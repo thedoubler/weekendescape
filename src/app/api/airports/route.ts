@@ -6,12 +6,13 @@ const TEQUILA_BASE_URL = "https://tequila-api.kiwi.com";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const term = searchParams.get("term");
     const lat = searchParams.get("lat");
     const lon = searchParams.get("lon");
 
-    if (!lat || !lon) {
+    if (!term && (!lat || !lon)) {
       return NextResponse.json(
-        { error: "Missing required parameters: lat, lon" },
+        { error: "Provide either a search term or lat/lon" },
         { status: 400 }
       );
     }
@@ -24,23 +25,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await axios.get(`${TEQUILA_BASE_URL}/locations/radius`, {
-      headers: { apikey: apiKey },
-      params: {
-        lat,
-        lon,
-        radius: 250,
-        locale: "en-US",
-        location_types: "airport",
-        limit: 5,
-        active_only: true,
-      },
-    });
+    // term = name/city autocomplete; lat/lon = nearest-airport geolocation.
+    const response = term
+      ? await axios.get(`${TEQUILA_BASE_URL}/locations/query`, {
+          headers: { apikey: apiKey },
+          params: {
+            term,
+            locale: "en-US",
+            location_types: "airport",
+            limit: 8,
+            active_only: true,
+          },
+        })
+      : await axios.get(`${TEQUILA_BASE_URL}/locations/radius`, {
+          headers: { apikey: apiKey },
+          params: {
+            lat,
+            lon,
+            radius: 250,
+            locale: "en-US",
+            location_types: "airport",
+            limit: 5,
+            active_only: true,
+          },
+        });
 
     const locations = Array.isArray(response.data?.locations)
       ? response.data.locations
       : [];
-    const airports = locations.slice(0, 5).map((a: any) => ({
+    const airports = locations.map((a: any) => ({
       code: a.code,
       name: a.name,
       city: a.city?.name ?? a.city_name ?? "",

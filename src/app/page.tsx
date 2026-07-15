@@ -14,6 +14,7 @@ import {
 import { continentsOf, filterByContinents } from "@/lib/continents";
 import { loadHome, saveHome } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
+import { AirportInput } from "@/components/AirportInput";
 import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
@@ -100,7 +101,6 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const bootstrapped = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const lastSearched = useRef("");
   const styleRef = useRef(style);
   styleRef.current = style;
   const monthsRef = useRef(months);
@@ -111,7 +111,6 @@ export default function Home() {
   async function runSearch(code: string) {
     const c = code.trim().toUpperCase();
     if (!c) return;
-    lastSearched.current = c;
     setHome(c);
     saveHome(c);
     setLoading(true);
@@ -231,23 +230,10 @@ export default function Home() {
       <section className="flex flex-col gap-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
         <Field label="Flying from">
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={inputRef}
+            <AirportInput
               value={home}
-              onChange={(e) => setHome(e.target.value)}
-              onBlur={() => {
-                if (home.trim().toUpperCase() !== lastSearched.current)
-                  runSearch(home);
-              }}
-              onKeyDown={(e) => {
-                if (
-                  e.key === "Enter" &&
-                  home.trim().toUpperCase() !== lastSearched.current
-                )
-                  runSearch(home);
-              }}
-              placeholder="Airport code, e.g. BCN"
-              className="w-44 rounded-lg border border-black/15 px-3 py-2 bg-transparent dark:border-white/15"
+              onSearch={runSearch}
+              inputRef={inputRef}
             />
             <button
               type="button"

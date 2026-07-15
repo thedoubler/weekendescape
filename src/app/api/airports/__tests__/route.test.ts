@@ -64,6 +64,31 @@ describe("GET /api/airports", () => {
     expect(params.location_types).toBe("airport");
   });
 
+  it("searches by term via locations/query for autocomplete", async () => {
+    (axios.get as any).mockResolvedValue({
+      status: 200,
+      data: {
+        locations: [
+          {
+            code: "BCN",
+            name: "Barcelona El Prat",
+            city: { name: "Barcelona" },
+            country: { name: "Spain" },
+          },
+        ],
+      },
+    });
+
+    const res = await GET(req("term=barce"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.airports[0].code).toBe("BCN");
+
+    const call = (axios.get as any).mock.calls[0];
+    expect(call[0]).toContain("/locations/query");
+    expect(call[1].params.term).toBe("barce");
+  });
+
   it("returns 500 when Tequila call fails", async () => {
     (axios.get as any).mockRejectedValue(new Error("upstream down"));
     const res = await GET(req("lat=41.4&lon=2.1"));
