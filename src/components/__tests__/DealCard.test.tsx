@@ -35,4 +35,11 @@ describe("DealCard", () => {
     expect(screen.getByText(/outbound/i)).toBeInTheDocument();
     expect(screen.getByText(/return/i)).toBeInTheDocument();
   });
+
+  it("shows the stay duration once, even when expanded", () => {
+    render(<DealCard deal={deal} />);
+    expect(screen.getByText(/in Ibiza/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+    expect(screen.getAllByText(/in Ibiza/i)).toHaveLength(1);
+  });
 });

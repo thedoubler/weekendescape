@@ -36,10 +36,15 @@ export function DealCard({ deal }: { deal: Deal }) {
           <div className="mt-2">
             <DayBlocks cells={cells} />
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-900 dark:bg-green-300/20 dark:text-green-100">
+              {stay} in {deal.cityTo}
+            </span>
+          </div>
           <div className="mt-2 text-sm opacity-70">
             Out {dayLabel(deal.outDepart)} {timeLabel(deal.outDepart)} → land{" "}
             {timeLabel(deal.outArrive)} · back {dayLabel(deal.backDepart)}{" "}
-            {timeLabel(deal.backDepart)} · {stay} there
+            {timeLabel(deal.backDepart)}
           </div>
         </button>
         <div className="text-right shrink-0">
@@ -70,11 +75,6 @@ export function DealCard({ deal }: { deal: Deal }) {
           <div>
             Return · {dayLabel(deal.backDepart)} {timeLabel(deal.backDepart)} →
             home {timeLabel(deal.backArrive)}
-          </div>
-          <div>
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-900 dark:bg-green-300/20 dark:text-green-100">
-              ≈ {stay} in {deal.cityTo}
-            </span>
           </div>
         </div>
       )}

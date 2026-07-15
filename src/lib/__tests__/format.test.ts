@@ -52,9 +52,9 @@ describe("dayBlocks", () => {
       "2026-08-10T23:45:00.000Z"
     );
     expect(cells).toEqual([
-      { weekday: "Sat", day: 8, isWeekend: true, role: "depart" },
-      { weekday: "Sun", day: 9, isWeekend: true, role: "middle" },
-      { weekday: "Mon", day: 10, isWeekend: false, role: "return" },
+      { weekday: "Sat", day: 8, month: "Aug", isWeekend: true, role: "depart" },
+      { weekday: "Sun", day: 9, month: "Aug", isWeekend: true, role: "middle" },
+      { weekday: "Mon", day: 10, month: "Aug", isWeekend: false, role: "return" },
     ]);
   });
   it("returns empty on bad input", () => {

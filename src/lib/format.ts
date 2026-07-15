@@ -1,11 +1,26 @@
 export interface DayCell {
   weekday: string;
   day: number;
+  month: string;
   isWeekend: boolean;
   role: "depart" | "return" | "middle";
 }
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MO = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
 
 interface Parts {
@@ -71,6 +86,7 @@ export function dayBlocks(outDepart: string, backArrive: string): DayCell[] {
     cells.push({
       weekday: WD[wd],
       day: dt.getUTCDate(),
+      month: MO[dt.getUTCMonth()],
       isWeekend: wd === 0 || wd === 6,
       role: i === 0 ? "depart" : i === n ? "return" : "middle",
     });

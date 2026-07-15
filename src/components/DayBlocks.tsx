@@ -13,6 +13,11 @@ export function DayBlocks({ cells }: { cells: DayCell[] }) {
               : "bg-black/5 text-black/60 dark:bg-white/10 dark:text-white/60"
           }`}
         >
+          {(i === 0 || c.month !== cells[i - 1].month) && (
+            <div className="text-[10px] uppercase tracking-wide opacity-60">
+              {c.month}
+            </div>
+          )}
           <div>{c.weekday}</div>
           <div className="font-medium">{c.day}</div>
           {c.role === "depart" && <div aria-label="Departure">🛫</div>}
