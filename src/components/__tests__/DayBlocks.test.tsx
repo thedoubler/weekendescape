@@ -4,22 +4,36 @@ import { DayBlocks } from "@/components/DayBlocks";
 import type { DayCell } from "@/lib/format";
 
 const cells: DayCell[] = [
-  { weekday: "Sat", day: 8, month: "Aug", isWeekend: true, role: "depart" },
-  { weekday: "Sun", day: 9, month: "Aug", isWeekend: true, role: "middle" },
-  { weekday: "Mon", day: 10, month: "Aug", isWeekend: false, role: "return" },
+  { weekday: "Sat", day: 8, month: "Aug", isWeekend: true, role: "arrive", fillStart: 0.35, fillEnd: 1 },
+  { weekday: "Sun", day: 9, month: "Aug", isWeekend: true, role: "middle", fillStart: 0, fillEnd: 1 },
+  { weekday: "Mon", day: 10, month: "Aug", isWeekend: false, role: "leave", fillStart: 0, fillEnd: 0.8 },
 ];
 
 describe("DayBlocks", () => {
-  it("renders a cell per day with weekday, day number, and the month", () => {
-    render(<DayBlocks cells={cells} />);
-    expect(screen.getByText("Sat")).toBeInTheDocument();
-    expect(screen.getByText("10")).toBeInTheDocument();
+  it("renders the month, day cells, and arrival/departure times", () => {
+    render(
+      <DayBlocks
+        cells={cells}
+        arrival={{ time: "08:20", night: false, plusOne: false }}
+        departure={{ time: "19:05", night: false }}
+      />
+    );
     expect(screen.getByText("Aug")).toBeInTheDocument();
+    expect(screen.getByText("Sat")).toBeInTheDocument();
+    expect(screen.getByText("08:20")).toBeInTheDocument();
+    expect(screen.getByText("19:05")).toBeInTheDocument();
+    expect(screen.getByText(/full day/i)).toBeInTheDocument();
   });
 
-  it("marks departure and return days", () => {
-    render(<DayBlocks cells={cells} />);
-    expect(screen.getByLabelText("Departure")).toBeInTheDocument();
-    expect(screen.getByLabelText("Return")).toBeInTheDocument();
+  it("marks a red-eye with +1 and night glyphs", () => {
+    render(
+      <DayBlocks
+        cells={cells}
+        arrival={{ time: "23:40", night: true, plusOne: true }}
+        departure={{ time: "06:00", night: true }}
+      />
+    );
+    expect(screen.getByText(/\+1/)).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Night flight")).toHaveLength(2);
   });
 });
