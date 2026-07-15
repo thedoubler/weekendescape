@@ -56,7 +56,8 @@ describe("DealCard", () => {
       destHoliday: { date: "2026-08-08", name: "Ferragosto" },
     };
     render(<DealCard deal={withHols} />);
+    expect(screen.getByText(/Assumption · Fri 7 Aug/)).toBeInTheDocument();
     expect(screen.getByText(/no day off needed/i)).toBeInTheDocument();
-    expect(screen.getByText(/Ferragosto/)).toBeInTheDocument();
+    expect(screen.getByText(/Ferragosto · Sat 8 Aug/)).toBeInTheDocument();
   });
 });

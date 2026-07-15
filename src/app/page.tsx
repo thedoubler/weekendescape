@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { WeekendStyle } from "@/lib/weekend";
 import type { Deal } from "@/lib/deals";
 import { type SortKey, sortDeals, monthsOf, filterByMonths } from "@/lib/sort";
+import { continentsOf, filterByContinents } from "@/lib/continents";
 import { loadHome, saveHome } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { MonthFilter } from "@/components/MonthFilter";
+import { ContinentFilter } from "@/components/ContinentFilter";
 import { DealList } from "@/components/DealList";
 
 const STYLE_OPTIONS = [
@@ -31,6 +33,7 @@ export default function Home() {
   const [months, setMonths] = useState(3);
   const [sort, setSort] = useState<SortKey>("soonest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,14 +114,31 @@ export default function Home() {
   }, [style, months]);
 
   const available = useMemo(() => monthsOf(rawDeals), [rawDeals]);
+  const availableContinents = useMemo(
+    () => continentsOf(rawDeals),
+    [rawDeals]
+  );
   const visible = useMemo(
-    () => sortDeals(filterByMonths(rawDeals, selectedMonths), sort),
-    [rawDeals, selectedMonths, sort]
+    () =>
+      sortDeals(
+        filterByContinents(
+          filterByMonths(rawDeals, selectedMonths),
+          selectedContinents
+        ),
+        sort
+      ),
+    [rawDeals, selectedMonths, selectedContinents, sort]
   );
 
   function toggleMonth(m: string) {
     setSelectedMonths((cur) =>
       cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]
+    );
+  }
+
+  function toggleContinent(c: string) {
+    setSelectedContinents((cur) =>
+      cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]
     );
   }
 
@@ -176,14 +196,23 @@ export default function Home() {
         />
       )}
 
+      {availableContinents.length > 1 && (
+        <ContinentFilter
+          continents={availableContinents}
+          selected={selectedContinents}
+          onToggle={toggleContinent}
+          onClear={() => setSelectedContinents([])}
+        />
+      )}
+
       {searched && (
         <DealList
           deals={visible}
           loading={loading}
           error={error}
           emptyMessage={
-            selectedMonths.length > 0
-              ? "No deals in the selected months."
+            selectedMonths.length > 0 || selectedContinents.length > 0
+              ? "No deals match these filters."
               : undefined
           }
         />

@@ -12,6 +12,7 @@ import {
   isNightHour,
   travelMinutes,
   valueVerdict,
+  holidayDate,
 } from "@/lib/format";
 import { DayBlocks } from "@/components/DayBlocks";
 
@@ -90,7 +91,7 @@ export function DealCard({ deal }: { deal: Deal }) {
         </span>
         {deal.homeHoliday && (
           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
-            🎉 {deal.homeHoliday.name} —{" "}
+            🎉 {deal.homeHoliday.name} · {holidayDate(deal.homeHoliday.date)} —{" "}
             {deal.ptoDays === 0
               ? "no day off needed"
               : `${deal.ptoDays} day${deal.ptoDays === 1 ? "" : "s"} off`}
@@ -98,7 +99,8 @@ export function DealCard({ deal }: { deal: Deal }) {
         )}
         {deal.destHoliday && (
           <span className="rounded-full border border-amber-300/50 px-2.5 py-1 text-sm text-amber-800 dark:text-amber-200">
-            {deal.destHoliday.name} in {deal.cityTo}
+            {deal.destHoliday.name} · {holidayDate(deal.destHoliday.date)} in{" "}
+            {deal.cityTo}
           </span>
         )}
       </div>

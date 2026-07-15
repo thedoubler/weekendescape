@@ -9,7 +9,18 @@ import {
   isNightHour,
   travelMinutes,
   valueVerdict,
+  holidayDate,
 } from "@/lib/format";
+
+describe("holidayDate", () => {
+  it("formats a YYYY-MM-DD date as weekday day month", () => {
+    expect(holidayDate("2026-12-25")).toBe("Fri 25 Dec");
+    expect(holidayDate("2026-08-08")).toBe("Sat 8 Aug");
+  });
+  it("returns empty on bad input", () => {
+    expect(holidayDate("nope")).toBe("");
+  });
+});
 
 describe("daysUntil", () => {
   it("counts whole days from a reference date to the departure day", () => {

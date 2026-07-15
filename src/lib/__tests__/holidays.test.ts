@@ -4,7 +4,7 @@ import { fetchHolidays, tripWorkdays, annotate } from "@/lib/holidays";
 describe("fetchHolidays", () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it("maps Nager JSON to {date, name} using localName", async () => {
+  it("maps Nager JSON to {date, name} using the English name", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => [
@@ -12,7 +12,7 @@ describe("fetchHolidays", () => {
       ],
     } as Response);
     expect(await fetchHolidays("it", 2026)).toEqual([
-      { date: "2026-08-15", name: "Ferragosto" },
+      { date: "2026-08-15", name: "Assumption Day" },
     ]);
   });
 

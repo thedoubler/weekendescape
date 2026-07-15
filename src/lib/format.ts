@@ -54,6 +54,13 @@ export function daysUntil(iso: string, from: Date): number {
   return Math.round((target - base) / 86400000);
 }
 
+export function holidayDate(dateStr: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!m) return "";
+  const wd = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay();
+  return `${WD[wd]} ${+m[3]} ${MO[+m[2] - 1]}`;
+}
+
 export function timeLabel(iso: string): string {
   const p = parts(iso);
   if (!p) return "";

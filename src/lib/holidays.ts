@@ -24,7 +24,7 @@ export async function fetchHolidays(
     return data
       .map((h: { date?: string; localName?: string; name?: string }) => ({
         date: h.date ?? "",
-        name: h.localName || h.name || "",
+        name: h.name || h.localName || "",
       }))
       .filter((h: Holiday) => /^\d{4}-\d{2}-\d{2}$/.test(h.date));
   } catch {
