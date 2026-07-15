@@ -63,4 +63,10 @@ describe("GET /api/airports", () => {
     expect(params.lon).toBe("2.1");
     expect(params.location_types).toBe("airport");
   });
+
+  it("returns 500 when Tequila call fails", async () => {
+    (axios.get as any).mockRejectedValue(new Error("upstream down"));
+    const res = await GET(req("lat=41.4&lon=2.1"));
+    expect(res.status).toBe(500);
+  });
 });

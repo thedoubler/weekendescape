@@ -24,6 +24,7 @@ export function DealCard({ deal }: { deal: Deal }) {
           href={deal.deepLink}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label={`Book ${deal.cityTo}`}
           className="text-sm underline"
         >
           Book

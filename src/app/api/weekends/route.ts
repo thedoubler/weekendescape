@@ -34,6 +34,10 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    const maxPrice = maxPriceRaw ? parseInt(maxPriceRaw, 10) : undefined;
+    if (maxPriceRaw && (!Number.isFinite(maxPrice) || (maxPrice as number) <= 0)) {
+      return NextResponse.json({ error: "Invalid maxPrice" }, { status: 400 });
+    }
 
     const apiKey = process.env.TEQUILA_API_KEY;
     if (!apiKey) {
@@ -46,7 +50,6 @@ export async function GET(request: NextRequest) {
     const currency = process.env.WEEKEND_CURRENCY || "EUR";
     const wp = weekendStyleToParams(style);
     const { dateFrom, dateTo } = timelineRange(months, new Date());
-    const maxPrice = maxPriceRaw ? parseInt(maxPriceRaw, 10) : undefined;
 
     const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
       headers: { apikey: apiKey },

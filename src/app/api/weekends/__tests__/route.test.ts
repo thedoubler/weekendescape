@@ -37,6 +37,13 @@ describe("GET /api/weekends", () => {
     expect(res.status).toBe(500);
   });
 
+  it("returns 400 on invalid maxPrice", async () => {
+    const res = await GET(req("flyFrom=BCN&maxPrice=abc"));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid maxPrice");
+  });
+
   it("calls Tequila with mapped params and returns normalized deals", async () => {
     (axios.get as any).mockResolvedValue({
       status: 200,

@@ -39,8 +39,16 @@ export default function Home() {
           const res = await fetch(
             `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
           );
+          if (!res.ok) {
+            setError("No nearby airport found — enter one manually.");
+            return;
+          }
           const body = await res.json();
-          if (body.airports?.[0]?.code) setHome(body.airports[0].code);
+          if (body.airports?.[0]?.code) {
+            setHome(body.airports[0].code);
+          } else {
+            setError("No nearby airport found — enter one manually.");
+          }
         } catch {
           setError("Couldn't resolve nearby airports — enter one manually.");
         }
@@ -131,7 +139,7 @@ export default function Home() {
           <input
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
-            placeholder="Max €"
+            placeholder="Max price"
             inputMode="numeric"
             className="w-24 rounded-lg border border-black/15 dark:border-white/15 px-3 py-2 bg-transparent"
           />
