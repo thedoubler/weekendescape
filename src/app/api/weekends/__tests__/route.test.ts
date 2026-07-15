@@ -9,7 +9,11 @@ vi.mock("@/lib/holidays", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/holidays")>();
   return {
     ...actual,
-    fetchHolidays: vi.fn(async () => [{ date: "2026-09-05", name: "Test Holiday" }]),
+    fetchHolidays: vi.fn(async (cc: string) =>
+      cc === "ES"
+        ? [{ date: "2026-09-04", name: "Home Holiday" }]
+        : [{ date: "2026-09-05", name: "Dest Holiday" }]
+    ),
   };
 });
 
@@ -119,7 +123,7 @@ describe("GET /api/weekends", () => {
             deep_link: "https://kiwi.com/deep/rome",
             nightsInDest: 1,
             route: [
-              { local_departure: "2026-09-05T07:30:00.000Z", local_arrival: "2026-09-05T09:00:00.000Z", return: 0 },
+              { local_departure: "2026-09-04T07:30:00.000Z", local_arrival: "2026-09-04T09:00:00.000Z", return: 0 },
               { local_departure: "2026-09-06T21:00:00.000Z", local_arrival: "2026-09-06T22:30:00.000Z", return: 1 },
             ],
           },
@@ -130,10 +134,12 @@ describe("GET /api/weekends", () => {
     const res = await GET(req("flyFrom=BCN&style=frimon&months=3"));
     expect(res.status).toBe(200);
     const body = await res.json();
-    // Sep 5-6 2026 is a weekend, so no PTO workdays; the mocked holiday on
-    // Sep 5 lands in-span, surfacing as the destination holiday.
+    // Trip Fri 2026-09-04 -> Sun 2026-09-06. The home (ES) holiday lands on the
+    // Friday workday (0 days off), and the distinct destination (IT) holiday on
+    // Sat 09-05 is detected in-span — proving home vs. dest calendars aren't swapped.
     expect(body.deals[0].ptoDays).toBe(0);
-    expect(body.deals[0].destHoliday).toEqual({ date: "2026-09-05", name: "Test Holiday" });
+    expect(body.deals[0].homeHoliday).toEqual({ date: "2026-09-04", name: "Home Holiday" });
+    expect(body.deals[0].destHoliday).toEqual({ date: "2026-09-05", name: "Dest Holiday" });
   });
 
   it("returns 500 when Tequila call fails", async () => {

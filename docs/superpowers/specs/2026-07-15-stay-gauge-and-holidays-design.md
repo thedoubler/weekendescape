@@ -199,6 +199,6 @@ coral fill reuses the weekend-accent token (works in light/dark).
 ## Defaults chosen
 
 - Day span for the gauge = `outArrive` → `backDepart` (time truly at destination).
-- Night = local hours 00:00–05:59; `+1` only when a leg's arrival date > departure date.
+- Night (awkward-hour) = local hour `>= 22 || < 7` (late-night or pre-7am, matching the mockup's moon on 23:40 and 06:00); `+1` only when a leg's arrival date > departure date.
 - Home badge shows only when a home holiday lands in-span; PTO wording keys off `ptoDays`.
 - Destination badge is context only (no PTO claim); both badges may show, home first.
