@@ -5,6 +5,14 @@ import { GET } from "@/app/api/weekends/route";
 
 vi.mock("axios");
 
+vi.mock("@/lib/holidays", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/holidays")>();
+  return {
+    ...actual,
+    fetchHolidays: vi.fn(async () => [{ date: "2026-09-05", name: "Test Holiday" }]),
+  };
+});
+
 function req(qs: string) {
   return new NextRequest(`http://localhost/api/weekends?${qs}`);
 }
@@ -92,6 +100,40 @@ describe("GET /api/weekends", () => {
     expect(params.sort).toBe("price");
     expect(params.curr).toBe("EUR");
     expect(params.price_to).toBe(200);
+    expect(params.ret_from_diff_airport).toBe(false);
+    expect(params.ret_to_diff_airport).toBe(false);
+  });
+
+  it("enriches deals with holiday info", async () => {
+    (axios.get as any).mockResolvedValue({
+      status: 200,
+      data: {
+        data: [
+          {
+            cityTo: "Rome",
+            flyFrom: "BCN",
+            flyTo: "FCO",
+            countryFrom: { code: "ES", name: "Spain" },
+            countryTo: { code: "IT", name: "Italy" },
+            price: 55,
+            deep_link: "https://kiwi.com/deep/rome",
+            nightsInDest: 1,
+            route: [
+              { local_departure: "2026-09-05T07:30:00.000Z", local_arrival: "2026-09-05T09:00:00.000Z", return: 0 },
+              { local_departure: "2026-09-06T21:00:00.000Z", local_arrival: "2026-09-06T22:30:00.000Z", return: 1 },
+            ],
+          },
+        ],
+      },
+    });
+
+    const res = await GET(req("flyFrom=BCN&style=frimon&months=3"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // Sep 5-6 2026 is a weekend, so no PTO workdays; the mocked holiday on
+    // Sep 5 lands in-span, surfacing as the destination holiday.
+    expect(body.deals[0].ptoDays).toBe(0);
+    expect(body.deals[0].destHoliday).toEqual({ date: "2026-09-05", name: "Test Holiday" });
   });
 
   it("returns 500 when Tequila call fails", async () => {

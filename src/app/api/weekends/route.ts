@@ -3,6 +3,7 @@ import axios from "axios";
 import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
 import { timelineRange } from "@/lib/timeline";
 import { normalizeDeals } from "@/lib/deals";
+import { fetchHolidays, annotate } from "@/lib/holidays";
 
 const TEQUILA_BASE_URL = "https://tequila-api.kiwi.com";
 const VALID_STYLES: WeekendStyle[] = ["strict", "frimon", "loose"];
@@ -62,6 +63,8 @@ export async function GET(request: NextRequest) {
         fly_days_type: "departure",
         ret_fly_days: wp.retFlyDays.join(","),
         ret_fly_days_type: "arrival",
+        ret_from_diff_airport: false,
+        ret_to_diff_airport: false,
         nights_in_dst_from: wp.nightsFrom,
         nights_in_dst_to: wp.nightsTo,
         one_for_city: 1,
@@ -73,6 +76,44 @@ export async function GET(request: NextRequest) {
     });
 
     const deals = normalizeDeals(response.data, currency);
+
+    if (deals.length > 0) {
+      const years = new Set<number>();
+      for (const d of deals) {
+        years.add(Number(d.outArrive.slice(0, 4)));
+        years.add(Number(d.backDepart.slice(0, 4)));
+      }
+      const yearList = [...years];
+      const homeCC = deals[0].countryFromCode;
+
+      const homeCal = (
+        await Promise.all(yearList.map((y) => fetchHolidays(homeCC, y)))
+      ).flat();
+
+      const destCCs = [...new Set(deals.map((d) => d.countryToCode).filter(Boolean))];
+      const destPairs = await Promise.all(
+        destCCs.map(async (cc) => {
+          const cal = (
+            await Promise.all(yearList.map((y) => fetchHolidays(cc, y)))
+          ).flat();
+          return [cc, cal] as const;
+        })
+      );
+      const destCalByCC = new Map(destPairs);
+
+      for (const d of deals) {
+        const info = annotate(
+          d.outArrive,
+          d.backDepart,
+          homeCal,
+          destCalByCC.get(d.countryToCode) ?? []
+        );
+        d.ptoDays = info.ptoDays;
+        d.homeHoliday = info.homeHoliday;
+        d.destHoliday = info.destHoliday;
+      }
+    }
+
     return NextResponse.json({ deals });
   } catch (error) {
     console.error("Weekend search error:", error);
