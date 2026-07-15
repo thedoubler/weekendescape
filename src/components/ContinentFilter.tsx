@@ -31,7 +31,7 @@ export function ContinentFilter({
         onClick={onClear}
         className={pillClass(selected.length === 0)}
       >
-        All continents
+        All
       </button>
       {continents.map((c) => (
         <button

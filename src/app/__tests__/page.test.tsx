@@ -139,7 +139,7 @@ describe("Home page", () => {
 
     render(<Home />);
     await waitFor(() =>
-      expect(screen.getByPlaceholderText(/home airport/i)).toHaveFocus()
+      expect(screen.getByPlaceholderText(/airport code/i)).toHaveFocus()
     );
     const weekendsCalls = fetchMock.mock.calls.filter((c) =>
       String(c[0]).includes("/api/weekends")

@@ -25,9 +25,10 @@ describe("ContinentFilter", () => {
       />
     );
     expect(screen.getByRole("button", { name: "Europe" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /all continents/i })
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 
   it("toggles a continent on click", () => {
