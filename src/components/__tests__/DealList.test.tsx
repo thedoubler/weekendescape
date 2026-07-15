@@ -15,7 +15,7 @@ describe("DealList", () => {
 
   it("shows the empty state", () => {
     render(<DealList deals={[]} loading={false} error={null} />);
-    expect(screen.getByText(/no cheap weekend deals/i)).toBeInTheDocument();
+    expect(screen.getByText(/no weekend escapes found/i)).toBeInTheDocument();
   });
 
   it("shows a custom empty message when provided", () => {

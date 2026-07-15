@@ -18,7 +18,7 @@ export function DealList({
     return (
       <p className="opacity-70">
         {emptyMessage ??
-          "No cheap weekend deals found — try the Loose style or a longer timeline."}
+          "No weekend escapes found — try the Loose style or a longer timeline."}
       </p>
     );
 
