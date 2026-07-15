@@ -1166,6 +1166,207 @@ git commit -m "test: enrich page-test fixtures with airport and country codes"
 
 ---
 
+### Task 8: Value verdict ("is it worth it?")
+
+**Files:**
+- Modify: `src/lib/format.ts`
+- Test: `src/lib/__tests__/format.test.ts`
+- Modify: `src/components/DealCard.tsx`
+- Test: `src/components/__tests__/DealCard.test.tsx`
+
+**Interfaces:**
+- Consumes: `parts` (internal to format.ts), `Deal` times.
+- Produces:
+  - `interface Verdict { label: string; tier: "great" | "fair" | "poor" }`
+  - `function travelMinutes(outDepart: string, outArrive: string, backDepart: string, backArrive: string): number` — outbound + return flight durations, in minutes.
+  - `function valueVerdict(stayMinutes: number, travelMin: number): Verdict` — ratio `stayMinutes / travelMin`: `>= 5` great, `>= 2` fair, else poor; `travelMin <= 0` → great.
+  - `DealCard` renders the verdict as a pill next to the stay pill (outlined green for great, outlined neutral for fair, muted text for poor).
+
+- [ ] **Step 1: Add the failing tests to `src/lib/__tests__/format.test.ts`**
+
+Add `travelMinutes` and `valueVerdict` to the import, then append:
+
+```ts
+describe("travelMinutes", () => {
+  it("sums outbound and return flight durations", () => {
+    expect(
+      travelMinutes(
+        "2026-08-08T21:05:00.000Z",
+        "2026-08-08T22:10:00.000Z",
+        "2026-08-10T18:00:00.000Z",
+        "2026-08-10T19:35:00.000Z"
+      )
+    ).toBe(160);
+  });
+});
+
+describe("valueVerdict", () => {
+  it("rates a trip by its stay-to-travel ratio", () => {
+    expect(valueVerdict(2880, 360).tier).toBe("great"); // 8:1
+    expect(valueVerdict(1500, 600).tier).toBe("fair"); // 2.5:1
+    expect(valueVerdict(480, 540).tier).toBe("poor"); // 0.9:1
+    expect(valueVerdict(1000, 0).tier).toBe("great"); // guard
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run src/lib/__tests__/format.test.ts`
+Expected: FAIL (`travelMinutes`/`valueVerdict` undefined).
+
+- [ ] **Step 3: Add the functions to `src/lib/format.ts`**
+
+```ts
+export interface Verdict {
+  label: string;
+  tier: "great" | "fair" | "poor";
+}
+
+function naiveMin(iso: string): number {
+  const p = parts(iso);
+  return p ? Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi) / 60000 : 0;
+}
+
+export function travelMinutes(
+  outDepart: string,
+  outArrive: string,
+  backDepart: string,
+  backArrive: string
+): number {
+  return (
+    naiveMin(outArrive) -
+    naiveMin(outDepart) +
+    (naiveMin(backArrive) - naiveMin(backDepart))
+  );
+}
+
+export function valueVerdict(stayMinutes: number, travelMin: number): Verdict {
+  if (travelMin <= 0) return { label: "Great value", tier: "great" };
+  const ratio = stayMinutes / travelMin;
+  if (ratio >= 5) return { label: "Great value", tier: "great" };
+  if (ratio >= 2) return { label: "Fair trade-off", tier: "fair" };
+  return { label: "Long trip, short stay", tier: "poor" };
+}
+```
+
+- [ ] **Step 4: Add a failing test to `src/components/__tests__/DealCard.test.tsx`**
+
+Inside the `describe("DealCard", ...)` block add (the `base` fixture's ~48h stay vs 160m travel is an 18:1 ratio → great):
+
+```ts
+  it("shows a value verdict", () => {
+    render(<DealCard deal={base} />);
+    expect(screen.getByText(/great value/i)).toBeInTheDocument();
+  });
+```
+
+- [ ] **Step 5: Run test to verify it fails**
+
+Run: `npx vitest run src/components/__tests__/DealCard.test.tsx`
+Expected: FAIL (no verdict rendered).
+
+- [ ] **Step 6: Render the verdict in `src/components/DealCard.tsx`**
+
+Add to the imports from `@/lib/format`: `travelMinutes`, `valueVerdict`. After the `departure`/`returnPlusOne` consts add:
+
+```ts
+  const verdict = valueVerdict(
+    deal.stayMinutes,
+    travelMinutes(deal.outDepart, deal.outArrive, deal.backDepart, deal.backArrive)
+  );
+  const verdictClass =
+    verdict.tier === "great"
+      ? "border border-green-300 text-green-800 dark:border-green-400/40 dark:text-green-200"
+      : verdict.tier === "fair"
+        ? "border border-black/15 text-black/60 dark:border-white/20 dark:text-white/70"
+        : "text-black/45 dark:text-white/45";
+```
+
+In the badges row, immediately after the green stay-pill `<span>…</span>`, add:
+
+```tsx
+        <span className={`rounded-full px-2.5 py-1 text-sm ${verdictClass}`}>
+          {verdict.label}
+        </span>
+```
+
+- [ ] **Step 7: Run tests to verify they pass**
+
+Run: `npx vitest run src/lib/__tests__/format.test.ts src/components/__tests__/DealCard.test.tsx`
+Expected: PASS.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/lib/format.ts src/lib/__tests__/format.test.ts src/components/DealCard.tsx src/components/__tests__/DealCard.test.tsx
+git commit -m "feat: add is-it-worth-it value verdict badge"
+```
+
+---
+
+### Task 9: Space Grotesk font
+
+**Files:**
+- Modify: `src/app/layout.tsx`
+- Modify: `src/app/globals.css`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: the app renders in Space Grotesk (loaded via `next/font/google`), replacing the default Arial body font.
+
+- [ ] **Step 1: Swap the font in `src/app/layout.tsx`**
+
+Replace the font import and the `geistSans`/`geistMono` consts with Space Grotesk (keep Geist Mono for the mono variable), and update the `<html>` className:
+
+```tsx
+import { Space_Grotesk, Geist_Mono } from "next/font/google";
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+```
+
+Change the `<html>` element's className to:
+
+```tsx
+      className={`${spaceGrotesk.variable} ${geistMono.variable} h-full antialiased`}
+```
+
+- [ ] **Step 2: Point the body font at Space Grotesk in `src/app/globals.css`**
+
+In the `@theme inline` block change the sans line to:
+
+```css
+  --font-sans: var(--font-space-grotesk);
+```
+
+And change the `body { … }` `font-family` line to:
+
+```css
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+```
+
+- [ ] **Step 3: Run the full suite and build**
+
+Run: `npm test && npm run build`
+Expected: all tests pass; build succeeds (fonts load at build time).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/app/layout.tsx src/app/globals.css
+git commit -m "feat: switch the app typeface to Space Grotesk"
+```
+
+---
+
 ## Notes for the implementer
 
 - Tasks 1–3 are pure logic (deals/format/holidays); Task 4 wires the route (mock `axios` and `@/lib/holidays`); Tasks 5–6 are components under jsdom; Task 7 finishes the type ripple and runs the full build.
