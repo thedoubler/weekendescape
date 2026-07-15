@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
         location_types: "airport",
         limit: 5,
         active_only: true,
-        sort: "distance",
       },
     });
 
