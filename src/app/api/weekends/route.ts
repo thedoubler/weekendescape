@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const flyFrom = searchParams.get("flyFrom");
+    const flyTo = searchParams.get("flyTo");
     const style = (searchParams.get("style") || "frimon") as WeekendStyle;
     const months = parseInt(searchParams.get("months") || "3", 10);
     const maxPriceRaw = searchParams.get("maxPrice");
@@ -67,7 +68,12 @@ export async function GET(request: NextRequest) {
         ret_to_diff_airport: false,
         nights_in_dst_from: wp.nightsFrom,
         nights_in_dst_to: wp.nightsTo,
-        one_for_city: 1,
+        // Board search: one (cheapish) flight per city for broad coverage.
+        // Single-city lookup (flyTo set): all options, so we can pick the
+        // true cheapest weekend for that destination.
+        ...(flyTo
+          ? { fly_to: flyTo, one_for_city: 0 }
+          : { one_for_city: 1 }),
         sort: "price",
         curr: currency,
         limit: 200,
@@ -75,7 +81,11 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const deals = normalizeDeals(response.data, currency);
+    // normalizeDeals returns price-ascending; for a single-city lookup keep only
+    // the cheapest weekend.
+    const deals = flyTo
+      ? normalizeDeals(response.data, currency).slice(0, 1)
+      : normalizeDeals(response.data, currency);
 
     if (deals.length > 0) {
       const years = new Set<number>();

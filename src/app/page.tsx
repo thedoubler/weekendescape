@@ -210,6 +210,7 @@ export default function Home() {
           deals={visible}
           loading={loading}
           error={error}
+          cheapest={{ style, months }}
           emptyMessage={
             selectedMonths.length > 0 || selectedContinents.length > 0
               ? "No deals match these filters."

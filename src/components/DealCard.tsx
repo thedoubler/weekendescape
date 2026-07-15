@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { Deal } from "@/lib/deals";
+import type { WeekendStyle } from "@/lib/weekend";
+import { CheapestWeekend } from "@/components/CheapestWeekend";
 import {
   dayLabel,
   timeLabel,
@@ -17,7 +19,13 @@ import {
 } from "@/lib/format";
 import { DayBlocks } from "@/components/DayBlocks";
 
-export function DealCard({ deal }: { deal: Deal }) {
+export function DealCard({
+  deal,
+  cheapest,
+}: {
+  deal: Deal;
+  cheapest?: { style: WeekendStyle; months: number };
+}) {
   const [open, setOpen] = useState(false);
   const cells = dayBlocks(deal.outArrive, deal.backDepart);
   const stay = durationLabel(deal.stayMinutes);
@@ -143,6 +151,18 @@ export function DealCard({ deal }: { deal: Deal }) {
               </span>
             )}
           </div>
+          {cheapest && (
+            <div className="mt-1 border-t border-black/10 pt-2 dark:border-white/10">
+              <CheapestWeekend
+                flyFrom={deal.flyFrom}
+                flyTo={deal.flyTo}
+                cityTo={deal.cityTo}
+                currentPrice={deal.price}
+                style={cheapest.style}
+                months={cheapest.months}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

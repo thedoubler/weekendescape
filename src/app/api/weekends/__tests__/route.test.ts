@@ -108,6 +108,54 @@ describe("GET /api/weekends", () => {
     expect(params.ret_to_diff_airport).toBe(false);
   });
 
+  it("with flyTo, searches all options for that city and returns the cheapest", async () => {
+    (axios.get as any).mockResolvedValue({
+      status: 200,
+      data: {
+        data: [
+          {
+            cityTo: "Ibiza",
+            flyFrom: "BCN",
+            flyTo: "IBZ",
+            countryFrom: { code: "ES", name: "Spain" },
+            countryTo: { code: "ES", name: "Spain" },
+            price: 41,
+            deep_link: "https://kiwi.com/deep/ibiza-41",
+            nightsInDest: 3,
+            route: [
+              { local_departure: "2026-08-14T21:00:00.000Z", local_arrival: "2026-08-14T22:05:00.000Z", return: 0 },
+              { local_departure: "2026-08-17T23:35:00.000Z", local_arrival: "2026-08-18T00:40:00.000Z", return: 1 },
+            ],
+          },
+          {
+            cityTo: "Ibiza",
+            flyFrom: "BCN",
+            flyTo: "IBZ",
+            countryFrom: { code: "ES", name: "Spain" },
+            countryTo: { code: "ES", name: "Spain" },
+            price: 36,
+            deep_link: "https://kiwi.com/deep/ibiza-36",
+            nightsInDest: 2,
+            route: [
+              { local_departure: "2026-08-01T21:05:00.000Z", local_arrival: "2026-08-01T22:10:00.000Z", return: 0 },
+              { local_departure: "2026-08-03T23:35:00.000Z", local_arrival: "2026-08-04T00:40:00.000Z", return: 1 },
+            ],
+          },
+        ],
+      },
+    });
+
+    const res = await GET(req("flyFrom=BCN&flyTo=IBZ&style=frimon&months=3"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.deals).toHaveLength(1);
+    expect(body.deals[0].price).toBe(36);
+
+    const params = (axios.get as any).mock.calls[0][1].params;
+    expect(params.fly_to).toBe("IBZ");
+    expect(params.one_for_city).toBe(0);
+  });
+
   it("enriches deals with holiday info", async () => {
     (axios.get as any).mockResolvedValue({
       status: 200,
