@@ -56,8 +56,16 @@ describe("GET /api/weekends", () => {
             deep_link: "https://kiwi.com/deep/rome",
             nightsInDest: 1,
             route: [
-              { local_departure: "2026-09-05T07:30:00.000Z", return: 0 },
-              { local_departure: "2026-09-06T21:00:00.000Z", return: 1 },
+              {
+                local_departure: "2026-09-05T07:30:00.000Z",
+                local_arrival: "2026-09-05T09:00:00.000Z",
+                return: 0,
+              },
+              {
+                local_departure: "2026-09-06T21:00:00.000Z",
+                local_arrival: "2026-09-06T22:30:00.000Z",
+                return: 1,
+              },
             ],
           },
         ],

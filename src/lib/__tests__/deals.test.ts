@@ -22,41 +22,58 @@ describe("normalizeDeals", () => {
         deep_link: "https://kiwi.com/deep/lisbon",
         nightsInDest: 2,
         route: [
-          { local_departure: "2026-08-21T18:00:00.000Z", return: 0 },
-          { local_departure: "2026-08-23T20:00:00.000Z", return: 1 },
+          {
+            local_departure: "2026-08-21T18:00:00.000Z",
+            local_arrival: "2026-08-21T20:00:00.000Z",
+            return: 0,
+          },
+          {
+            local_departure: "2026-08-23T20:00:00.000Z",
+            local_arrival: "2026-08-23T22:00:00.000Z",
+            return: 1,
+          },
         ],
       },
       {
-        cityTo: "Rome",
-        countryTo: { code: "IT", name: "Italy" },
-        price: 55,
-        deep_link: "https://kiwi.com/deep/rome",
-        nightsInDest: 1,
+        cityTo: "Ibiza",
+        countryTo: { code: "ES", name: "Spain" },
+        price: 37,
+        deep_link: "https://kiwi.com/deep/ibiza",
+        nightsInDest: 2,
         route: [
-          { local_departure: "2026-09-05T07:30:00.000Z", return: 0 },
-          { local_departure: "2026-09-06T21:00:00.000Z", return: 1 },
+          {
+            local_departure: "2026-08-08T21:05:00.000Z",
+            local_arrival: "2026-08-08T22:10:00.000Z",
+            return: 0,
+          },
+          {
+            local_departure: "2026-08-10T22:45:00.000Z",
+            local_arrival: "2026-08-10T23:45:00.000Z",
+            return: 1,
+          },
         ],
       },
     ],
   };
 
-  it("normalizes and sorts ascending by price", () => {
+  it("extracts all four flight times and computes stayMinutes, sorted by price", () => {
     const deals = normalizeDeals(raw, "EUR");
     expect(deals).toHaveLength(2);
     expect(deals[0]).toEqual({
-      cityTo: "Rome",
-      countryTo: "Italy",
-      flag: "🇮🇹",
-      dateOut: "2026-09-05",
-      dateBack: "2026-09-06",
-      nights: 1,
-      price: 55,
+      cityTo: "Ibiza",
+      countryTo: "Spain",
+      flag: "🇪🇸",
+      outDepart: "2026-08-08T21:05:00.000Z",
+      outArrive: "2026-08-08T22:10:00.000Z",
+      backDepart: "2026-08-10T22:45:00.000Z",
+      backArrive: "2026-08-10T23:45:00.000Z",
+      stayMinutes: 2915,
+      nights: 2,
+      price: 37,
       currency: "EUR",
-      deepLink: "https://kiwi.com/deep/rome",
+      deepLink: "https://kiwi.com/deep/ibiza",
     });
     expect(deals[1].cityTo).toBe("Lisbon");
-    expect(deals[1].dateOut).toBe("2026-08-21");
-    expect(deals[1].dateBack).toBe("2026-08-23");
   });
 
   it("returns an empty array when data is missing", () => {
@@ -64,8 +81,18 @@ describe("normalizeDeals", () => {
     expect(normalizeDeals(null, "EUR")).toEqual([]);
   });
 
-  it("skips items missing required fields", () => {
-    const bad = { data: [{ cityTo: "Nowhere" }] };
+  it("skips items missing a leg time", () => {
+    const bad = {
+      data: [
+        {
+          cityTo: "Nowhere",
+          countryTo: { code: "XX", name: "" },
+          price: 10,
+          deep_link: "x",
+          route: [{ local_departure: "2026-08-08T21:05:00.000Z", return: 0 }],
+        },
+      ],
+    };
     expect(normalizeDeals(bad, "EUR")).toEqual([]);
   });
 });

@@ -2,8 +2,11 @@ export interface Deal {
   cityTo: string;
   countryTo: string;
   flag: string;
-  dateOut: string;
-  dateBack: string;
+  outDepart: string;
+  outArrive: string;
+  backDepart: string;
+  backArrive: string;
+  stayMinutes: number;
   nights: number;
   price: number;
   currency: string;
@@ -23,13 +26,19 @@ export function flagEmoji(countryCode: string): string {
 
 interface RouteLeg {
   local_departure?: string;
+  local_arrival?: string;
   return?: number;
 }
 
-function datepart(iso: string | undefined): string | null {
-  if (!iso || typeof iso !== "string") return null;
-  const part = iso.split("T")[0];
-  return /^\d{4}-\d{2}-\d{2}$/.test(part) ? part : null;
+const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
+
+function isoOrNull(iso: string | undefined): string | null {
+  return iso && typeof iso === "string" && ISO_RE.test(iso) ? iso : null;
+}
+
+function naiveMinutes(iso: string): number {
+  const m = ISO_RE.exec(iso)!;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000;
 }
 
 export function normalizeDeals(raw: unknown, currency: string): Deal[] {
@@ -41,10 +50,14 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
   const deals: Deal[] = [];
   for (const item of data) {
     const route: RouteLeg[] = Array.isArray(item?.route) ? item.route : [];
-    const outLeg = route[0];
+    const outLeg = route.find((l) => l?.return === 0) ?? route[0];
     const backLeg = route.find((l) => l?.return === 1);
-    const dateOut = datepart(outLeg?.local_departure);
-    const dateBack = datepart(backLeg?.local_departure);
+
+    const outDepart = isoOrNull(outLeg?.local_departure);
+    const outArrive = isoOrNull(outLeg?.local_arrival);
+    const backDepart = isoOrNull(backLeg?.local_departure);
+    const backArrive = isoOrNull(backLeg?.local_arrival);
+
     const cityTo = item?.cityTo;
     const price = item?.price;
     const deepLink = item?.deep_link;
@@ -53,8 +66,10 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       !cityTo ||
       typeof price !== "number" ||
       !deepLink ||
-      !dateOut ||
-      !dateBack
+      !outDepart ||
+      !outArrive ||
+      !backDepart ||
+      !backArrive
     ) {
       continue;
     }
@@ -63,10 +78,12 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       cityTo,
       countryTo: item?.countryTo?.name ?? "",
       flag: flagEmoji(item?.countryTo?.code ?? ""),
-      dateOut,
-      dateBack,
-      nights:
-        typeof item?.nightsInDest === "number" ? item.nightsInDest : 0,
+      outDepart,
+      outArrive,
+      backDepart,
+      backArrive,
+      stayMinutes: naiveMinutes(backDepart) - naiveMinutes(outArrive),
+      nights: typeof item?.nightsInDest === "number" ? item.nightsInDest : 0,
       price,
       currency,
       deepLink,
