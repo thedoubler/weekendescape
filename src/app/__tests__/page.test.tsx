@@ -146,4 +146,16 @@ describe("Home page", () => {
     );
     expect(weekendsCalls.length).toBe(0);
   });
+
+  it("hides the refine filters until the Refine button is clicked", async () => {
+    grantGeolocation();
+    vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+
+    expect(screen.queryByRole("button", { name: "Aug" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /refine/i }));
+    expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
+  });
 });

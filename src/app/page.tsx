@@ -99,6 +99,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [showRefine, setShowRefine] = useState(false);
   const bootstrapped = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const styleRef = useRef(style);
@@ -216,6 +217,10 @@ export default function Home() {
     available.length > 0 ||
     availableContinents.length > 1 ||
     bounds.max > bounds.min;
+  const activeFilters =
+    selectedMonths.length +
+    selectedContinents.length +
+    (cap < bounds.max ? 1 : 0);
 
   return (
     <main className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
@@ -276,15 +281,33 @@ export default function Home() {
       {/* Results header + sort */}
       {searched && (
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <span className="text-base font-medium">
-            {loading
-              ? "Searching…"
-              : error
-                ? "Couldn’t load results"
-                : `${visible.length} weekend escape${
-                    visible.length === 1 ? "" : "s"
-                  }`}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-base font-medium">
+              {loading
+                ? "Searching…"
+                : error
+                  ? "Couldn’t load results"
+                  : `${visible.length} weekend escape${
+                      visible.length === 1 ? "" : "s"
+                    }`}
+            </span>
+            {hasRefinements && (
+              <button
+                type="button"
+                onClick={() => setShowRefine((v) => !v)}
+                aria-expanded={showRefine}
+                className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-sm text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+              >
+                Refine
+                {activeFilters > 0 && (
+                  <span className="rounded-full bg-black px-1.5 text-xs text-white dark:bg-white dark:text-black">
+                    {activeFilters}
+                  </span>
+                )}
+                <span aria-hidden>{showRefine ? "▴" : "▾"}</span>
+              </button>
+            )}
+          </div>
           <Field label="Sort by" align="end">
             <SegmentedControl
               options={SORT_OPTIONS}
@@ -297,11 +320,8 @@ export default function Home() {
       )}
 
       {/* Refine — instant filters on the loaded results */}
-      {searched && hasRefinements && (
+      {searched && showRefine && hasRefinements && (
         <div className="flex flex-col gap-3 rounded-xl border border-black/10 p-4 dark:border-white/10">
-          <span className="text-xs font-medium uppercase tracking-wide text-black/40 dark:text-white/40">
-            Refine
-          </span>
           {available.length > 0 && (
             <RefineRow label="Month">
               <MonthFilter
