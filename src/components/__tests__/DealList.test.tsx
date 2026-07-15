@@ -17,4 +17,18 @@ describe("DealList", () => {
     render(<DealList deals={[]} loading={false} error={null} />);
     expect(screen.getByText(/no cheap weekend deals/i)).toBeInTheDocument();
   });
+
+  it("shows a custom empty message when provided", () => {
+    render(
+      <DealList
+        deals={[]}
+        loading={false}
+        error={null}
+        emptyMessage="No deals in the selected months"
+      />
+    );
+    expect(
+      screen.getByText("No deals in the selected months")
+    ).toBeInTheDocument();
+  });
 });
