@@ -17,6 +17,10 @@ const base: Deal = {
   backArrive: "2026-08-10T19:35:00.000Z",
   stayMinutes: 2915,
   nights: 2,
+  outStops: 0,
+  backStops: 0,
+  outVia: [],
+  backVia: [],
   price: 37,
   currency: "EUR",
   deepLink: "https://kiwi.com/deep/ibiza",
@@ -46,6 +50,26 @@ describe("DealCard", () => {
   it("shows a value verdict", () => {
     render(<DealCard deal={base} />);
     expect(screen.getByText(/great value/i)).toBeInTheDocument();
+  });
+
+  it("labels a direct trip and shows layover detail on expand", () => {
+    render(<DealCard deal={base} />);
+    expect(screen.getByText("Direct")).toBeInTheDocument();
+
+    const layover: Deal = {
+      ...base,
+      outStops: 1,
+      backStops: 1,
+      outVia: ["MAD"],
+      backVia: ["MAD"],
+    };
+    render(<DealCard deal={layover} />);
+    expect(screen.getByText("1 stop each way")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getAllByRole("button", { expanded: false })[1]
+    );
+    // via MAD appears on both the outbound and return lines
+    expect(screen.getAllByText(/via MAD/)).toHaveLength(2);
   });
 
   it("renders holiday badges when present", () => {

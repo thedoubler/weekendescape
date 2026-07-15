@@ -17,6 +17,10 @@ export interface Deal {
   backArrive: string;
   stayMinutes: number;
   nights: number;
+  outStops: number;
+  backStops: number;
+  outVia: string[];
+  backVia: string[];
   price: number;
   currency: string;
   deepLink: string;
@@ -39,6 +43,7 @@ export function flagEmoji(countryCode: string): string {
 interface RouteLeg {
   local_departure?: string;
   local_arrival?: string;
+  flyTo?: string;
   return?: number;
 }
 
@@ -62,13 +67,19 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
   const deals: Deal[] = [];
   for (const item of data) {
     const route: RouteLeg[] = Array.isArray(item?.route) ? item.route : [];
-    const outLeg = route.find((l) => l?.return === 0) ?? route[0];
-    const backLeg = route.find((l) => l?.return === 1);
+    const outSegs = route.filter((l) => l?.return === 0);
+    const inSegs = route.filter((l) => l?.return === 1);
+    const outFirst = outSegs[0];
+    const outLast = outSegs[outSegs.length - 1];
+    const inFirst = inSegs[0];
+    const inLast = inSegs[inSegs.length - 1];
 
-    const outDepart = isoOrNull(outLeg?.local_departure);
-    const outArrive = isoOrNull(outLeg?.local_arrival);
-    const backDepart = isoOrNull(backLeg?.local_departure);
-    const backArrive = isoOrNull(backLeg?.local_arrival);
+    // Departures are the first segment of each direction; arrivals are the LAST
+    // segment (the final destination / home), not the first layover.
+    const outDepart = isoOrNull(outFirst?.local_departure);
+    const outArrive = isoOrNull(outLast?.local_arrival);
+    const backDepart = isoOrNull(inFirst?.local_departure);
+    const backArrive = isoOrNull(inLast?.local_arrival);
 
     const cityTo = item?.cityTo;
     const price = item?.price;
@@ -104,6 +115,16 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       backArrive,
       stayMinutes: naiveMinutes(backDepart) - naiveMinutes(outArrive),
       nights: typeof item?.nightsInDest === "number" ? item.nightsInDest : 0,
+      outStops: Math.max(0, outSegs.length - 1),
+      backStops: Math.max(0, inSegs.length - 1),
+      outVia: outSegs
+        .slice(0, -1)
+        .map((s) => s.flyTo)
+        .filter((c): c is string => Boolean(c)),
+      backVia: inSegs
+        .slice(0, -1)
+        .map((s) => s.flyTo)
+        .filter((c): c is string => Boolean(c)),
       price,
       currency,
       deepLink,

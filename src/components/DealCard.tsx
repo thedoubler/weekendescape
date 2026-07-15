@@ -13,6 +13,7 @@ import {
   travelMinutes,
   valueVerdict,
   holidayDate,
+  stopsSummary,
 } from "@/lib/format";
 import { DayBlocks } from "@/components/DayBlocks";
 
@@ -31,6 +32,8 @@ export function DealCard({ deal }: { deal: Deal }) {
     night: isNightHour(deal.backDepart),
   };
   const returnPlusOne = crossesMidnight(deal.backDepart, deal.backArrive);
+  const direct = deal.outStops === 0 && deal.backStops === 0;
+  const stops = stopsSummary(deal.outStops, deal.backStops);
   const verdict = valueVerdict(
     deal.stayMinutes,
     travelMinutes(deal.outDepart, deal.outArrive, deal.backDepart, deal.backArrive)
@@ -59,6 +62,15 @@ export function DealCard({ deal }: { deal: Deal }) {
             <span className="text-sm opacity-60">{deal.countryTo}</span>
             <span className="rounded-full border border-black/15 px-2 py-0.5 text-xs opacity-70 dark:border-white/20">
               {deal.flyFrom} → {deal.flyTo}
+            </span>
+            <span
+              className={
+                direct
+                  ? "text-xs opacity-50"
+                  : "rounded-full border border-amber-300/60 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200"
+              }
+            >
+              {stops}
             </span>
           </div>
           <div className="mt-2">
@@ -111,11 +123,25 @@ export function DealCard({ deal }: { deal: Deal }) {
             Outbound · {dayLabel(deal.outDepart)} {timeLabel(deal.outDepart)}{" "}
             {deal.flyFrom} → {deal.flyTo} {timeLabel(deal.outArrive)}
             {arrival.plusOne ? " +1" : ""}
+            {deal.outStops > 0 && (
+              <span className="opacity-60">
+                {" "}
+                · {deal.outStops} stop{deal.outStops > 1 ? "s" : ""} via{" "}
+                {deal.outVia.join(", ")}
+              </span>
+            )}
           </div>
           <div>
             Return · {dayLabel(deal.backDepart)} {timeLabel(deal.backDepart)}{" "}
             {deal.flyTo} → {deal.flyFrom} {timeLabel(deal.backArrive)}
             {returnPlusOne ? " +1" : ""}
+            {deal.backStops > 0 && (
+              <span className="opacity-60">
+                {" "}
+                · {deal.backStops} stop{deal.backStops > 1 ? "s" : ""} via{" "}
+                {deal.backVia.join(", ")}
+              </span>
+            )}
           </div>
         </div>
       )}

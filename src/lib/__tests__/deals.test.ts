@@ -63,12 +63,49 @@ describe("normalizeDeals", () => {
       backArrive: "2026-08-10T23:45:00.000Z",
       stayMinutes: 2915,
       nights: 2,
+      outStops: 0,
+      backStops: 0,
+      outVia: [],
+      backVia: [],
       price: 37,
       currency: "EUR",
       deepLink: "https://kiwi.com/deep/ibiza",
     });
     expect(deals[1].cityTo).toBe("Lisbon");
     expect(deals[1].flyTo).toBe("LIS");
+  });
+
+  it("uses the final segment's arrival and reports stops for a layover", () => {
+    const layover = {
+      data: [
+        {
+          cityTo: "Alghero",
+          flyFrom: "BCN",
+          flyTo: "AHO",
+          countryFrom: { code: "ES", name: "Spain" },
+          countryTo: { code: "IT", name: "Italy" },
+          price: 200,
+          deep_link: "https://kiwi.com/deep/alghero",
+          nightsInDest: 2,
+          route: [
+            { local_departure: "2026-07-24T20:30:00.000Z", local_arrival: "2026-07-24T21:55:00.000Z", flyTo: "MAD", return: 0 },
+            { local_departure: "2026-07-25T01:00:00.000Z", local_arrival: "2026-07-25T02:50:00.000Z", flyTo: "AHO", return: 0 },
+            { local_departure: "2026-07-26T03:45:00.000Z", local_arrival: "2026-07-26T05:50:00.000Z", flyTo: "MAD", return: 1 },
+            { local_departure: "2026-07-26T07:30:00.000Z", local_arrival: "2026-07-26T08:55:00.000Z", flyTo: "BCN", return: 1 },
+          ],
+        },
+      ],
+    };
+    const [deal] = normalizeDeals(layover, "EUR");
+    // depart origin at first segment, arrive destination at LAST segment
+    expect(deal.outDepart).toBe("2026-07-24T20:30:00.000Z");
+    expect(deal.outArrive).toBe("2026-07-25T02:50:00.000Z");
+    expect(deal.backDepart).toBe("2026-07-26T03:45:00.000Z");
+    expect(deal.backArrive).toBe("2026-07-26T08:55:00.000Z");
+    expect(deal.outStops).toBe(1);
+    expect(deal.backStops).toBe(1);
+    expect(deal.outVia).toEqual(["MAD"]);
+    expect(deal.backVia).toEqual(["MAD"]);
   });
 
   it("returns an empty array when data is missing", () => {

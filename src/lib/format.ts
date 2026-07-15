@@ -54,6 +54,16 @@ export function daysUntil(iso: string, from: Date): number {
   return Math.round((target - base) / 86400000);
 }
 
+export function stopsSummary(outStops: number, backStops: number): string {
+  if (outStops === 0 && backStops === 0) return "Direct";
+  if (outStops === backStops) {
+    return `${outStops} stop${outStops > 1 ? "s" : ""} each way`;
+  }
+  const leg = (n: number, dir: string) =>
+    n === 0 ? `direct ${dir}` : `${n} stop${n > 1 ? "s" : ""} ${dir}`;
+  return `${leg(outStops, "out")}, ${leg(backStops, "back")}`;
+}
+
 export function holidayDate(dateStr: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   if (!m) return "";

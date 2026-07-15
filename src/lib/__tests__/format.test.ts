@@ -10,7 +10,18 @@ import {
   travelMinutes,
   valueVerdict,
   holidayDate,
+  stopsSummary,
 } from "@/lib/format";
+
+describe("stopsSummary", () => {
+  it("summarizes direct and layover trips", () => {
+    expect(stopsSummary(0, 0)).toBe("Direct");
+    expect(stopsSummary(1, 1)).toBe("1 stop each way");
+    expect(stopsSummary(2, 2)).toBe("2 stops each way");
+    expect(stopsSummary(1, 0)).toBe("1 stop out, direct back");
+    expect(stopsSummary(0, 2)).toBe("direct out, 2 stops back");
+  });
+});
 
 describe("holidayDate", () => {
   it("formats a YYYY-MM-DD date as weekday day month", () => {
