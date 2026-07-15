@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { weekendStyleToParams } from "@/lib/weekend";
 
 describe("weekendStyleToParams", () => {
-  it("maps strict to Sat out / Sun back, 1 night", () => {
+  it("maps strict to Fri out / Sun back, 1-2 nights", () => {
     expect(weekendStyleToParams("strict")).toEqual({
-      flyDays: [6],
+      flyDays: [5],
       retFlyDays: [0],
       nightsFrom: 1,
-      nightsTo: 1,
+      nightsTo: 2,
     });
   });
 

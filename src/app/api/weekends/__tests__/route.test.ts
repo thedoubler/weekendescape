@@ -81,10 +81,10 @@ describe("GET /api/weekends", () => {
     const params = (axios.get as any).mock.calls[0][1].params;
     expect(params.fly_from).toBe("BCN");
     expect(params.flight_type).toBe("round");
-    expect(params.fly_days).toBe("6");
+    expect(params.fly_days).toBe("5");
     expect(params.ret_fly_days).toBe("0");
     expect(params.nights_in_dst_from).toBe(1);
-    expect(params.nights_in_dst_to).toBe(1);
+    expect(params.nights_in_dst_to).toBe(2);
     expect(params.one_for_city).toBe(1);
     expect(params.sort).toBe("price");
     expect(params.curr).toBe("EUR");
