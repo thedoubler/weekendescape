@@ -26,11 +26,17 @@ const SORT_OPTIONS = [
   { value: "soonest" as SortKey, label: "Soonest" },
   { value: "cheapest" as SortKey, label: "Cheapest" },
 ];
+const STOP_OPTIONS = [
+  { value: "any" as StopMode, label: "Any" },
+  { value: "direct" as StopMode, label: "Direct" },
+];
+type StopMode = "any" | "direct";
 
 export default function Home() {
   const [home, setHome] = useState("");
   const [style, setStyle] = useState<WeekendStyle>("frimon");
   const [months, setMonths] = useState(3);
+  const [stopMode, setStopMode] = useState<StopMode>("any");
   const [sort, setSort] = useState<SortKey>("soonest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
@@ -45,6 +51,8 @@ export default function Home() {
   styleRef.current = style;
   const monthsRef = useRef(months);
   monthsRef.current = months;
+  const stopModeRef = useRef(stopMode);
+  stopModeRef.current = stopMode;
 
   async function runSearch(code: string) {
     const c = code.trim().toUpperCase();
@@ -61,6 +69,7 @@ export default function Home() {
         style: styleRef.current,
         months: String(monthsRef.current),
       });
+      if (stopModeRef.current === "direct") qs.set("direct", "1");
       const res = await fetch(`/api/weekends?${qs.toString()}`);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
@@ -111,7 +120,7 @@ export default function Home() {
     if (!bootstrapped.current || !home) return;
     runSearch(home);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, months]);
+  }, [style, months, stopMode]);
 
   const available = useMemo(() => monthsOf(rawDeals), [rawDeals]);
   const availableContinents = useMemo(
@@ -180,6 +189,12 @@ export default function Home() {
           ariaLabel="Timeline"
         />
         <SegmentedControl
+          options={STOP_OPTIONS}
+          value={stopMode}
+          onChange={setStopMode}
+          ariaLabel="Stops"
+        />
+        <SegmentedControl
           options={SORT_OPTIONS}
           value={sort}
           onChange={setSort}
@@ -210,7 +225,7 @@ export default function Home() {
           deals={visible}
           loading={loading}
           error={error}
-          cheapest={{ style, months }}
+          cheapest={{ style, months, direct: stopMode === "direct" }}
           emptyMessage={
             selectedMonths.length > 0 || selectedContinents.length > 0
               ? "No deals match these filters."

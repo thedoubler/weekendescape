@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const flyFrom = searchParams.get("flyFrom");
     const flyTo = searchParams.get("flyTo");
+    const direct = searchParams.get("direct") === "1";
     const style = (searchParams.get("style") || "frimon") as WeekendStyle;
     const months = parseInt(searchParams.get("months") || "3", 10);
     const maxPriceRaw = searchParams.get("maxPrice");
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
         ...(flyTo
           ? { fly_to: flyTo, one_for_city: 0 }
           : { one_for_city: 1 }),
+        ...(direct ? { max_stopovers: 0 } : {}),
         sort: "price",
         curr: currency,
         limit: 200,

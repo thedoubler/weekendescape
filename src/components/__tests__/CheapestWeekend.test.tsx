@@ -18,8 +18,8 @@ const cheaper = {
   nights: 2,
   outStops: 0,
   backStops: 0,
-  outVia: [],
-  backVia: [],
+  outLayovers: [],
+  backLayovers: [],
   price: 36,
   currency: "EUR",
   deepLink: "https://kiwi.com/deep/ibiza-36",
@@ -42,6 +42,7 @@ describe("CheapestWeekend", () => {
         currentPrice={41}
         style="frimon"
         months={3}
+        direct={false}
       />
     );
 
@@ -70,6 +71,7 @@ describe("CheapestWeekend", () => {
         currentPrice={41}
         style="frimon"
         months={3}
+        direct={false}
       />
     );
 

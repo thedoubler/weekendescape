@@ -12,6 +12,7 @@ export function CheapestWeekend({
   currentPrice,
   style,
   months,
+  direct,
 }: {
   flyFrom: string;
   flyTo: string;
@@ -19,6 +20,7 @@ export function CheapestWeekend({
   currentPrice: number;
   style: WeekendStyle;
   months: number;
+  direct: boolean;
 }) {
   const [loading, setLoading] = useState(true);
   const [deal, setDeal] = useState<Deal | null>(null);
@@ -34,6 +36,7 @@ export function CheapestWeekend({
           style,
           months: String(months),
         });
+        if (direct) qs.set("direct", "1");
         const res = await fetch(`/api/weekends?${qs.toString()}`);
         const body = await res.json();
         if (!cancelled) {
@@ -50,7 +53,7 @@ export function CheapestWeekend({
     return () => {
       cancelled = true;
     };
-  }, [flyFrom, flyTo, style, months]);
+  }, [flyFrom, flyTo, style, months, direct]);
 
   if (loading)
     return (

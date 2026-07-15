@@ -19,8 +19,8 @@ const base: Deal = {
   nights: 2,
   outStops: 0,
   backStops: 0,
-  outVia: [],
-  backVia: [],
+  outLayovers: [],
+  backLayovers: [],
   price: 37,
   currency: "EUR",
   deepLink: "https://kiwi.com/deep/ibiza",
@@ -60,16 +60,17 @@ describe("DealCard", () => {
       ...base,
       outStops: 1,
       backStops: 1,
-      outVia: ["MAD"],
-      backVia: ["MAD"],
+      outLayovers: [{ at: "MAD", minutes: 185 }],
+      backLayovers: [{ at: "MAD", minutes: 100 }],
     };
     render(<DealCard deal={layover} />);
     expect(screen.getByText("1 stop each way")).toBeInTheDocument();
     fireEvent.click(
       screen.getAllByRole("button", { expanded: false })[1]
     );
-    // via MAD appears on both the outbound and return lines
-    expect(screen.getAllByText(/via MAD/)).toHaveLength(2);
+    // layover airport + duration appears on the outbound and return lines
+    expect(screen.getByText(/MAD \(3h 5m\)/)).toBeInTheDocument();
+    expect(screen.getByText(/MAD \(1h 40m\)/)).toBeInTheDocument();
   });
 
   it("renders holiday badges when present", () => {

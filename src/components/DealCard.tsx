@@ -24,7 +24,7 @@ export function DealCard({
   cheapest,
 }: {
   deal: Deal;
-  cheapest?: { style: WeekendStyle; months: number };
+  cheapest?: { style: WeekendStyle; months: number; direct: boolean };
 }) {
   const [open, setOpen] = useState(false);
   const cells = dayBlocks(deal.outArrive, deal.backDepart);
@@ -135,7 +135,9 @@ export function DealCard({
               <span className="opacity-60">
                 {" "}
                 · {deal.outStops} stop{deal.outStops > 1 ? "s" : ""} via{" "}
-                {deal.outVia.join(", ")}
+                {deal.outLayovers
+                  .map((l) => `${l.at} (${durationLabel(l.minutes)})`)
+                  .join(", ")}
               </span>
             )}
           </div>
@@ -147,7 +149,9 @@ export function DealCard({
               <span className="opacity-60">
                 {" "}
                 · {deal.backStops} stop{deal.backStops > 1 ? "s" : ""} via{" "}
-                {deal.backVia.join(", ")}
+                {deal.backLayovers
+                  .map((l) => `${l.at} (${durationLabel(l.minutes)})`)
+                  .join(", ")}
               </span>
             )}
           </div>
@@ -160,6 +164,7 @@ export function DealCard({
                 currentPrice={deal.price}
                 style={cheapest.style}
                 months={cheapest.months}
+                direct={cheapest.direct}
               />
             </div>
           )}

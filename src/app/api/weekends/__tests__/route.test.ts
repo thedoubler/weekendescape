@@ -156,6 +156,20 @@ describe("GET /api/weekends", () => {
     expect(params.one_for_city).toBe(0);
   });
 
+  it("restricts to direct flights when direct=1", async () => {
+    (axios.get as any).mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN&direct=1"));
+    expect((axios.get as any).mock.calls[0][1].params.max_stopovers).toBe(0);
+  });
+
+  it("omits max_stopovers when not direct", async () => {
+    (axios.get as any).mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN"));
+    expect(
+      "max_stopovers" in (axios.get as any).mock.calls[0][1].params
+    ).toBe(false);
+  });
+
   it("enriches deals with holiday info", async () => {
     (axios.get as any).mockResolvedValue({
       status: 200,

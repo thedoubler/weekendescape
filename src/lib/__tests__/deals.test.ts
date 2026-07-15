@@ -65,8 +65,8 @@ describe("normalizeDeals", () => {
       nights: 2,
       outStops: 0,
       backStops: 0,
-      outVia: [],
-      backVia: [],
+      outLayovers: [],
+      backLayovers: [],
       price: 37,
       currency: "EUR",
       deepLink: "https://kiwi.com/deep/ibiza",
@@ -104,8 +104,10 @@ describe("normalizeDeals", () => {
     expect(deal.backArrive).toBe("2026-07-26T08:55:00.000Z");
     expect(deal.outStops).toBe(1);
     expect(deal.backStops).toBe(1);
-    expect(deal.outVia).toEqual(["MAD"]);
-    expect(deal.backVia).toEqual(["MAD"]);
+    // BCN->MAD lands 21:55, MAD->AHO departs next day 01:00 -> 3h05 = 185 min
+    expect(deal.outLayovers).toEqual([{ at: "MAD", minutes: 185 }]);
+    // AHO->MAD lands 05:50, MAD->BCN departs 07:30 -> 1h40 = 100 min
+    expect(deal.backLayovers).toEqual([{ at: "MAD", minutes: 100 }]);
   });
 
   it("returns an empty array when data is missing", () => {

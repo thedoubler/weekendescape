@@ -3,6 +3,11 @@ export interface HolidayRef {
   name: string;
 }
 
+export interface Layover {
+  at: string;
+  minutes: number;
+}
+
 export interface Deal {
   cityTo: string;
   countryTo: string;
@@ -19,8 +24,8 @@ export interface Deal {
   nights: number;
   outStops: number;
   backStops: number;
-  outVia: string[];
-  backVia: string[];
+  outLayovers: Layover[];
+  backLayovers: Layover[];
   price: number;
   currency: string;
   deepLink: string;
@@ -56,6 +61,20 @@ function isoOrNull(iso: string | undefined): string | null {
 function naiveMinutes(iso: string): number {
   const m = ISO_RE.exec(iso)!;
   return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000;
+}
+
+// Layover = gap between one segment's arrival and the next segment's departure.
+function layoversOf(segs: RouteLeg[]): Layover[] {
+  const out: Layover[] = [];
+  for (let i = 0; i < segs.length - 1; i++) {
+    const arr = segs[i].local_arrival;
+    const dep = segs[i + 1].local_departure;
+    const at = segs[i].flyTo;
+    if (at && arr && dep && ISO_RE.test(arr) && ISO_RE.test(dep)) {
+      out.push({ at, minutes: naiveMinutes(dep) - naiveMinutes(arr) });
+    }
+  }
+  return out;
 }
 
 export function normalizeDeals(raw: unknown, currency: string): Deal[] {
@@ -117,14 +136,8 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       nights: typeof item?.nightsInDest === "number" ? item.nightsInDest : 0,
       outStops: Math.max(0, outSegs.length - 1),
       backStops: Math.max(0, inSegs.length - 1),
-      outVia: outSegs
-        .slice(0, -1)
-        .map((s) => s.flyTo)
-        .filter((c): c is string => Boolean(c)),
-      backVia: inSegs
-        .slice(0, -1)
-        .map((s) => s.flyTo)
-        .filter((c): c is string => Boolean(c)),
+      outLayovers: layoversOf(outSegs),
+      backLayovers: layoversOf(inSegs),
       price,
       currency,
       deepLink,

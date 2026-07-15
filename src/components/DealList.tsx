@@ -13,7 +13,7 @@ export function DealList({
   loading: boolean;
   error: string | null;
   emptyMessage?: string;
-  cheapest?: { style: WeekendStyle; months: number };
+  cheapest?: { style: WeekendStyle; months: number; direct: boolean };
 }) {
   if (loading) return <p className="opacity-70">Searching for escapes…</p>;
   if (error) return <p className="text-red-500">{error}</p>;
