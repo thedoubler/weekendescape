@@ -3,12 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { WeekendStyle } from "@/lib/weekend";
 import type { Deal } from "@/lib/deals";
-import { type SortKey, sortDeals, monthsOf, filterByMonths } from "@/lib/sort";
+import {
+  type SortKey,
+  sortDeals,
+  monthsOf,
+  filterByMonths,
+  priceRange,
+  filterByMaxPrice,
+} from "@/lib/sort";
 import { continentsOf, filterByContinents } from "@/lib/continents";
 import { loadHome, saveHome } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
+import { PriceFilter } from "@/components/PriceFilter";
 import { DealList } from "@/components/DealList";
 
 const STYLE_OPTIONS = [
@@ -40,6 +48,7 @@ export default function Home() {
   const [sort, setSort] = useState<SortKey>("soonest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
+  const [maxPrice, setMaxPrice] = useState(0);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,16 +136,25 @@ export default function Home() {
     () => continentsOf(rawDeals),
     [rawDeals]
   );
+  const bounds = useMemo(() => priceRange(rawDeals), [rawDeals]);
+  // Reset the price cap to "show everything" whenever a new search lands.
+  useEffect(() => {
+    setMaxPrice(bounds.max);
+  }, [bounds.max]);
+  const cap = maxPrice > 0 ? maxPrice : bounds.max;
   const visible = useMemo(
     () =>
       sortDeals(
-        filterByContinents(
-          filterByMonths(rawDeals, selectedMonths),
-          selectedContinents
+        filterByMaxPrice(
+          filterByContinents(
+            filterByMonths(rawDeals, selectedMonths),
+            selectedContinents
+          ),
+          cap
         ),
         sort
       ),
-    [rawDeals, selectedMonths, selectedContinents, sort]
+    [rawDeals, selectedMonths, selectedContinents, cap, sort]
   );
 
   function toggleMonth(m: string) {
@@ -220,6 +238,14 @@ export default function Home() {
         />
       )}
 
+      <PriceFilter
+        min={bounds.min}
+        max={bounds.max}
+        value={cap}
+        currency={rawDeals[0]?.currency ?? "EUR"}
+        onChange={setMaxPrice}
+      />
+
       {searched && (
         <DealList
           deals={visible}
@@ -227,7 +253,9 @@ export default function Home() {
           error={error}
           cheapest={{ style, months, direct: stopMode === "direct" }}
           emptyMessage={
-            selectedMonths.length > 0 || selectedContinents.length > 0
+            selectedMonths.length > 0 ||
+            selectedContinents.length > 0 ||
+            cap < bounds.max
               ? "No deals match these filters."
               : undefined
           }

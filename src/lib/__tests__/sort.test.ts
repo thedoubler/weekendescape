@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { sortDeals, monthsOf, filterByMonths } from "@/lib/sort";
+import {
+  sortDeals,
+  monthsOf,
+  filterByMonths,
+  priceRange,
+  filterByMaxPrice,
+} from "@/lib/sort";
 import type { Deal } from "@/lib/deals";
 
 function d(cityTo: string, outDepart: string, price: number): Deal {
@@ -58,6 +64,27 @@ describe("sortDeals", () => {
 describe("monthsOf", () => {
   it("returns distinct months ascending", () => {
     expect(monthsOf(deals)).toEqual(["2026-08", "2026-09"]);
+  });
+});
+
+describe("priceRange", () => {
+  it("returns the min and max price", () => {
+    expect(priceRange(deals)).toEqual({ min: 37, max: 55 });
+  });
+  it("returns zeros for an empty list", () => {
+    expect(priceRange([])).toEqual({ min: 0, max: 0 });
+  });
+});
+
+describe("filterByMaxPrice", () => {
+  it("keeps deals at or below the max price", () => {
+    expect(filterByMaxPrice(deals, 40).map((x) => x.cityTo).sort()).toEqual([
+      "Ibiza",
+      "Paris",
+    ]);
+  });
+  it("keeps everything when the cap is the max", () => {
+    expect(filterByMaxPrice(deals, 55)).toHaveLength(3);
   });
 });
 
