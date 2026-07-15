@@ -121,4 +121,19 @@ describe("Home page", () => {
     expect(weekendsCalls.length).toBe(1);
     expect(String(weekendsCalls[0][0])).toContain("flyFrom=MAD");
   });
+
+  it("focuses the input and does not search when geolocation is denied and no home is saved", async () => {
+    denyGeolocation();
+    const fetchMock = mockFetch();
+    vi.spyOn(global, "fetch").mockImplementation(fetchMock as any);
+
+    render(<Home />);
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/home airport/i)).toHaveFocus()
+    );
+    const weekendsCalls = fetchMock.mock.calls.filter((c) =>
+      String(c[0]).includes("/api/weekends")
+    );
+    expect(weekendsCalls.length).toBe(0);
+  });
 });

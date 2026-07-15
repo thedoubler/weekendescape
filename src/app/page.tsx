@@ -36,10 +36,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const bootstrapped = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const lastSearched = useRef("");
 
   async function runSearch(code: string) {
     const c = code.trim().toUpperCase();
     if (!c) return;
+    lastSearched.current = c;
     setHome(c);
     saveHome(c);
     setLoading(true);
@@ -71,6 +74,7 @@ export default function Home() {
     const fallback = () => {
       const saved = loadHome();
       if (saved) runSearch(saved);
+      else inputRef.current?.focus();
     };
 
     if (!navigator.geolocation) {
@@ -123,9 +127,12 @@ export default function Home() {
 
       <div className="flex flex-wrap items-center gap-2">
         <input
+          ref={inputRef}
           value={home}
           onChange={(e) => setHome(e.target.value)}
-          onBlur={() => runSearch(home)}
+          onBlur={() => {
+            if (home.trim().toUpperCase() !== lastSearched.current) runSearch(home);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") runSearch(home);
           }}
