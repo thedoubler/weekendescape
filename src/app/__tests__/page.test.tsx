@@ -158,4 +158,31 @@ describe("Home page", () => {
     fireEvent.click(screen.getByRole("button", { name: /refine/i }));
     expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
   });
+
+  it("hides short-layover trips by default and reveals them on demand", async () => {
+    grantGeolocation();
+    const doha = {
+      ...rome,
+      cityTo: "Doha",
+      flyTo: "DOH",
+      outStops: 1,
+      backStops: 1,
+      outLayovers: [{ at: "IST", minutes: 120 }],
+      stayMinutes: 600, // under a day
+      deepLink: "https://kiwi.com/deep/doha",
+    };
+    vi.spyOn(global, "fetch").mockImplementation((async (url: string) => {
+      if (String(url).includes("/api/airports")) {
+        return { ok: true, json: async () => ({ airports: [{ code: "BCN" }] }) } as Response;
+      }
+      return { ok: true, json: async () => ({ deals: [ibiza, doha] }) } as Response;
+    }) as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+    expect(screen.queryByText("Doha")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /show 1 hidden/i }));
+    expect(screen.getByText("Doha")).toBeInTheDocument();
+  });
 });

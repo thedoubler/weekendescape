@@ -34,6 +34,14 @@ export interface Deal {
   destHoliday?: HolidayRef | null;
 }
 
+// A getaway that connects (has a layover) AND gives under a full day at the
+// destination isn't much of a weekend escape — hidden by default in the UI.
+export function isShortLayoverTrip(deal: Deal): boolean {
+  return (
+    (deal.outStops > 0 || deal.backStops > 0) && deal.stayMinutes < 24 * 60
+  );
+}
+
 export function flagEmoji(countryCode: string): string {
   if (!countryCode || countryCode.length !== 2) return "🏳️";
   const A = 0x1f1e6;

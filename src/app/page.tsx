@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { WeekendStyle } from "@/lib/weekend";
-import type { Deal } from "@/lib/deals";
+import { type Deal, isShortLayoverTrip } from "@/lib/deals";
 import {
   type SortKey,
   sortDeals,
@@ -100,6 +100,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const bootstrapped = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const styleRef = useRef(style);
@@ -186,7 +187,7 @@ export default function Home() {
     setMaxPrice(bounds.max);
   }, [bounds.max]);
   const cap = maxPrice > 0 ? maxPrice : bounds.max;
-  const visible = useMemo(
+  const filtered = useMemo(
     () =>
       sortDeals(
         filterByMaxPrice(
@@ -200,6 +201,14 @@ export default function Home() {
       ),
     [rawDeals, selectedMonths, selectedContinents, cap, sort]
   );
+  // Layover trips with under a day at the destination are hidden by default.
+  const hiddenCount = useMemo(
+    () => filtered.filter(isShortLayoverTrip).length,
+    [filtered]
+  );
+  const visible = showHidden
+    ? filtered
+    : filtered.filter((d) => !isShortLayoverTrip(d));
 
   function toggleMonth(m: string) {
     setSelectedMonths((cur) =>
@@ -305,6 +314,18 @@ export default function Home() {
                   </span>
                 )}
                 <span aria-hidden>{showRefine ? "▴" : "▾"}</span>
+              </button>
+            )}
+            {!loading && hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowHidden((v) => !v)}
+                title="Trips with a layover and under a day at the destination"
+                className="text-sm text-black/50 underline decoration-dotted underline-offset-2 hover:text-black/80 dark:text-white/50 dark:hover:text-white/80"
+              >
+                {showHidden
+                  ? "Hide short-layover trips"
+                  : `Show ${hiddenCount} hidden`}
               </button>
             )}
           </div>

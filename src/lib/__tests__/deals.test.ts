@@ -1,5 +1,52 @@
 import { describe, it, expect } from "vitest";
-import { flagEmoji, normalizeDeals } from "@/lib/deals";
+import {
+  flagEmoji,
+  normalizeDeals,
+  isShortLayoverTrip,
+  type Deal,
+} from "@/lib/deals";
+
+function dealWith(partial: Partial<Deal>): Deal {
+  return {
+    cityTo: "X",
+    countryTo: "",
+    flag: "🏳️",
+    flyFrom: "BCN",
+    flyTo: "XXX",
+    countryFromCode: "ES",
+    countryToCode: "XX",
+    outDepart: "2026-08-08T21:05:00.000Z",
+    outArrive: "2026-08-08T22:10:00.000Z",
+    backDepart: "2026-08-10T18:00:00.000Z",
+    backArrive: "2026-08-10T19:35:00.000Z",
+    stayMinutes: 3000,
+    nights: 2,
+    outStops: 0,
+    backStops: 0,
+    outLayovers: [],
+    backLayovers: [],
+    price: 50,
+    currency: "EUR",
+    deepLink: "x",
+    ...partial,
+  };
+}
+
+describe("isShortLayoverTrip", () => {
+  it("is true only for a layover with under a day at the destination", () => {
+    expect(
+      isShortLayoverTrip(dealWith({ outStops: 1, stayMinutes: 600 }))
+    ).toBe(true);
+    // direct but short -> keep
+    expect(
+      isShortLayoverTrip(dealWith({ outStops: 0, stayMinutes: 600 }))
+    ).toBe(false);
+    // layover but a long stay -> keep
+    expect(
+      isShortLayoverTrip(dealWith({ backStops: 1, stayMinutes: 3000 }))
+    ).toBe(false);
+  });
+});
 
 describe("flagEmoji", () => {
   it("converts an ISO country code to a flag emoji", () => {
