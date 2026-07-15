@@ -3,7 +3,9 @@ export interface DayCell {
   day: number;
   month: string;
   isWeekend: boolean;
-  role: "depart" | "return" | "middle";
+  role: "arrive" | "leave" | "middle" | "solo";
+  fillStart: number;
+  fillEnd: number;
 }
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -70,25 +72,64 @@ export function durationLabel(minutes: number): string {
   return out.length ? out.join(" ") : "0m";
 }
 
-export function dayBlocks(outDepart: string, backArrive: string): DayCell[] {
-  const a = parts(outDepart);
-  const b = parts(backArrive);
+function hourFrac(p: { h: number; mi: number }): number {
+  return (p.h + p.mi / 60) / 24;
+}
+
+export function crossesMidnight(depIso: string, arrIso: string): boolean {
+  const d = parts(depIso);
+  const a = parts(arrIso);
+  if (!d || !a) return false;
+  return Date.UTC(a.y, a.mo - 1, a.d) > Date.UTC(d.y, d.mo - 1, d.d);
+}
+
+export function isNightHour(iso: string): boolean {
+  const p = parts(iso);
+  if (!p) return false;
+  return p.h >= 22 || p.h < 7;
+}
+
+export function dayBlocks(outArrive: string, backDepart: string): DayCell[] {
+  const a = parts(outArrive);
+  const b = parts(backDepart);
   if (!a || !b) return [];
   const DAY = 86400000;
   const start = Date.UTC(a.y, a.mo - 1, a.d);
   const end = Date.UTC(b.y, b.mo - 1, b.d);
   const n = Math.round((end - start) / DAY);
   if (n < 0 || n > 30) return [];
+  const aFrac = hourFrac(a);
+  const bFrac = hourFrac(b);
   const cells: DayCell[] = [];
   for (let i = 0; i <= n; i++) {
     const dt = new Date(start + i * DAY);
     const wd = dt.getUTCDay();
+    let role: DayCell["role"];
+    let fillStart = 0;
+    let fillEnd = 1;
+    if (n === 0) {
+      role = "solo";
+      fillStart = aFrac;
+      fillEnd = bFrac;
+    } else if (i === 0) {
+      role = "arrive";
+      fillStart = aFrac;
+      fillEnd = 1;
+    } else if (i === n) {
+      role = "leave";
+      fillStart = 0;
+      fillEnd = bFrac;
+    } else {
+      role = "middle";
+    }
     cells.push({
       weekday: WD[wd],
       day: dt.getUTCDate(),
       month: MO[dt.getUTCMonth()],
       isWeekend: wd === 0 || wd === 6,
-      role: i === 0 ? "depart" : i === n ? "return" : "middle",
+      role,
+      fillStart,
+      fillEnd,
     });
   }
   return cells;

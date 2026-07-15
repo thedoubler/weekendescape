@@ -3,8 +3,10 @@ import {
   dayLabel,
   timeLabel,
   durationLabel,
-  dayBlocks,
   daysUntil,
+  dayBlocks,
+  crossesMidnight,
+  isNightHour,
 } from "@/lib/format";
 
 describe("daysUntil", () => {
@@ -46,18 +48,54 @@ describe("durationLabel", () => {
 });
 
 describe("dayBlocks", () => {
-  it("builds one cell per day, accents the weekend, tags depart/return", () => {
+  it("models the stay with a usable-time gauge per day", () => {
     const cells = dayBlocks(
-      "2026-08-08T21:05:00.000Z",
-      "2026-08-10T23:45:00.000Z"
+      "2026-08-08T08:20:00.000Z", // land Sat 08:20
+      "2026-08-10T19:05:00.000Z"  // leave Mon 19:05
     );
-    expect(cells).toEqual([
-      { weekday: "Sat", day: 8, month: "Aug", isWeekend: true, role: "depart" },
-      { weekday: "Sun", day: 9, month: "Aug", isWeekend: true, role: "middle" },
-      { weekday: "Mon", day: 10, month: "Aug", isWeekend: false, role: "return" },
-    ]);
+    expect(cells).toHaveLength(3);
+    expect(cells[0]).toMatchObject({ weekday: "Sat", day: 8, month: "Aug", isWeekend: true, role: "arrive" });
+    expect(cells[0].fillStart).toBeCloseTo(8.3333 / 24, 3);
+    expect(cells[0].fillEnd).toBe(1);
+    expect(cells[1]).toMatchObject({ day: 9, role: "middle", fillStart: 0, fillEnd: 1 });
+    expect(cells[2]).toMatchObject({ weekday: "Mon", day: 10, role: "leave", fillStart: 0 });
+    expect(cells[2].fillEnd).toBeCloseTo(19.0833 / 24, 3);
   });
+
+  it("shows sliver gauges for a red-eye stay", () => {
+    const cells = dayBlocks(
+      "2026-08-08T23:40:00.000Z", // land Sat 23:40
+      "2026-08-10T06:00:00.000Z"  // leave Mon 06:00
+    );
+    expect(cells[0].fillStart).toBeCloseTo(23.6667 / 24, 3); // tiny usable slice
+    expect(cells[2].fillEnd).toBeCloseTo(6 / 24, 3);
+  });
+
+  it("produces one solo cell for a same-day stay", () => {
+    const cells = dayBlocks("2026-08-08T09:00:00.000Z", "2026-08-08T20:00:00.000Z");
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toMatchObject({ role: "solo" });
+    expect(cells[0].fillStart).toBeCloseTo(9 / 24, 3);
+    expect(cells[0].fillEnd).toBeCloseTo(20 / 24, 3);
+  });
+
   it("returns empty on bad input", () => {
     expect(dayBlocks("x", "y")).toEqual([]);
+  });
+});
+
+describe("crossesMidnight", () => {
+  it("is true when arrival is on a later calendar day", () => {
+    expect(crossesMidnight("2026-08-08T23:30:00.000Z", "2026-08-09T01:00:00.000Z")).toBe(true);
+    expect(crossesMidnight("2026-08-08T21:05:00.000Z", "2026-08-08T22:10:00.000Z")).toBe(false);
+  });
+});
+
+describe("isNightHour", () => {
+  it("flags late-night and early-morning local hours", () => {
+    expect(isNightHour("2026-08-08T23:40:00.000Z")).toBe(true);
+    expect(isNightHour("2026-08-08T06:00:00.000Z")).toBe(true);
+    expect(isNightHour("2026-08-08T08:20:00.000Z")).toBe(false);
+    expect(isNightHour("2026-08-08T19:05:00.000Z")).toBe(false);
   });
 });
