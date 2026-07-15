@@ -17,52 +17,46 @@ describe("normalizeDeals", () => {
     data: [
       {
         cityTo: "Lisbon",
+        flyFrom: "BCN",
+        flyTo: "LIS",
+        countryFrom: { code: "ES", name: "Spain" },
         countryTo: { code: "PT", name: "Portugal" },
         price: 89,
         deep_link: "https://kiwi.com/deep/lisbon",
         nightsInDest: 2,
         route: [
-          {
-            local_departure: "2026-08-21T18:00:00.000Z",
-            local_arrival: "2026-08-21T20:00:00.000Z",
-            return: 0,
-          },
-          {
-            local_departure: "2026-08-23T20:00:00.000Z",
-            local_arrival: "2026-08-23T22:00:00.000Z",
-            return: 1,
-          },
+          { local_departure: "2026-08-21T18:00:00.000Z", local_arrival: "2026-08-21T20:00:00.000Z", return: 0 },
+          { local_departure: "2026-08-23T20:00:00.000Z", local_arrival: "2026-08-23T22:00:00.000Z", return: 1 },
         ],
       },
       {
         cityTo: "Ibiza",
+        flyFrom: "BCN",
+        flyTo: "IBZ",
+        countryFrom: { code: "ES", name: "Spain" },
         countryTo: { code: "ES", name: "Spain" },
         price: 37,
         deep_link: "https://kiwi.com/deep/ibiza",
         nightsInDest: 2,
         route: [
-          {
-            local_departure: "2026-08-08T21:05:00.000Z",
-            local_arrival: "2026-08-08T22:10:00.000Z",
-            return: 0,
-          },
-          {
-            local_departure: "2026-08-10T22:45:00.000Z",
-            local_arrival: "2026-08-10T23:45:00.000Z",
-            return: 1,
-          },
+          { local_departure: "2026-08-08T21:05:00.000Z", local_arrival: "2026-08-08T22:10:00.000Z", return: 0 },
+          { local_departure: "2026-08-10T22:45:00.000Z", local_arrival: "2026-08-10T23:45:00.000Z", return: 1 },
         ],
       },
     ],
   };
 
-  it("extracts all four flight times and computes stayMinutes, sorted by price", () => {
+  it("extracts airport + country codes and all four times, sorted by price", () => {
     const deals = normalizeDeals(raw, "EUR");
     expect(deals).toHaveLength(2);
     expect(deals[0]).toEqual({
       cityTo: "Ibiza",
       countryTo: "Spain",
       flag: "🇪🇸",
+      flyFrom: "BCN",
+      flyTo: "IBZ",
+      countryFromCode: "ES",
+      countryToCode: "ES",
       outDepart: "2026-08-08T21:05:00.000Z",
       outArrive: "2026-08-08T22:10:00.000Z",
       backDepart: "2026-08-10T22:45:00.000Z",
@@ -74,6 +68,7 @@ describe("normalizeDeals", () => {
       deepLink: "https://kiwi.com/deep/ibiza",
     });
     expect(deals[1].cityTo).toBe("Lisbon");
+    expect(deals[1].flyTo).toBe("LIS");
   });
 
   it("returns an empty array when data is missing", () => {
@@ -81,7 +76,7 @@ describe("normalizeDeals", () => {
     expect(normalizeDeals(null, "EUR")).toEqual([]);
   });
 
-  it("skips items missing a leg time", () => {
+  it("skips items missing airport codes", () => {
     const bad = {
       data: [
         {
@@ -89,7 +84,10 @@ describe("normalizeDeals", () => {
           countryTo: { code: "XX", name: "" },
           price: 10,
           deep_link: "x",
-          route: [{ local_departure: "2026-08-08T21:05:00.000Z", return: 0 }],
+          route: [
+            { local_departure: "2026-08-08T21:05:00.000Z", local_arrival: "2026-08-08T22:10:00.000Z", return: 0 },
+            { local_departure: "2026-08-10T22:45:00.000Z", local_arrival: "2026-08-10T23:45:00.000Z", return: 1 },
+          ],
         },
       ],
     };

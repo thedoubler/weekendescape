@@ -1,7 +1,16 @@
+export interface HolidayRef {
+  date: string;
+  name: string;
+}
+
 export interface Deal {
   cityTo: string;
   countryTo: string;
   flag: string;
+  flyFrom: string;
+  flyTo: string;
+  countryFromCode: string;
+  countryToCode: string;
   outDepart: string;
   outArrive: string;
   backDepart: string;
@@ -11,6 +20,9 @@ export interface Deal {
   price: number;
   currency: string;
   deepLink: string;
+  ptoDays?: number;
+  homeHoliday?: HolidayRef | null;
+  destHoliday?: HolidayRef | null;
 }
 
 export function flagEmoji(countryCode: string): string {
@@ -61,11 +73,15 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
     const cityTo = item?.cityTo;
     const price = item?.price;
     const deepLink = item?.deep_link;
+    const flyFrom = item?.flyFrom;
+    const flyTo = item?.flyTo;
 
     if (
       !cityTo ||
       typeof price !== "number" ||
       !deepLink ||
+      !flyFrom ||
+      !flyTo ||
       !outDepart ||
       !outArrive ||
       !backDepart ||
@@ -78,6 +94,10 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       cityTo,
       countryTo: item?.countryTo?.name ?? "",
       flag: flagEmoji(item?.countryTo?.code ?? ""),
+      flyFrom,
+      flyTo,
+      countryFromCode: item?.countryFrom?.code ?? "",
+      countryToCode: item?.countryTo?.code ?? "",
       outDepart,
       outArrive,
       backDepart,

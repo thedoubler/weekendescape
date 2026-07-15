@@ -51,6 +51,9 @@ describe("GET /api/weekends", () => {
         data: [
           {
             cityTo: "Rome",
+            flyFrom: "BCN",
+            flyTo: "FCO",
+            countryFrom: { code: "ES", name: "Spain" },
             countryTo: { code: "IT", name: "Italy" },
             price: 55,
             deep_link: "https://kiwi.com/deep/rome",
