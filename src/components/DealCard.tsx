@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import type { Deal } from "@/lib/deals";
-import { dayLabel, timeLabel, durationLabel, dayBlocks } from "@/lib/format";
+import {
+  dayLabel,
+  timeLabel,
+  durationLabel,
+  dayBlocks,
+  daysUntil,
+} from "@/lib/format";
 import { DayBlocks } from "@/components/DayBlocks";
 
 export function DealCard({ deal }: { deal: Deal }) {
   const [open, setOpen] = useState(false);
   const cells = dayBlocks(deal.outDepart, deal.backArrive);
   const stay = durationLabel(deal.stayMinutes);
+  const days = daysUntil(deal.outDepart, new Date());
 
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
@@ -39,6 +46,9 @@ export function DealCard({ deal }: { deal: Deal }) {
           <div className="text-lg font-semibold">
             {deal.price} {deal.currency}
           </div>
+          {days > 0 && (
+            <div className="text-xs opacity-60">in {days} days</div>
+          )}
           <a
             href={deal.deepLink}
             target="_blank"

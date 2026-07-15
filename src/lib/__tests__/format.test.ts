@@ -1,5 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { dayLabel, timeLabel, durationLabel, dayBlocks } from "@/lib/format";
+import {
+  dayLabel,
+  timeLabel,
+  durationLabel,
+  dayBlocks,
+  daysUntil,
+} from "@/lib/format";
+
+describe("daysUntil", () => {
+  it("counts whole days from a reference date to the departure day", () => {
+    const from = new Date(2026, 6, 15); // 15 Jul 2026
+    expect(daysUntil("2026-08-08T21:05:00.000Z", from)).toBe(24);
+    expect(daysUntil("2026-07-15T06:00:00.000Z", from)).toBe(0);
+  });
+  it("returns 0 on bad input", () => {
+    expect(daysUntil("nope", new Date(2026, 6, 15))).toBe(0);
+  });
+});
 
 describe("dayLabel", () => {
   it("formats weekday and day-of-month from local wall-clock", () => {

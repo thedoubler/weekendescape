@@ -29,6 +29,14 @@ export function dayLabel(iso: string): string {
   return `${WD[wd]} ${p.d}`;
 }
 
+export function daysUntil(iso: string, from: Date): number {
+  const p = parts(iso);
+  if (!p) return 0;
+  const target = Date.UTC(p.y, p.mo - 1, p.d);
+  const base = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  return Math.round((target - base) / 86400000);
+}
+
 export function timeLabel(iso: string): string {
   const p = parts(iso);
   if (!p) return "";

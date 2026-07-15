@@ -38,6 +38,10 @@ export default function Home() {
   const bootstrapped = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastSearched = useRef("");
+  const styleRef = useRef(style);
+  styleRef.current = style;
+  const monthsRef = useRef(months);
+  monthsRef.current = months;
 
   async function runSearch(code: string) {
     const c = code.trim().toUpperCase();
@@ -51,8 +55,8 @@ export default function Home() {
     try {
       const qs = new URLSearchParams({
         flyFrom: c,
-        style,
-        months: String(months),
+        style: styleRef.current,
+        months: String(monthsRef.current),
       });
       const res = await fetch(`/api/weekends?${qs.toString()}`);
       const body = await res.json();
@@ -134,7 +138,11 @@ export default function Home() {
             if (home.trim().toUpperCase() !== lastSearched.current) runSearch(home);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter") runSearch(home);
+            if (
+              e.key === "Enter" &&
+              home.trim().toUpperCase() !== lastSearched.current
+            )
+              runSearch(home);
           }}
           placeholder="Home airport (e.g. BCN)"
           className="w-40 rounded-lg border border-black/15 dark:border-white/15 px-3 py-2 bg-transparent"
