@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Deal } from "@/lib/deals";
 import type { WeekendStyle } from "@/lib/weekend";
-import { dayLabel } from "@/lib/format";
+import { dateWithMonth } from "@/lib/format";
 
 export function CheapestWeekend({
   flyFrom,
@@ -74,7 +74,7 @@ export function CheapestWeekend({
       <span className="font-medium">
         {deal.price} {deal.currency}
       </span>{" "}
-      · {dayLabel(deal.outDepart)} → {dayLabel(deal.backArrive)}{" "}
+      · {dateWithMonth(deal.outDepart)} → {dateWithMonth(deal.backArrive)}{" "}
       <a
         href={deal.deepLink}
         target="_blank"

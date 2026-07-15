@@ -64,6 +64,14 @@ export function stopsSummary(outStops: number, backStops: number): string {
   return `${leg(outStops, "out")}, ${leg(backStops, "back")}`;
 }
 
+// "Sat 3 Aug" from an ISO date or datetime string.
+export function dateWithMonth(iso: string): string {
+  const p = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!p) return "";
+  const wd = new Date(Date.UTC(+p[1], +p[2] - 1, +p[3])).getUTCDay();
+  return `${WD[wd]} ${+p[3]} ${MO[+p[2] - 1]}`;
+}
+
 export function holidayDate(dateStr: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   if (!m) return "";

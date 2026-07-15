@@ -10,8 +10,19 @@ import {
   travelMinutes,
   valueVerdict,
   holidayDate,
+  dateWithMonth,
   stopsSummary,
 } from "@/lib/format";
+
+describe("dateWithMonth", () => {
+  it("formats an ISO date or datetime as weekday day month", () => {
+    expect(dateWithMonth("2026-08-08T21:05:00.000Z")).toBe("Sat 8 Aug");
+    expect(dateWithMonth("2026-12-25")).toBe("Fri 25 Dec");
+  });
+  it("returns empty on bad input", () => {
+    expect(dateWithMonth("nope")).toBe("");
+  });
+});
 
 describe("stopsSummary", () => {
   it("summarizes direct and layover trips", () => {
