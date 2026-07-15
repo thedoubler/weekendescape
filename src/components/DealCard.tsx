@@ -10,6 +10,8 @@ import {
   dayBlocks,
   crossesMidnight,
   isNightHour,
+  travelMinutes,
+  valueVerdict,
 } from "@/lib/format";
 import { DayBlocks } from "@/components/DayBlocks";
 
@@ -28,6 +30,16 @@ export function DealCard({ deal }: { deal: Deal }) {
     night: isNightHour(deal.backDepart),
   };
   const returnPlusOne = crossesMidnight(deal.backDepart, deal.backArrive);
+  const verdict = valueVerdict(
+    deal.stayMinutes,
+    travelMinutes(deal.outDepart, deal.outArrive, deal.backDepart, deal.backArrive)
+  );
+  const verdictClass =
+    verdict.tier === "great"
+      ? "border border-green-300 text-green-800 dark:border-green-400/40 dark:text-green-200"
+      : verdict.tier === "fair"
+        ? "border border-black/15 text-black/60 dark:border-white/20 dark:text-white/70"
+        : "text-black/45 dark:text-white/45";
 
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
@@ -73,12 +85,15 @@ export function DealCard({ deal }: { deal: Deal }) {
         <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-900 dark:bg-green-300/20 dark:text-green-100">
           {stay} in {deal.cityTo}
         </span>
+        <span className={`rounded-full px-2.5 py-1 text-sm ${verdictClass}`}>
+          {verdict.label}
+        </span>
         {deal.homeHoliday && (
           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
             🎉 {deal.homeHoliday.name} —{" "}
             {deal.ptoDays === 0
               ? "no day off needed"
-              : `${deal.ptoDays} day off`}
+              : `${deal.ptoDays} day${deal.ptoDays === 1 ? "" : "s"} off`}
           </span>
         )}
         {deal.destHoliday && (

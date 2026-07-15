@@ -7,6 +7,8 @@ import {
   dayBlocks,
   crossesMidnight,
   isNightHour,
+  travelMinutes,
+  valueVerdict,
 } from "@/lib/format";
 
 describe("daysUntil", () => {
@@ -97,5 +99,27 @@ describe("isNightHour", () => {
     expect(isNightHour("2026-08-08T06:00:00.000Z")).toBe(true);
     expect(isNightHour("2026-08-08T08:20:00.000Z")).toBe(false);
     expect(isNightHour("2026-08-08T19:05:00.000Z")).toBe(false);
+  });
+});
+
+describe("travelMinutes", () => {
+  it("sums outbound and return flight durations", () => {
+    expect(
+      travelMinutes(
+        "2026-08-08T21:05:00.000Z",
+        "2026-08-08T22:10:00.000Z",
+        "2026-08-10T18:00:00.000Z",
+        "2026-08-10T19:35:00.000Z"
+      )
+    ).toBe(160);
+  });
+});
+
+describe("valueVerdict", () => {
+  it("rates a trip by its stay-to-travel ratio", () => {
+    expect(valueVerdict(2880, 360).tier).toBe("great"); // 8:1
+    expect(valueVerdict(1500, 600).tier).toBe("fair"); // 2.5:1
+    expect(valueVerdict(480, 540).tier).toBe("poor"); // 0.9:1
+    expect(valueVerdict(1000, 0).tier).toBe("great"); // guard
   });
 });

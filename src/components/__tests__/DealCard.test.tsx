@@ -43,6 +43,11 @@ describe("DealCard", () => {
     expect(screen.getByText(/return/i)).toBeInTheDocument();
   });
 
+  it("shows a value verdict", () => {
+    render(<DealCard deal={base} />);
+    expect(screen.getByText(/great value/i)).toBeInTheDocument();
+  });
+
   it("renders holiday badges when present", () => {
     const withHols: Deal = {
       ...base,
