@@ -233,15 +233,17 @@ export default function Home() {
 
   return (
     <main className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Weekend Escape</h1>
-        <p className="opacity-70">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-[28px] font-semibold tracking-tight">
+          Weekend Escape
+        </h1>
+        <p className="text-[15px] text-black/55 dark:text-white/55">
           The cheapest weekend getaways from your home airport.
         </p>
       </header>
 
       {/* Search — defines the trip; changing these runs a new search */}
-      <section className="flex flex-col gap-4 rounded-xl border border-black/10 p-4 dark:border-white/10">
+      <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
         <Field label="Flying from">
           <div className="flex flex-wrap items-center gap-2">
             <AirportInput
@@ -252,7 +254,7 @@ export default function Home() {
             <button
               type="button"
               onClick={detectLocation}
-              className="rounded-lg border border-black/10 px-3 py-2 text-sm text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+              className="rounded-lg border border-black/10 px-3.5 py-2.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]"
             >
               📍 Use my location
             </button>

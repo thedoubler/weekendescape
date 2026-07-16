@@ -107,7 +107,7 @@ export function AirportInput({
           }
         }}
         placeholder="Airport or city, e.g. Barcelona"
-        className="w-56 rounded-lg border border-black/15 px-3 py-2 bg-transparent dark:border-white/15"
+        className="w-56 rounded-lg border border-black/10 bg-black/[0.02] px-3.5 py-2.5 text-[15px] outline-none transition focus:border-black/25 focus:bg-transparent dark:border-white/15 dark:bg-white/[0.03] dark:focus:border-white/35"
       />
       {open && suggestions.length > 0 && (
         <ul
