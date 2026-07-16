@@ -13,7 +13,6 @@ import {
   crossesMidnight,
   isNightHour,
   travelMinutes,
-  valueVerdict,
   holidayDate,
   stopsSummary,
 } from "@/lib/format";
@@ -42,16 +41,18 @@ export function DealCard({
   const returnPlusOne = crossesMidnight(deal.backDepart, deal.backArrive);
   const direct = deal.outStops === 0 && deal.backStops === 0;
   const stops = stopsSummary(deal.outStops, deal.backStops);
-  const verdict = valueVerdict(
-    deal.stayMinutes,
-    travelMinutes(deal.outDepart, deal.outArrive, deal.backDepart, deal.backArrive)
+  // Round-trip air time = total transit minus the layover waits.
+  const layoverMinutes = [...deal.outLayovers, ...deal.backLayovers].reduce(
+    (sum, l) => sum + l.minutes,
+    0
   );
-  const verdictClass =
-    verdict.tier === "great"
-      ? "border border-green-300 text-green-800 dark:border-green-400/40 dark:text-green-200"
-      : verdict.tier === "fair"
-        ? "border border-black/15 text-black/60 dark:border-white/20 dark:text-white/70"
-        : "text-black/45 dark:text-white/45";
+  const flyingMinutes =
+    travelMinutes(
+      deal.outDepart,
+      deal.outArrive,
+      deal.backDepart,
+      deal.backArrive
+    ) - layoverMinutes;
 
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
@@ -106,8 +107,8 @@ export function DealCard({
         <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-900 dark:bg-green-300/20 dark:text-green-100">
           {stay} in {deal.cityTo}
         </span>
-        <span className={`rounded-full px-2.5 py-1 text-sm ${verdictClass}`}>
-          {verdict.label}
+        <span className="text-sm text-black/55 dark:text-white/55">
+          ≈ {durationLabel(flyingMinutes)} flying
         </span>
         {deal.homeHoliday && (
           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">

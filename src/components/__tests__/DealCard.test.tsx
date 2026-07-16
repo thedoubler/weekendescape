@@ -47,9 +47,10 @@ describe("DealCard", () => {
     expect(screen.getByText(/return/i)).toBeInTheDocument();
   });
 
-  it("shows a value verdict", () => {
+  it("shows the round-trip flying time", () => {
     render(<DealCard deal={base} />);
-    expect(screen.getByText(/great value/i)).toBeInTheDocument();
+    // 65m out + 95m back = 160m = 2h 40m, no layovers
+    expect(screen.getByText(/2h 40m flying/)).toBeInTheDocument();
   });
 
   it("labels a direct trip and shows layover detail on expand", () => {

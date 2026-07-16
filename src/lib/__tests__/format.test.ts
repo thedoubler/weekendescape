@@ -8,7 +8,6 @@ import {
   crossesMidnight,
   isNightHour,
   travelMinutes,
-  valueVerdict,
   holidayDate,
   dateWithMonth,
   stopsSummary,
@@ -145,14 +144,5 @@ describe("travelMinutes", () => {
         "2026-08-10T19:35:00.000Z"
       )
     ).toBe(160);
-  });
-});
-
-describe("valueVerdict", () => {
-  it("rates a trip by its stay-to-travel ratio", () => {
-    expect(valueVerdict(2880, 360).tier).toBe("great"); // 8:1
-    expect(valueVerdict(1500, 600).tier).toBe("fair"); // 2.5:1
-    expect(valueVerdict(480, 540).tier).toBe("poor"); // 0.9:1
-    expect(valueVerdict(1000, 0).tier).toBe("great"); // guard
   });
 });

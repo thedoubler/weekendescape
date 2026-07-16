@@ -114,11 +114,6 @@ export function isNightHour(iso: string): boolean {
   return p.h >= 22 || p.h < 7;
 }
 
-export interface Verdict {
-  label: string;
-  tier: "great" | "fair" | "poor";
-}
-
 function naiveMin(iso: string): number {
   const p = parts(iso);
   return p ? Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi) / 60000 : 0;
@@ -135,14 +130,6 @@ export function travelMinutes(
     naiveMin(outDepart) +
     (naiveMin(backArrive) - naiveMin(backDepart))
   );
-}
-
-export function valueVerdict(stayMinutes: number, travelMin: number): Verdict {
-  if (travelMin <= 0) return { label: "Great value", tier: "great" };
-  const ratio = stayMinutes / travelMin;
-  if (ratio >= 5) return { label: "Great value", tier: "great" };
-  if (ratio >= 2) return { label: "Fair trade-off", tier: "fair" };
-  return { label: "Long trip, short stay", tier: "poor" };
 }
 
 export function dayBlocks(outArrive: string, backDepart: string): DayCell[] {
