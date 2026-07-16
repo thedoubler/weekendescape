@@ -101,7 +101,9 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const bootstrapped = useRef(false);
+  const didAutoCollapse = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const styleRef = useRef(style);
   styleRef.current = style;
@@ -130,6 +132,12 @@ export default function Home() {
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
       setSelectedMonths([]);
+      // Collapse the search panel once, after the first successful search, so
+      // results are visible right away. Later edits keep it open.
+      if (!didAutoCollapse.current) {
+        didAutoCollapse.current = true;
+        setCollapsed(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed");
       setRawDeals([]);
@@ -230,69 +238,113 @@ export default function Home() {
     selectedMonths.length +
     selectedContinents.length +
     (cap < bounds.max ? 1 : 0);
+  const styleLabel =
+    STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
 
   return (
     <main className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-[28px] font-semibold tracking-tight">
-          Weekend Escape
-        </h1>
-        <p className="text-[15px] text-black/55 dark:text-white/55">
-          The cheapest weekend getaways from your home airport.
-        </p>
+      <header className="flex items-center gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
+        <span
+          aria-hidden
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-black text-base text-white dark:bg-white dark:text-black"
+        >
+          ✦
+        </span>
+        <div className="leading-tight">
+          <h1 className="text-lg font-semibold tracking-tight">
+            Weekend Escape
+          </h1>
+          <p className="text-[13px] text-black/50 dark:text-white/50">
+            Cheapest weekend getaways from home
+          </p>
+        </div>
       </header>
 
-      {/* Search — defines the trip; changing these runs a new search */}
-      <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
-        <Field label="Flying from">
-          <div className="flex flex-wrap items-center gap-2">
-            <AirportInput
-              value={home}
-              onSearch={runSearch}
-              inputRef={inputRef}
-            />
-            <button
-              type="button"
-              onClick={detectLocation}
-              className="rounded-lg border border-black/10 px-3.5 py-2.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]"
-            >
-              📍 Use my location
-            </button>
+      {collapsed ? (
+        /* Compact summary once searched — tap to edit */
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.07] bg-black/[0.015] px-4 py-3 text-left transition hover:bg-black/[0.03] dark:border-white/10 dark:bg-white/[0.02] dark:hover:bg-white/[0.04]"
+        >
+          <div className="min-w-0">
+            <div className="text-xs text-black/45 dark:text-white/45">
+              Weekend escapes from
+            </div>
+            <div className="font-medium">
+              {home} · {styleLabel} · next {months} month
+              {months === 1 ? "" : "s"} ·{" "}
+              {stopMode === "direct" ? "Direct only" : "Any flights"}
+            </div>
           </div>
-        </Field>
+          <span className="shrink-0 rounded-lg border border-black/15 px-3 py-1.5 text-sm text-black/70 dark:border-white/20 dark:text-white/70">
+            Edit
+          </span>
+        </button>
+      ) : (
+        /* Full search — defines the trip; changing these runs a new search */
+        <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
+          <div className="flex items-start justify-between gap-3">
+            <Field label="Flying from">
+              <div className="flex flex-wrap items-center gap-2">
+                <AirportInput
+                  value={home}
+                  onSearch={runSearch}
+                  inputRef={inputRef}
+                />
+                <button
+                  type="button"
+                  onClick={detectLocation}
+                  className="rounded-lg border border-black/10 px-3.5 py-2.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]"
+                >
+                  📍 Use my location
+                </button>
+              </div>
+            </Field>
+            {searched && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="mt-5 shrink-0 rounded-lg px-3 py-1.5 text-sm text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white"
+              >
+                Done
+              </button>
+            )}
+          </div>
 
-        <div className="flex flex-wrap gap-x-8 gap-y-4">
-          <Field label="Weekend" hint="Strict = Fri–Sun · Loose = Thu–Mon">
-            <SegmentedControl
-              options={STYLE_OPTIONS}
-              value={style}
-              onChange={setStyle}
-              ariaLabel="Weekend style"
-            />
-          </Field>
-          <Field label="Search the next" hint="months ahead">
-            <SegmentedControl
-              options={MONTH_OPTIONS}
-              value={months}
-              onChange={setMonths}
-              ariaLabel="Timeline"
-            />
-          </Field>
-          <Field label="Flights" hint="Allow layovers or not">
-            <SegmentedControl
-              options={STOP_OPTIONS}
-              value={stopMode}
-              onChange={setStopMode}
-              ariaLabel="Stops"
-            />
-          </Field>
-        </div>
-      </section>
+          <div className="flex flex-wrap gap-x-8 gap-y-4">
+            <Field label="Weekend" hint="Strict = Fri–Sun · Loose = Thu–Mon">
+              <SegmentedControl
+                options={STYLE_OPTIONS}
+                value={style}
+                onChange={setStyle}
+                ariaLabel="Weekend style"
+              />
+            </Field>
+            <Field label="Search the next" hint="months ahead">
+              <SegmentedControl
+                options={MONTH_OPTIONS}
+                value={months}
+                onChange={setMonths}
+                ariaLabel="Timeline"
+              />
+            </Field>
+            <Field label="Flights" hint="Allow layovers or not">
+              <SegmentedControl
+                options={STOP_OPTIONS}
+                value={stopMode}
+                onChange={setStopMode}
+                ariaLabel="Stops"
+              />
+            </Field>
+          </div>
+        </section>
+      )}
 
       {/* Results header + sort */}
       {searched && (
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span className="text-base font-medium">
               {loading
                 ? "Searching…"

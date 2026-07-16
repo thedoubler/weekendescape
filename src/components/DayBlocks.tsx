@@ -27,7 +27,7 @@ export function DayBlocks({
               key={i}
               role="listitem"
               aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable`}
-              className="flex-1 rounded-md bg-black/5 px-1 py-1 text-center text-xs dark:bg-white/10"
+              className="min-w-0 flex-1 rounded-md bg-black/5 px-1 py-1 text-center text-xs dark:bg-white/10"
             >
               <div className="text-black/60 dark:text-white/60">{c.weekday}</div>
               <div

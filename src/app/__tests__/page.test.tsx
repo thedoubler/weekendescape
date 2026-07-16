@@ -185,4 +185,19 @@ describe("Home page", () => {
     fireEvent.click(screen.getByRole("button", { name: /show 1 hidden/i }));
     expect(screen.getByText("Doha")).toBeInTheDocument();
   });
+
+  it("collapses the search after searching and reopens it on Edit", async () => {
+    grantGeolocation();
+    vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+
+    // collapsed: the search controls are gone, a summary is shown
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByText(/weekend escapes from/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
 });

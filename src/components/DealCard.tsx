@@ -56,14 +56,14 @@ export function DealCard({
 
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <button
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="flex-1 text-left"
+          className="min-w-0 flex-1 text-left"
         >
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-xl" aria-hidden>
               {deal.flag}
             </span>
@@ -82,11 +82,8 @@ export function DealCard({
               {stops}
             </span>
           </div>
-          <div className="mt-2">
-            <DayBlocks cells={cells} arrival={arrival} departure={departure} />
-          </div>
         </button>
-        <div className="text-right shrink-0">
+        <div className="shrink-0 text-right">
           <div className="text-lg font-semibold">
             {deal.price} {deal.currency}
           </div>
@@ -102,6 +99,15 @@ export function DealCard({
           </a>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? "Hide details" : "Show details"}
+        className="mt-2 block w-full text-left"
+      >
+        <DayBlocks cells={cells} arrival={arrival} departure={departure} />
+      </button>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-900 dark:bg-green-300/20 dark:text-green-100">
