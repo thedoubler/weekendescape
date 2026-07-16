@@ -68,7 +68,7 @@ export function AirportInput({
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-64">
       <input
         ref={inputRef}
         value={query}
@@ -107,13 +107,13 @@ export function AirportInput({
           }
         }}
         placeholder="Airport or city, e.g. Barcelona"
-        className="w-56 rounded-lg border border-black/10 bg-black/[0.02] px-3.5 py-2.5 text-[15px] outline-none transition focus:border-black/25 focus:bg-transparent dark:border-white/15 dark:bg-white/[0.03] dark:focus:border-white/35"
+        className="w-full rounded-lg border border-black/10 bg-black/[0.02] px-3.5 py-2.5 text-[15px] outline-none transition focus:border-black/25 focus:bg-transparent dark:border-white/15 dark:bg-white/[0.03] dark:focus:border-white/35"
       />
       {open && suggestions.length > 0 && (
         <ul
           id="airport-suggestions"
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-72 overflow-auto rounded-lg border border-black/15 bg-white shadow-lg dark:border-white/15 dark:bg-neutral-900"
+          className="absolute inset-x-0 z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-black/15 bg-white shadow-lg sm:inset-x-auto sm:w-72 dark:border-white/15 dark:bg-neutral-900"
         >
           {suggestions.map((s, i) => (
             <li

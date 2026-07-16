@@ -284,23 +284,25 @@ export default function Home() {
       ) : (
         /* Full search — defines the trip; changing these runs a new search */
         <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
-          <div className="flex items-start justify-between gap-3">
-            <Field label="Flying from">
-              <div className="flex flex-wrap items-center gap-2">
-                <AirportInput
-                  value={home}
-                  onSearch={runSearch}
-                  inputRef={inputRef}
-                />
-                <button
-                  type="button"
-                  onClick={detectLocation}
-                  className="rounded-lg border border-black/10 px-3.5 py-2.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]"
-                >
-                  📍 Use my location
-                </button>
-              </div>
-            </Field>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <Field label="Flying from">
+                <div className="flex flex-wrap items-center gap-2">
+                  <AirportInput
+                    value={home}
+                    onSearch={runSearch}
+                    inputRef={inputRef}
+                  />
+                  <button
+                    type="button"
+                    onClick={detectLocation}
+                    className="rounded-lg border border-black/10 px-3.5 py-2.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]"
+                  >
+                    📍 Use my location
+                  </button>
+                </div>
+              </Field>
+            </div>
             {searched && (
               <button
                 type="button"
