@@ -91,7 +91,7 @@ export default function Home() {
   const [style, setStyle] = useState<WeekendStyle>("frimon");
   const [months, setMonths] = useState(3);
   const [stopMode, setStopMode] = useState<StopMode>("any");
-  const [sort, setSort] = useState<SortKey>("soonest");
+  const [sort, setSort] = useState<SortKey>("cheapest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(0);

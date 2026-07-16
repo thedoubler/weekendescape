@@ -110,7 +110,7 @@ describe("Home page", () => {
     const before = fetchMock.mock.calls.filter((c) =>
       String(c[0]).includes("/api/weekends")
     ).length;
-    fireEvent.click(screen.getByRole("button", { name: /cheapest/i }));
+    fireEvent.click(screen.getByRole("button", { name: /soonest/i }));
     const after = fetchMock.mock.calls.filter((c) =>
       String(c[0]).includes("/api/weekends")
     ).length;
