@@ -63,20 +63,25 @@ export function DealCard({
           onClick={() => setOpen((o) => !o)}
           className="min-w-0 flex-1 text-left"
         >
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="flex items-center gap-2">
             <span className="text-xl" aria-hidden>
               {deal.flag}
             </span>
-            <span className="font-medium">{deal.cityTo}</span>
-            <span className="text-sm opacity-60">{deal.countryTo}</span>
-            <span className="rounded-full border border-black/15 px-2 py-0.5 text-xs opacity-70 dark:border-white/20">
-              {deal.flyFrom} → {deal.flyTo}
+            <span className="truncate text-lg font-semibold">
+              {deal.cityTo}
             </span>
+          </div>
+          <div className="mt-0.5 text-xs text-black/50 dark:text-white/50">
+            {deal.countryTo} ·{" "}
+            <span>
+              {deal.flyFrom} → {deal.flyTo}
+            </span>{" "}
+            ·{" "}
             <span
               className={
                 direct
-                  ? "text-xs opacity-50"
-                  : "rounded-full border border-amber-300/60 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200"
+                  ? ""
+                  : "font-medium text-amber-700 dark:text-amber-300"
               }
             >
               {stops}
@@ -87,16 +92,11 @@ export function DealCard({
           <div className="text-lg font-semibold">
             {deal.price} {deal.currency}
           </div>
-          {days > 0 && <div className="text-xs opacity-60">in {days} days</div>}
-          <a
-            href={deal.deepLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Book ${deal.cityTo}`}
-            className="text-sm underline"
-          >
-            Book
-          </a>
+          {days > 0 && (
+            <div className="text-xs text-black/50 dark:text-white/50">
+              in {days} days
+            </div>
+          )}
         </div>
       </div>
 
@@ -104,33 +104,49 @@ export function DealCard({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Hide details" : "Show details"}
-        className="mt-2 block w-full text-left"
+        className="mt-3 block w-full text-left"
       >
         <DayBlocks cells={cells} arrival={arrival} departure={departure} />
       </button>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-900 dark:bg-green-300/20 dark:text-green-100">
-          {stay} in {deal.cityTo}
-        </span>
-        <span className="text-sm text-black/55 dark:text-white/55">
-          ≈ {durationLabel(flyingMinutes)} flying
-        </span>
-        {deal.homeHoliday && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
-            🎉 {deal.homeHoliday.name} · {holidayDate(deal.homeHoliday.date)} —{" "}
-            {deal.ptoDays === 0
-              ? "no day off needed"
-              : `${deal.ptoDays} day${deal.ptoDays === 1 ? "" : "s"} off`}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-900 dark:bg-green-300/20 dark:text-green-100">
+            {stay} there
           </span>
-        )}
-        {deal.destHoliday && (
-          <span className="rounded-full border border-amber-300/50 px-2.5 py-1 text-sm text-amber-800 dark:text-amber-200">
-            {deal.destHoliday.name} · {holidayDate(deal.destHoliday.date)} in{" "}
-            {deal.cityTo}
+          <span className="text-sm text-black/55 dark:text-white/55">
+            ≈ {durationLabel(flyingMinutes)} flying
           </span>
-        )}
+        </div>
+        <a
+          href={deal.deepLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Book ${deal.cityTo}`}
+          className="text-sm font-medium text-black underline underline-offset-2 dark:text-white"
+        >
+          Book ↗
+        </a>
       </div>
+
+      {(deal.homeHoliday || deal.destHoliday) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {deal.homeHoliday && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
+              🎉 {deal.homeHoliday.name} · {holidayDate(deal.homeHoliday.date)} —{" "}
+              {deal.ptoDays === 0
+                ? "no day off needed"
+                : `${deal.ptoDays} day${deal.ptoDays === 1 ? "" : "s"} off`}
+            </span>
+          )}
+          {deal.destHoliday && (
+            <span className="rounded-full border border-amber-300/50 px-2.5 py-1 text-sm text-amber-800 dark:text-amber-200">
+              {deal.destHoliday.name} · {holidayDate(deal.destHoliday.date)} in{" "}
+              {deal.cityTo}
+            </span>
+          )}
+        </div>
+      )}
 
       {open && (
         <div className="mt-3 flex flex-col gap-1 border-t border-black/10 pt-3 text-sm dark:border-white/10">
