@@ -380,15 +380,18 @@ export default function Home() {
 
           {/* When & how — refinements to the trip */}
           <div className="flex flex-wrap gap-x-8 gap-y-5">
-            <Field label="Weekend" hint="Strict = Fri–Sun · Loose = Thu–Mon">
+            <Field
+              label="Weekend length"
+              hint="Strict = Fri–Sun · Loose = Thu–Mon"
+            >
               <SegmentedControl
                 options={STYLE_OPTIONS}
                 value={style}
                 onChange={setStyle}
-                ariaLabel="Weekend style"
+                ariaLabel="Weekend length"
               />
             </Field>
-            <Field label="Search the next" hint="months ahead">
+            <Field label="Timeline" hint="months ahead">
               <SegmentedControl
                 options={MONTH_OPTIONS}
                 value={months}
@@ -396,7 +399,7 @@ export default function Home() {
                 ariaLabel="Timeline"
               />
             </Field>
-            <Field label="Flights" hint="Allow layovers or not">
+            <Field label="Stops" hint="Direct = nonstop only">
               <SegmentedControl
                 options={STOP_OPTIONS}
                 value={stopMode}
