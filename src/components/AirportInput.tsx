@@ -68,7 +68,7 @@ export function AirportInput({
   }
 
   return (
-    <div className="relative w-full sm:w-64">
+    <div className="relative w-full">
       <input
         ref={inputRef}
         value={query}

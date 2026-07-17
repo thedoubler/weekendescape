@@ -1,36 +1,41 @@
+import { pillClass } from "@/lib/pill";
+
 export function PriceFilter({
-  min,
+  buckets,
   max,
   value,
   currency,
   onChange,
 }: {
-  min: number;
+  buckets: number[];
   max: number;
   value: number;
   currency: string;
   onChange: (v: number) => void;
 }) {
-  if (max <= min) return null;
+  if (buckets.length === 0) return null;
+  const capped = value < max;
   return (
-    <div
-      role="group"
-      aria-label="Max price"
-      className="flex items-center gap-3"
-    >
-      <span className="whitespace-nowrap text-sm opacity-70">
-        Under {value} {currency}
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-label="Maximum price"
-        className="w-40 accent-black dark:accent-white"
-      />
+    <div role="group" aria-label="Max price" className="flex flex-wrap gap-1">
+      {buckets.map((b) => (
+        <button
+          key={b}
+          type="button"
+          aria-pressed={value === b}
+          onClick={() => onChange(b)}
+          className={pillClass(value === b)}
+        >
+          ≤ {b} {currency}
+        </button>
+      ))}
+      <button
+        type="button"
+        aria-pressed={!capped}
+        onClick={() => onChange(max)}
+        className={pillClass(!capped)}
+      >
+        Any
+      </button>
     </div>
   );
 }

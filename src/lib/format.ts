@@ -72,6 +72,54 @@ export function dateWithMonth(iso: string): string {
   return `${WD[wd]} ${+p[3]} ${MO[+p[2] - 1]}`;
 }
 
+const MO_FULL = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// "2026-09" — groups deals into calendar months.
+export function monthKey(iso: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(iso);
+  return m ? `${m[1]}-${m[2]}` : "";
+}
+
+// "September" — full month name for a section divider.
+export function monthTitle(iso: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(iso);
+  return m ? MO_FULL[+m[2] - 1] : "";
+}
+
+// "Sep" — short month name from a "YYYY-MM" (or ISO) string.
+export function monthShort(iso: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(iso);
+  return m ? MO[+m[2] - 1] : iso;
+}
+
+// "Fri 18 – Sun 20 Sep" (shared month shown once) or "Fri 30 Oct – Sun 1 Nov".
+export function weekendRange(startIso: string, endIso: string): string {
+  const a = /^(\d{4})-(\d{2})-(\d{2})/.exec(startIso);
+  const b = /^(\d{4})-(\d{2})-(\d{2})/.exec(endIso);
+  if (!a || !b) return "";
+  const wdA = new Date(Date.UTC(+a[1], +a[2] - 1, +a[3])).getUTCDay();
+  const wdB = new Date(Date.UTC(+b[1], +b[2] - 1, +b[3])).getUTCDay();
+  const sameMonth = a[1] === b[1] && a[2] === b[2];
+  const left = sameMonth
+    ? `${WD[wdA]} ${+a[3]}`
+    : `${WD[wdA]} ${+a[3]} ${MO[+a[2] - 1]}`;
+  const right = `${WD[wdB]} ${+b[3]} ${MO[+b[2] - 1]}`;
+  return `${left} – ${right}`;
+}
+
 export function holidayDate(dateStr: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
   if (!m) return "";
@@ -117,6 +165,11 @@ export function isNightHour(iso: string): boolean {
 function naiveMin(iso: string): number {
   const p = parts(iso);
   return p ? Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi) / 60000 : 0;
+}
+
+// Air-time of a single leg (local wall-clock; spans a +1 day correctly).
+export function legMinutes(depIso: string, arrIso: string): number {
+  return naiveMin(arrIso) - naiveMin(depIso);
 }
 
 export function travelMinutes(

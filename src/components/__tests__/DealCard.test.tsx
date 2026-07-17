@@ -30,7 +30,9 @@ describe("DealCard", () => {
   it("shows the origin chip, price, times and a booking link", () => {
     render(<DealCard deal={base} />);
     expect(screen.getByText("Ibiza")).toBeInTheDocument();
-    expect(screen.getByText("BCN → IBZ")).toBeInTheDocument();
+    // Weekend dates anchor the card; the constant origin route is not repeated.
+    expect(screen.getByText(/Sat 8 – Mon 10 Aug/)).toBeInTheDocument();
+    expect(screen.queryByText("BCN → IBZ")).not.toBeInTheDocument();
     expect(screen.getByText(/37/)).toBeInTheDocument();
     expect(screen.getByText("22:10")).toBeInTheDocument();
     expect(screen.getByText("18:00")).toBeInTheDocument();
@@ -84,6 +86,8 @@ describe("DealCard", () => {
     render(<DealCard deal={withHols} />);
     expect(screen.getByText(/Assumption · Fri 7 Aug/)).toBeInTheDocument();
     expect(screen.getByText(/no day off needed/i)).toBeInTheDocument();
-    expect(screen.getByText(/Ferragosto · Sat 8 Aug/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Public holiday · Ferragosto · Sat 8 Aug/i)
+    ).toBeInTheDocument();
   });
 });

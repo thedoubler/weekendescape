@@ -182,7 +182,11 @@ describe("Home page", () => {
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
     expect(screen.queryByText("Doha")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /show 1 hidden/i }));
+    // The short-stay filter now lives under Refine, as a labeled toggle.
+    fireEvent.click(screen.getByRole("button", { name: /refine/i }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /layover and under a day/i })
+    );
     expect(screen.getByText("Doha")).toBeInTheDocument();
   });
 

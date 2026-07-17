@@ -11,13 +11,20 @@ import {
   priceRange,
   filterByMaxPrice,
 } from "@/lib/sort";
-import { continentsOf, filterByContinents } from "@/lib/continents";
+import {
+  continentOf,
+  continentsOf,
+  filterByContinents,
+} from "@/lib/continents";
+import { monthShort } from "@/lib/format";
+import { priceBuckets } from "@/lib/price";
 import { loadHome, saveHome } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { AirportInput } from "@/components/AirportInput";
 import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
+import { FilterChip } from "@/components/FilterChip";
 import { DealList } from "@/components/DealList";
 
 const STYLE_OPTIONS = [
@@ -30,10 +37,6 @@ const MONTH_OPTIONS = [
   { value: 2, label: "2" },
   { value: 3, label: "3" },
   { value: 6, label: "6" },
-];
-const SORT_OPTIONS = [
-  { value: "soonest" as SortKey, label: "Soonest" },
-  { value: "cheapest" as SortKey, label: "Cheapest" },
 ];
 const STOP_OPTIONS = [
   { value: "any" as StopMode, label: "Any" },
@@ -49,13 +52,17 @@ function Field({
 }: {
   label: string;
   hint?: string;
-  align?: "start" | "end";
+  align?: "start" | "end" | "stretch";
   children: ReactNode;
 }) {
+  const alignClass =
+    align === "end"
+      ? "items-end"
+      : align === "stretch"
+        ? "items-stretch"
+        : "items-start";
   return (
-    <div
-      className={`flex flex-col ${align === "end" ? "items-end" : "items-start"}`}
-    >
+    <div className={`flex min-w-0 flex-col ${alignClass}`}>
       <span className="mb-1 text-xs font-medium text-black/60 dark:text-white/60">
         {label}
       </span>
@@ -69,20 +76,23 @@ function Field({
   );
 }
 
-function RefineRow({
-  label,
+// One tappable facet in the collapsed summary — the dotted underline signals it
+// can be edited (Airbnb-style: each part of the query is its own edit target).
+function FacetButton({
   children,
+  onClick,
 }: {
-  label: string;
   children: ReactNode;
+  onClick: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
-      <span className="w-20 shrink-0 text-sm text-black/50 dark:text-white/50">
-        {label}
-      </span>
+    <button
+      type="button"
+      onClick={onClick}
+      className="-mx-0.5 rounded px-1 underline decoration-dotted decoration-black/25 underline-offset-4 transition hover:bg-black/[0.06] hover:decoration-black/60 dark:decoration-white/25 dark:hover:bg-white/[0.10] dark:hover:decoration-white/60"
+    >
       {children}
-    </div>
+    </button>
   );
 }
 
@@ -102,6 +112,7 @@ export default function Home() {
   const [showRefine, setShowRefine] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [showJump, setShowJump] = useState(false);
   const bootstrapped = useRef(false);
   const didAutoCollapse = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +195,15 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style, months, stopMode]);
 
+  // Show a "back to controls" pill once the user scrolls deep into the list, so
+  // sort/refine stay reachable without scrolling to the top (our month dividers
+  // are already sticky, so we avoid a second sticky bar that would overlap them).
+  useEffect(() => {
+    const onScroll = () => setShowJump(window.scrollY > 700);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const available = useMemo(() => monthsOf(rawDeals), [rawDeals]);
   const availableContinents = useMemo(
     () => continentsOf(rawDeals),
@@ -218,6 +238,48 @@ export default function Home() {
     ? filtered
     : filtered.filter((d) => !isShortLayoverTrip(d));
 
+  // Per-option counts for the Refine pills, over the base universe the user can
+  // actually see (respecting the short-stay toggle) but ignoring month/region/
+  // price selections — so each pill shows how many trips it would surface.
+  const countable = useMemo(
+    () =>
+      showHidden ? rawDeals : rawDeals.filter((d) => !isShortLayoverTrip(d)),
+    [rawDeals, showHidden]
+  );
+  const monthCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const d of countable) {
+      const k = d.outDepart.slice(0, 7);
+      m[k] = (m[k] ?? 0) + 1;
+    }
+    return m;
+  }, [countable]);
+  const continentCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const d of countable) {
+      const c = continentOf(d.countryToCode);
+      if (c) m[c] = (m[c] ?? 0) + 1;
+    }
+    return m;
+  }, [countable]);
+  const currency = rawDeals[0]?.currency ?? "EUR";
+  const priceBucketList = useMemo(
+    () => priceBuckets(rawDeals.map((d) => d.price)),
+    [rawDeals]
+  );
+
+  function clearAll() {
+    setSelectedMonths([]);
+    setSelectedContinents([]);
+    setMaxPrice(bounds.max);
+  }
+
+  const editSearch = () => setCollapsed(false);
+  const editFrom = () => {
+    setCollapsed(false);
+    setTimeout(() => inputRef.current?.focus(), 60);
+  };
+
   function toggleMonth(m: string) {
     setSelectedMonths((cur) =>
       cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]
@@ -233,7 +295,8 @@ export default function Home() {
   const hasRefinements =
     available.length > 0 ||
     availableContinents.length > 1 ||
-    bounds.max > bounds.min;
+    priceBucketList.length > 0 ||
+    hiddenCount > 0;
   const activeFilters =
     selectedMonths.length +
     selectedContinents.length +
@@ -242,7 +305,7 @@ export default function Home() {
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
 
   return (
-    <main className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
+    <main className="max-w-2xl mx-auto w-full min-w-0 p-6 flex flex-col gap-6">
       <header className="flex items-center gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
         <span
           aria-hidden
@@ -261,60 +324,62 @@ export default function Home() {
       </header>
 
       {collapsed ? (
-        /* Compact summary once searched — tap to edit */
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.07] bg-black/[0.015] px-4 py-3 text-left transition hover:bg-black/[0.03] dark:border-white/10 dark:bg-white/[0.02] dark:hover:bg-white/[0.04]"
-        >
+        /* Compact summary once searched — each facet is individually tappable */
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.07] bg-black/[0.015] px-4 py-3 dark:border-white/10 dark:bg-white/[0.02]">
           <div className="min-w-0">
             <div className="text-xs text-black/45 dark:text-white/45">
               Weekend escapes from
             </div>
-            <div className="font-medium">
-              {home} · {styleLabel} · next {months} month
-              {months === 1 ? "" : "s"} ·{" "}
-              {stopMode === "direct" ? "Direct only" : "Any flights"}
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 font-medium">
+              <FacetButton onClick={editFrom}>{home}</FacetButton>
+              <span className="text-black/25 dark:text-white/25">·</span>
+              <FacetButton onClick={editSearch}>{styleLabel}</FacetButton>
+              <span className="text-black/25 dark:text-white/25">·</span>
+              <FacetButton onClick={editSearch}>
+                next {months} month{months === 1 ? "" : "s"}
+              </FacetButton>
+              <span className="text-black/25 dark:text-white/25">·</span>
+              <FacetButton onClick={editSearch}>
+                {stopMode === "direct" ? "Direct only" : "Any flights"}
+              </FacetButton>
             </div>
           </div>
-          <span className="shrink-0 rounded-lg border border-black/15 px-3 py-1.5 text-sm text-black/70 dark:border-white/20 dark:text-white/70">
+          <button
+            type="button"
+            onClick={editSearch}
+            className="shrink-0 rounded-lg border border-black/15 px-3 py-1.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/20 dark:text-white/70 dark:hover:bg-white/[0.06]"
+          >
             Edit
-          </span>
-        </button>
+          </button>
+        </div>
       ) : (
         /* Full search — defines the trip; changing these runs a new search */
         <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <Field label="Flying from">
-                <div className="flex flex-wrap items-center gap-2">
-                  <AirportInput
-                    value={home}
-                    onSearch={runSearch}
-                    inputRef={inputRef}
-                  />
-                  <button
-                    type="button"
-                    onClick={detectLocation}
-                    className="rounded-lg border border-black/10 px-3.5 py-2.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06]"
-                  >
-                    📍 Use my location
-                  </button>
-                </div>
-              </Field>
-            </div>
-            {searched && (
+          {/* Origin — the primary input, given room to breathe */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <span className="text-xs font-medium text-black/60 dark:text-white/60">
+                Flying from
+              </span>
               <button
                 type="button"
-                onClick={() => setCollapsed(true)}
-                className="mt-5 shrink-0 rounded-lg px-3 py-1.5 text-sm text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white"
+                onClick={detectLocation}
+                className="text-xs text-black/55 underline-offset-2 transition hover:text-black hover:underline dark:text-white/55 dark:hover:text-white"
               >
-                Done
+                📍 Use my location
               </button>
-            )}
+            </div>
+            <AirportInput
+              value={home}
+              onSearch={runSearch}
+              inputRef={inputRef}
+            />
           </div>
 
-          <div className="flex flex-wrap gap-x-8 gap-y-4">
+          <div className="h-px bg-black/[0.06] dark:bg-white/[0.08]" />
+
+          {/* When & how — refinements to the trip */}
+          <div className="flex flex-wrap gap-x-8 gap-y-5">
             <Field label="Weekend" hint="Strict = Fri–Sun · Loose = Thu–Mon">
               <SegmentedControl
                 options={STYLE_OPTIONS}
@@ -340,14 +405,26 @@ export default function Home() {
               />
             </Field>
           </div>
+
+          {searched && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition hover:opacity-90 dark:bg-white dark:text-black"
+              >
+                Done
+              </button>
+            </div>
+          )}
         </section>
       )}
 
-      {/* Results header + sort */}
+      {/* Results header — primary: what you're seeing + how it's ordered */}
       {searched && (
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="text-base font-medium">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <span className="text-lg font-semibold tracking-tight">
               {loading
                 ? "Searching…"
                 : error
@@ -356,79 +433,133 @@ export default function Home() {
                       visible.length === 1 ? "" : "s"
                     }`}
             </span>
-            {hasRefinements && (
-              <button
-                type="button"
-                onClick={() => setShowRefine((v) => !v)}
-                aria-expanded={showRefine}
-                className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-sm text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
-              >
-                Refine
-                {activeFilters > 0 && (
-                  <span className="rounded-full bg-black px-1.5 text-xs text-white dark:bg-white dark:text-black">
-                    {activeFilters}
-                  </span>
-                )}
-                <span aria-hidden>{showRefine ? "▴" : "▾"}</span>
-              </button>
-            )}
-            {!loading && hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowHidden((v) => !v)}
-                title="Trips with a layover and under a day at the destination"
-                className="text-sm text-black/50 underline decoration-dotted underline-offset-2 hover:text-black/80 dark:text-white/50 dark:hover:text-white/80"
-              >
-                {showHidden
-                  ? "Hide short-layover trips"
-                  : `Show ${hiddenCount} hidden`}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-black/45 dark:text-white/45">
+                Sort
+              </span>
+              <SegmentedControl
+                options={[
+                  { value: "soonest" as SortKey, label: "Soonest" },
+                  { value: "cheapest" as SortKey, label: "Cheapest" },
+                ]}
+                value={sort}
+                onChange={setSort}
+                ariaLabel="Sort"
+              />
+            </div>
           </div>
-          <Field label="Sort by" align="end">
-            <SegmentedControl
-              options={SORT_OPTIONS}
-              value={sort}
-              onChange={setSort}
-              ariaLabel="Sort"
-            />
-          </Field>
+          {/* Secondary: Refine trigger + the active filters as removable chips,
+              so filter state stays visible while the panel is closed. */}
+          {!loading && !error && hasRefinements && (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowRefine((v) => !v)}
+                  aria-expanded={showRefine}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                >
+                  Refine
+                  {activeFilters > 0 && (
+                    <span className="rounded-full bg-black px-1.5 text-xs text-white dark:bg-white dark:text-black">
+                      {activeFilters}
+                    </span>
+                  )}
+                  <span aria-hidden>{showRefine ? "▴" : "▾"}</span>
+                </button>
+              </div>
+              {activeFilters > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {selectedMonths.map((m) => (
+                    <FilterChip
+                      key={m}
+                      label={monthShort(m)}
+                      onRemove={() => toggleMonth(m)}
+                    />
+                  ))}
+                  {selectedContinents.map((c) => (
+                    <FilterChip
+                      key={c}
+                      label={c}
+                      onRemove={() => toggleContinent(c)}
+                    />
+                  ))}
+                  {cap < bounds.max && (
+                    <FilterChip
+                      label={`≤ ${cap} ${currency}`}
+                      onRemove={() => setMaxPrice(bounds.max)}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="ml-0.5 text-sm text-black/50 underline underline-offset-2 hover:text-black/80 dark:text-white/50 dark:hover:text-white/80"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Refine — instant filters on the loaded results */}
+      {/* Refine — instant client-side filters; same visual language as the
+          trip panel, but these narrow the loaded results without re-searching. */}
       {searched && showRefine && hasRefinements && (
-        <div className="flex flex-col gap-3 rounded-xl border border-black/10 p-4 dark:border-white/10">
+        <div className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
+          <p className="text-xs text-black/45 dark:text-white/45">
+            Narrows the results below instantly — no new search.
+          </p>
           {available.length > 0 && (
-            <RefineRow label="Month">
+            <Field label="Month" align="stretch">
               <MonthFilter
                 months={available}
                 selected={selectedMonths}
+                counts={monthCounts}
                 onToggle={toggleMonth}
                 onClear={() => setSelectedMonths([])}
               />
-            </RefineRow>
+            </Field>
           )}
           {availableContinents.length > 1 && (
-            <RefineRow label="Region">
+            <Field label="Region" align="stretch">
               <ContinentFilter
                 continents={availableContinents}
                 selected={selectedContinents}
+                counts={continentCounts}
                 onToggle={toggleContinent}
                 onClear={() => setSelectedContinents([])}
               />
-            </RefineRow>
+            </Field>
           )}
-          {bounds.max > bounds.min && (
-            <RefineRow label="Max price">
+          {priceBucketList.length > 0 && (
+            <Field label="Max price" align="stretch">
               <PriceFilter
-                min={bounds.min}
+                buckets={priceBucketList}
                 max={bounds.max}
                 value={cap}
-                currency={rawDeals[0]?.currency ?? "EUR"}
+                currency={currency}
                 onChange={setMaxPrice}
               />
-            </RefineRow>
+            </Field>
+          )}
+          {hiddenCount > 0 && (
+            <Field label="Short-stay trips" align="stretch">
+              <label className="flex cursor-pointer items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!showHidden}
+                  onChange={() => setShowHidden((v) => !v)}
+                  className="mt-0.5 accent-black dark:accent-white"
+                />
+                <span className="text-black/70 dark:text-white/70">
+                  Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with a
+                  layover and under a day at the destination — more travel than
+                  time there.
+                </span>
+              </label>
+            </Field>
           )}
         </div>
       )}
@@ -438,7 +569,9 @@ export default function Home() {
           deals={visible}
           loading={loading}
           error={error}
+          groupByMonth={sort === "soonest"}
           cheapest={{ style, months, direct: stopMode === "direct" }}
+          onClearFilters={activeFilters > 0 ? clearAll : undefined}
           emptyMessage={
             selectedMonths.length > 0 ||
             selectedContinents.length > 0 ||
@@ -447,6 +580,16 @@ export default function Home() {
               : undefined
           }
         />
+      )}
+
+      {searched && showJump && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:opacity-90 dark:bg-white dark:text-black"
+        >
+          ↑ Sort &amp; filter
+        </button>
       )}
     </main>
   );

@@ -1,39 +1,16 @@
-const MONTH_NAMES = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-function monthName(ym: string): string {
-  const m = Number(ym.slice(5, 7));
-  return MONTH_NAMES[m - 1] ?? ym;
-}
-
-function pillClass(active: boolean): string {
-  return `rounded-full px-3 py-1 text-sm transition ${
-    active
-      ? "bg-black text-white dark:bg-white dark:text-black"
-      : "text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 border border-black/10 dark:border-white/15"
-  }`;
-}
+import { monthShort } from "@/lib/format";
+import { pillClass } from "@/lib/pill";
 
 export function MonthFilter({
   months,
   selected,
+  counts,
   onToggle,
   onClear,
 }: {
   months: string[];
   selected: string[];
+  counts?: Record<string, number>;
   onToggle: (m: string) => void;
   onClear: () => void;
 }) {
@@ -57,7 +34,13 @@ export function MonthFilter({
           onClick={() => onToggle(m)}
           className={pillClass(sel.has(m))}
         >
-          {monthName(m)}
+          {sel.has(m) && <span aria-hidden>✓ </span>}
+          {monthShort(m)}
+          {counts?.[m] != null && (
+            <span aria-hidden className="ml-1.5 opacity-55">
+              {counts[m]}
+            </span>
+          )}
         </button>
       ))}
     </div>

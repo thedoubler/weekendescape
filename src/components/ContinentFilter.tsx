@@ -1,19 +1,15 @@
-function pillClass(active: boolean): string {
-  return `rounded-full px-3 py-1 text-sm transition ${
-    active
-      ? "bg-black text-white dark:bg-white dark:text-black"
-      : "text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 border border-black/10 dark:border-white/15"
-  }`;
-}
+import { pillClass } from "@/lib/pill";
 
 export function ContinentFilter({
   continents,
   selected,
+  counts,
   onToggle,
   onClear,
 }: {
   continents: string[];
   selected: string[];
+  counts?: Record<string, number>;
   onToggle: (c: string) => void;
   onClear: () => void;
 }) {
@@ -41,7 +37,13 @@ export function ContinentFilter({
           onClick={() => onToggle(c)}
           className={pillClass(sel.has(c))}
         >
+          {sel.has(c) && <span aria-hidden>✓ </span>}
           {c}
+          {counts?.[c] != null && (
+            <span aria-hidden className="ml-1.5 opacity-55">
+              {counts[c]}
+            </span>
+          )}
         </button>
       ))}
     </div>

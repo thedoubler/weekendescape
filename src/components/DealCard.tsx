@@ -5,18 +5,107 @@ import type { Deal } from "@/lib/deals";
 import type { WeekendStyle } from "@/lib/weekend";
 import { CheapestWeekend } from "@/components/CheapestWeekend";
 import {
-  dayLabel,
+  dateWithMonth,
   timeLabel,
   durationLabel,
   daysUntil,
   dayBlocks,
   crossesMidnight,
   isNightHour,
+  legMinutes,
   travelMinutes,
   holidayDate,
   stopsSummary,
+  weekendRange,
 } from "@/lib/format";
+import type { Layover } from "@/lib/deals";
+import { hotelUrl } from "@/lib/hotels";
 import { DayBlocks } from "@/components/DayBlocks";
+
+function Leg({
+  label,
+  date,
+  depTime,
+  depCode,
+  arrTime,
+  arrCode,
+  plusOne,
+  minutes,
+  stops,
+  layovers,
+}: {
+  label: string;
+  date: string;
+  depTime: string;
+  depCode: string;
+  arrTime: string;
+  arrCode: string;
+  plusOne: boolean;
+  minutes: number;
+  stops: number;
+  layovers: Layover[];
+}) {
+  const via = layovers
+    .map((l) => `${l.at} (${durationLabel(l.minutes)})`)
+    .join(", ");
+  const stopLabel =
+    stops === 0 ? "Direct" : `${stops} stop${stops > 1 ? "s" : ""}`;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-[11px] uppercase tracking-wide text-black/40 dark:text-white/40">
+        <span className="font-semibold">{label}</span>
+        <span>{date}</span>
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <div className="w-14 shrink-0">
+          <div className="text-[15px] font-semibold leading-none tabular-nums">
+            {depTime}
+          </div>
+          <div className="mt-1 text-xs text-black/50 dark:text-white/50">
+            {depCode}
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col items-center">
+          <span className="text-[11px] text-black/45 dark:text-white/45">
+            {durationLabel(minutes)}
+          </span>
+          <div className="my-1 flex w-full items-center gap-1">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/30 dark:border-white/30" />
+            <span className="h-px flex-1 bg-black/15 dark:bg-white/15" />
+            <span aria-hidden className="shrink-0 text-black/35 dark:text-white/35">
+              ✈
+            </span>
+            <span className="h-px flex-1 bg-black/15 dark:bg-white/15" />
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black/30 dark:bg-white/30" />
+          </div>
+          <span
+            className={`truncate text-[11px] ${
+              stops === 0
+                ? "text-black/45 dark:text-white/45"
+                : "text-amber-700 dark:text-amber-300"
+            }`}
+          >
+            {stopLabel}
+            {via ? ` · via ${via}` : ""}
+          </span>
+        </div>
+        <div className="w-14 shrink-0 text-right">
+          <div className="text-[15px] font-semibold leading-none tabular-nums">
+            {arrTime}
+            {plusOne && (
+              <span className="align-super text-[9px] font-normal text-black/45 dark:text-white/45">
+                +1
+              </span>
+            )}
+          </div>
+          <div className="mt-1 text-xs text-black/50 dark:text-white/50">
+            {arrCode}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function DealCard({
   deal,
@@ -71,16 +160,15 @@ export function DealCard({
               {deal.cityTo}
             </span>
           </div>
-          <div className="mt-0.5 text-xs text-black/50 dark:text-white/50">
-            {deal.countryTo} ·{" "}
-            <span>
-              {deal.flyFrom} → {deal.flyTo}
-            </span>{" "}
-            ·{" "}
+          <div className="mt-0.5 text-xs">
+            <span className="font-medium text-black/70 dark:text-white/70">
+              {weekendRange(deal.outDepart, deal.backArrive)}
+            </span>
+            <span className="text-black/35 dark:text-white/35"> · </span>
             <span
               className={
                 direct
-                  ? ""
+                  ? "text-black/45 dark:text-white/45"
                   : "font-medium text-amber-700 dark:text-amber-300"
               }
             >
@@ -118,15 +206,26 @@ export function DealCard({
             ≈ {durationLabel(flyingMinutes)} flying
           </span>
         </div>
-        <a
-          href={deal.deepLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Book ${deal.cityTo}`}
-          className="text-sm font-medium text-black underline underline-offset-2 dark:text-white"
-        >
-          Book ↗
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href={hotelUrl(deal)}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            aria-label={`Find a hotel in ${deal.cityTo}`}
+            className="text-sm text-black/55 underline underline-offset-2 hover:text-black dark:text-white/55 dark:hover:text-white"
+          >
+            🛏 Stay
+          </a>
+          <a
+            href={deal.deepLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Book ${deal.cityTo}`}
+            className="text-sm font-medium text-black underline underline-offset-2 dark:text-white"
+          >
+            Book ↗
+          </a>
+        </div>
       </div>
 
       {(deal.homeHoliday || deal.destHoliday) && (
@@ -140,44 +239,43 @@ export function DealCard({
             </span>
           )}
           {deal.destHoliday && (
-            <span className="rounded-full border border-amber-300/50 px-2.5 py-1 text-sm text-amber-800 dark:text-amber-200">
-              {deal.destHoliday.name} · {holidayDate(deal.destHoliday.date)} in{" "}
-              {deal.cityTo}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300/60 px-2.5 py-0.5 text-xs text-rose-700 dark:border-rose-400/30 dark:text-rose-300">
+              🎊
+              <span>
+                Public holiday · {deal.destHoliday.name} ·{" "}
+                {holidayDate(deal.destHoliday.date)}
+              </span>
             </span>
           )}
         </div>
       )}
 
       {open && (
-        <div className="mt-3 flex flex-col gap-1 border-t border-black/10 pt-3 text-sm dark:border-white/10">
-          <div>
-            Outbound · {dayLabel(deal.outDepart)} {timeLabel(deal.outDepart)}{" "}
-            {deal.flyFrom} → {deal.flyTo} {timeLabel(deal.outArrive)}
-            {arrival.plusOne ? " +1" : ""}
-            {deal.outStops > 0 && (
-              <span className="opacity-60">
-                {" "}
-                · {deal.outStops} stop{deal.outStops > 1 ? "s" : ""} via{" "}
-                {deal.outLayovers
-                  .map((l) => `${l.at} (${durationLabel(l.minutes)})`)
-                  .join(", ")}
-              </span>
-            )}
-          </div>
-          <div>
-            Return · {dayLabel(deal.backDepart)} {timeLabel(deal.backDepart)}{" "}
-            {deal.flyTo} → {deal.flyFrom} {timeLabel(deal.backArrive)}
-            {returnPlusOne ? " +1" : ""}
-            {deal.backStops > 0 && (
-              <span className="opacity-60">
-                {" "}
-                · {deal.backStops} stop{deal.backStops > 1 ? "s" : ""} via{" "}
-                {deal.backLayovers
-                  .map((l) => `${l.at} (${durationLabel(l.minutes)})`)
-                  .join(", ")}
-              </span>
-            )}
-          </div>
+        <div className="mt-3 flex flex-col gap-3 border-t border-black/10 pt-3 text-sm dark:border-white/10">
+          <Leg
+            label="Outbound"
+            date={dateWithMonth(deal.outDepart)}
+            depTime={timeLabel(deal.outDepart)}
+            depCode={deal.flyFrom}
+            arrTime={timeLabel(deal.outArrive)}
+            arrCode={deal.flyTo}
+            plusOne={arrival.plusOne}
+            minutes={legMinutes(deal.outDepart, deal.outArrive)}
+            stops={deal.outStops}
+            layovers={deal.outLayovers}
+          />
+          <Leg
+            label="Return"
+            date={dateWithMonth(deal.backDepart)}
+            depTime={timeLabel(deal.backDepart)}
+            depCode={deal.flyTo}
+            arrTime={timeLabel(deal.backArrive)}
+            arrCode={deal.flyFrom}
+            plusOne={returnPlusOne}
+            minutes={legMinutes(deal.backDepart, deal.backArrive)}
+            stops={deal.backStops}
+            layovers={deal.backLayovers}
+          />
           {cheapest && (
             <div className="mt-1 border-t border-black/10 pt-2 dark:border-white/10">
               <CheapestWeekend
