@@ -489,9 +489,12 @@ export default function Home() {
               <button
                 type="button"
                 onClick={detectLocation}
-                className="text-xs text-black/55 underline-offset-2 transition hover:text-black hover:underline dark:text-white/55 dark:hover:text-white"
+                className="group text-xs text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
               >
-                📍 Find my airport
+                <span aria-hidden>📍</span>{" "}
+                <span className="underline-offset-2 group-hover:underline">
+                  Find my airport
+                </span>
               </button>
             </div>
             <AirportInput
