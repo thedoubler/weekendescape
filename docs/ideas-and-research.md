@@ -22,7 +22,12 @@ Roughly ordered by leverage. Items marked ✅ shipped this session.
 
 ### Polish
 - Skeleton cards while loading (cohesive with the smooth first-load).
-- ✅ OpenGraph preview image for shared links.
+- ✅ OpenGraph preview image for shared links (site-wide card).
+- **Per-airport dynamic OG card** (e.g. "Cheap weekends from Barcelona 🇪🇸" in the
+  image). Needs `generateMetadata({ searchParams })`, which can't live in a client
+  component — so `page.tsx` needs a small server/client split (a server page that
+  reads `searchParams` and renders the existing client component). Makes shared
+  `?from=BCN` links much more clickable. Deferred.
 - Save / shortlist & compare deals (`home-storage.ts` already exists).
 
 ### Trust / data quality
