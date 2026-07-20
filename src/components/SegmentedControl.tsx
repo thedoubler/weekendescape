@@ -28,7 +28,7 @@ export function SegmentedControl<T extends string | number>({
             type="button"
             aria-pressed={active}
             onClick={() => onChange(o.value)}
-            className={`rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+            className={`rounded-full px-3.5 py-2 text-sm transition-colors sm:py-1.5 ${
               active
                 ? "bg-white text-black shadow-sm dark:bg-neutral-700 dark:text-white"
                 : "text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white"

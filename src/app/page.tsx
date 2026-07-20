@@ -410,7 +410,7 @@ export default function Home() {
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
 
   return (
-    <main className="max-w-2xl mx-auto w-full min-w-0 p-6 flex flex-col gap-6">
+    <main className="max-w-2xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-6">
       <header className="flex items-center gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
         <span
           aria-hidden
@@ -479,7 +479,7 @@ export default function Home() {
         </div>
       ) : (
         /* Full search — defines the trip; changing these runs a new search */
-        <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
+        <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
           {/* Origin — the primary input, given room to breathe */}
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -507,7 +507,7 @@ export default function Home() {
           <div className="h-px bg-black/[0.06] dark:bg-white/[0.08]" />
 
           {/* When & how — refinements to the trip */}
-          <div className="flex flex-wrap gap-x-8 gap-y-5">
+          <div className="flex flex-wrap gap-x-6 gap-y-5">
             <Field label="Weekend length">
               <SegmentedControl
                 options={STYLE_OPTIONS}
@@ -639,7 +639,7 @@ export default function Home() {
       {/* Refine — instant client-side filters; same visual language as the
           trip panel, but these narrow the loaded results without re-searching. */}
       {searched && showRefine && hasRefinements && (
-        <div className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-5 dark:border-white/10 dark:bg-white/[0.02]">
+        <div className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
           <p className="text-xs text-black/45 dark:text-white/45">
             Narrows the results below instantly — no new search.
           </p>
