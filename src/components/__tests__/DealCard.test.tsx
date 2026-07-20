@@ -49,10 +49,10 @@ describe("DealCard", () => {
     expect(screen.getByText(/return/i)).toBeInTheDocument();
   });
 
-  it("shows the time on the ground", () => {
+  it("shows the time at the destination", () => {
     render(<DealCard deal={base} />);
     // arrive → return departure = 2915 min ≈ 2 days at the destination
-    expect(screen.getByText(/2d on the ground/)).toBeInTheDocument();
+    expect(screen.getByText(/2d to explore/)).toBeInTheDocument();
   });
 
   it("labels a direct trip and shows layover detail on expand", () => {

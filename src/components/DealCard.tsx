@@ -284,7 +284,7 @@ export function DealCard({
                 : "bg-black/[0.06] text-black/70 dark:bg-white/10 dark:text-white/70"
             }`}
           >
-            {stay} on the ground
+            {stay} to explore
           </span>
         </div>
         <div className="flex items-center gap-3">
