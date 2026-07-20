@@ -1,6 +1,6 @@
 import type { Deal } from "@/lib/deals";
 
-export type SortKey = "soonest" | "cheapest" | "closest";
+export type SortKey = "soonest" | "cheapest";
 
 export function sortDeals(deals: Deal[], key: SortKey): Deal[] {
   const arr = [...deals];
@@ -8,13 +8,6 @@ export function sortDeals(deals: Deal[], key: SortKey): Deal[] {
     arr.sort(
       (a, b) => a.price - b.price || a.outDepart.localeCompare(b.outDepart)
     );
-  } else if (key === "closest") {
-    // Nearest airport-to-city first; unknown distances sink to the bottom.
-    arr.sort((a, b) => {
-      const ka = a.airportKmFromCity ?? Infinity;
-      const kb = b.airportKmFromCity ?? Infinity;
-      return ka - kb || a.price - b.price;
-    });
   } else {
     arr.sort(
       (a, b) => a.outDepart.localeCompare(b.outDepart) || a.price - b.price

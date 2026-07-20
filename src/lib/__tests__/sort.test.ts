@@ -77,20 +77,6 @@ describe("sortDeals", () => {
       "Rome",
     ]);
   });
-  it("closest orders by airport distance, unknowns last", () => {
-    const withDist = [
-      withKm(d("Far", "2026-09-01T00:00", 50), 90),
-      withKm(d("Near", "2026-09-01T00:00", 60), 8),
-      withKm(d("Unknown", "2026-09-01T00:00", 40), null),
-      withKm(d("Mid", "2026-09-01T00:00", 70), 30),
-    ];
-    expect(sortDeals(withDist, "closest").map((x) => x.cityTo)).toEqual([
-      "Near",
-      "Mid",
-      "Far",
-      "Unknown",
-    ]);
-  });
   it("does not mutate the input", () => {
     const copy = [...deals];
     sortDeals(deals, "cheapest");

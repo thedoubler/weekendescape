@@ -583,9 +583,6 @@ export default function Home() {
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },
                   { value: "cheapest" as SortKey, label: "Cheapest" },
-                  ...(farAirportDeals > 0
-                    ? [{ value: "closest" as SortKey, label: "Closest" }]
-                    : []),
                 ]}
                 value={sort}
                 onChange={setSort}
