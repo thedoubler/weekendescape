@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { Deal } from "@/lib/deals";
 import type { WeatherResult } from "@/lib/weather";
+
+interface DestinationImage {
+  url: string | null;
+  alt: string;
+  credit: { name: string; profile: string | null; photo: string | null };
+}
 import type { WeekendStyle } from "@/lib/weekend";
 import { CheapestWeekend } from "@/components/CheapestWeekend";
 import {
@@ -163,6 +169,8 @@ export function DealCard({
   const [open, setOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [image, setImage] = useState<DestinationImage | null>(null);
+  const imageTried = useRef(false);
   // Weather is fetched lazily the first time a card is expanded, so the list
   // view stays free of per-destination network calls.
   const weatherTried = useRef(false);
@@ -180,6 +188,19 @@ export function DealCard({
       .catch(() => setWeather(null))
       .finally(() => setWeatherLoading(false));
   }, [open, deal.flyTo, deal.outArrive, deal.backDepart]);
+
+  useEffect(() => {
+    if (!open || imageTried.current) return;
+    imageTried.current = true;
+    const params = new URLSearchParams({
+      city: deal.cityTo,
+      country: deal.countryTo,
+    });
+    fetch(`/api/destination-image?${params.toString()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setImage(d?.image ?? null))
+      .catch(() => setImage(null));
+  }, [open, deal.cityTo, deal.countryTo]);
 
   const cells = dayBlocks(deal.outArrive, deal.backDepart);
   const stay = durationLabel(deal.stayMinutes);
@@ -324,6 +345,27 @@ export function DealCard({
 
       {open && (
         <div className="mt-3 flex flex-col gap-3 border-t border-black/10 pt-3 text-sm dark:border-white/10">
+          {image?.url && (
+            <div className="relative overflow-hidden rounded-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={image.url}
+                alt={image.alt}
+                loading="lazy"
+                className="h-40 w-full object-cover"
+              />
+              {image.credit?.name && (
+                <a
+                  href={image.credit.photo ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-1 right-1.5 rounded bg-black/45 px-1.5 py-0.5 text-[10px] text-white/85 backdrop-blur-sm hover:text-white"
+                >
+                  Photo: {image.credit.name} / Unsplash
+                </a>
+              )}
+            </div>
+          )}
           <Leg
             label="Outbound"
             date={dateWithMonth(deal.outDepart)}
