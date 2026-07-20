@@ -14,7 +14,12 @@ export async function GET(request: NextRequest) {
   const city = (searchParams.get("city") || "").trim();
   const country = (searchParams.get("country") || "").trim();
   const key = process.env.UNSPLASH_ACCESS_KEY;
-  if (!city || !key) return NextResponse.json({ image: null });
+  // Kill switch — set DESTINATION_IMAGES=off (or false/0) to disable the feature
+  // without removing the key. Cards degrade gracefully to no hero.
+  const disabled = /^(off|false|0|no)$/i.test(
+    process.env.DESTINATION_IMAGES || ""
+  );
+  if (!city || !key || disabled) return NextResponse.json({ image: null });
 
   try {
     const q = [city, country].filter(Boolean).join(" ");
