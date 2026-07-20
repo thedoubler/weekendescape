@@ -230,13 +230,21 @@ export function DealCard({
       onMouseEnter={loadImage}
       className="group relative overflow-hidden rounded-xl border border-black/10 p-4 transition duration-200 hover:border-black/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:hover:border-white/20"
     >
-      {/* Destination photo, peeled in from the top-right corner on hover. A small
-          dog-ear peek hints at it; hovering the card reveals the full image.
-          Only on collapsed cards — never over the expanded details. */}
+      {/* Peel the destination photo in from the top-right corner — but ONLY when
+          that corner is hovered (a `peer`), so reading the rest of the card
+          never triggers it. A dog-ear marks the spot. Collapsed cards only. */}
+      {!open && (
+        <div
+          className="peer absolute right-0 top-0 z-30 h-14 w-14 cursor-pointer"
+          aria-hidden
+        >
+          <span className="absolute right-0 top-0 h-5 w-5 bg-gradient-to-br from-black/15 to-black/30 [clip-path:polygon(100%_0,0_0,100%_100%)] dark:from-white/20 dark:to-white/35" />
+        </div>
+      )}
       {!open && image?.url && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-20 [clip-path:circle(26px_at_100%_0)] transition-[clip-path] duration-500 ease-out group-hover:[clip-path:circle(170%_at_100%_0)]"
+          className="pointer-events-none absolute inset-0 z-20 [clip-path:circle(0px_at_100%_0)] transition-[clip-path] duration-500 ease-out peer-hover:[clip-path:circle(175%_at_100%_0)]"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -245,7 +253,7 @@ export function DealCard({
             className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4 opacity-0 transition-opacity delay-100 duration-300 group-hover:opacity-100">
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4 opacity-0 transition-opacity delay-100 duration-300 peer-hover:opacity-100">
             <span className="font-serif text-2xl leading-none text-white drop-shadow">
               {deal.cityTo}
             </span>
