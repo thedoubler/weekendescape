@@ -189,8 +189,10 @@ export function DealCard({
       .finally(() => setWeatherLoading(false));
   }, [open, deal.flyTo, deal.outArrive, deal.backDepart]);
 
-  useEffect(() => {
-    if (!open || imageTried.current) return;
+  // Load the destination photo lazily the first time the card is hovered — so
+  // the peel-to-reveal only costs a request for cards you actually point at.
+  function loadImage() {
+    if (imageTried.current) return;
     imageTried.current = true;
     const params = new URLSearchParams({
       city: deal.cityTo,
@@ -200,7 +202,7 @@ export function DealCard({
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setImage(d?.image ?? null))
       .catch(() => setImage(null));
-  }, [open, deal.cityTo, deal.countryTo]);
+  }
 
   const cells = dayBlocks(deal.outArrive, deal.backDepart);
   const stay = durationLabel(deal.stayMinutes);
@@ -224,7 +226,37 @@ export function DealCard({
   const airlines = deal.airlines ?? [];
 
   return (
-    <div className="rounded-xl border border-black/10 p-4 transition duration-200 hover:border-black/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:hover:border-white/20">
+    <div
+      onMouseEnter={loadImage}
+      className="group relative overflow-hidden rounded-xl border border-black/10 p-4 transition duration-200 hover:border-black/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:hover:border-white/20"
+    >
+      {/* Destination photo, peeled in from the top-right corner on hover. A small
+          dog-ear peek hints at it; hovering the card reveals the full image.
+          Only on collapsed cards — never over the expanded details. */}
+      {!open && image?.url && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20 [clip-path:circle(26px_at_100%_0)] transition-[clip-path] duration-500 ease-out group-hover:[clip-path:circle(170%_at_100%_0)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image.url}
+            alt={image.alt}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4 opacity-0 transition-opacity delay-100 duration-300 group-hover:opacity-100">
+            <span className="font-serif text-2xl leading-none text-white drop-shadow">
+              {deal.cityTo}
+            </span>
+            {image.credit?.name && (
+              <span className="text-[10px] text-white/70">
+                {image.credit.name} / Unsplash
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
@@ -345,27 +377,6 @@ export function DealCard({
 
       {open && (
         <div className="mt-3 flex flex-col gap-3 border-t border-black/10 pt-3 text-sm dark:border-white/10">
-          {image?.url && (
-            <div className="relative overflow-hidden rounded-lg">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={image.url}
-                alt={image.alt}
-                loading="lazy"
-                className="h-40 w-full object-cover"
-              />
-              {image.credit?.name && (
-                <a
-                  href={image.credit.photo ?? undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute bottom-1 right-1.5 rounded bg-black/45 px-1.5 py-0.5 text-[10px] text-white/85 backdrop-blur-sm hover:text-white"
-                >
-                  Photo: {image.credit.name} / Unsplash
-                </a>
-              )}
-            </div>
-          )}
           <Leg
             label="Outbound"
             date={dateWithMonth(deal.outDepart)}
