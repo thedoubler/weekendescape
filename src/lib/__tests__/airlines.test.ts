@@ -8,9 +8,15 @@ describe("airlineName", () => {
     expect(airlineName("W6")).toBe("Wizz Air");
   });
 
-  it("uses the corrected name for stale duplicate codes", () => {
-    // OpenFlights still maps VY to the defunct Formosa Airlines; we override it.
+  it("uses the corrected name for stale/reassigned codes", () => {
+    // OpenFlights predates the current low-cost AOCs, so these codes resolve to
+    // defunct carriers (VY->Formosa, W4->AeroWorld, RK->Air Afrique) without the
+    // overrides.
     expect(airlineName("VY")).toBe("Vueling");
+    expect(airlineName("W4")).toBe("Wizz Air");
+    expect(airlineName("W9")).toBe("Wizz Air");
+    expect(airlineName("RK")).toBe("Ryanair");
+    expect(airlineName("AL")).toBe("Ryanair");
   });
 
   it("falls back to the code itself when unknown, and empty for blank", () => {
