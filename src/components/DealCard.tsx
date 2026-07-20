@@ -20,6 +20,7 @@ import {
 } from "@/lib/format";
 import type { Layover } from "@/lib/deals";
 import { hotelUrl } from "@/lib/hotels";
+import { airlineName } from "@/lib/airlines";
 import { DayBlocks } from "@/components/DayBlocks";
 
 // Below this the airport is "in town" enough not to warrant a caveat; above it
@@ -354,7 +355,7 @@ export function DealCard({
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400"
               />
               <span>
-                Public holiday at destination · {deal.destHoliday.name}
+                Public holiday in {deal.cityTo} · {deal.destHoliday.name}
               </span>
             </div>
           )}
@@ -403,8 +404,8 @@ export function DealCard({
                     <img
                       key={code}
                       src={`https://images.kiwi.com/airlines/64/${code}.png`}
-                      alt={code}
-                      title={code}
+                      alt={airlineName(code)}
+                      title={airlineName(code)}
                       width={18}
                       height={18}
                       loading="lazy"

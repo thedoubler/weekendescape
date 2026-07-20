@@ -95,11 +95,11 @@ describe("DealCard", () => {
     expect(screen.queryByText(/Sat 8 Aug/i)).not.toBeInTheDocument();
     // The named note shows only in the expanded panel.
     expect(
-      screen.queryByText(/Public holiday at destination/i)
+      screen.queryByText(/Public holiday in Ibiza/i)
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /show details/i }));
     expect(
-      screen.getByText(/Public holiday at destination · Ferragosto/i)
+      screen.getByText(/Public holiday in Ibiza · Ferragosto/i)
     ).toBeInTheDocument();
   });
 });
