@@ -199,6 +199,42 @@ Sources: [Tequila](https://tequila.kiwi.com/) ·
 
 ---
 
+## Best practices for flight-deal / getaway sites (researched)
+
+Mapped to Weekend Escape. ✅ have it · ⚠️ gap · 💡 opportunity.
+
+1. **All-in price transparency** (⚠️, high) — FTC Unfair/Deceptive Fees Rule (May
+   2025) + DOT Full Fare Rule expect the *total* incl. mandatory fees up front;
+   hidden fees are the #1 abandonment trigger. We show fare + bag price + airport
+   distance but not a combined "real cost". Build the all-in price (fare + bag +
+   rough transfer). Conversion win *and* compliance-aligned.
+2. **"Is this a good deal?" signal** (💡, high) — the whole reason to use a
+   deal-finder vs Google Flights. A "cheapest in 3 months" / "great price" badge
+   or price sparkline. `CheapestWeekend` is a start.
+3. **Skeleton loaders while searching** (💡, low) — kill the dead pause; big
+   perceived-quality lift for little effort.
+4. **Freshness + currency** (💡, low/med) — "prices checked 2h ago" (Tequila
+   links go stale) and prices in the user's currency. Trust signals.
+5. **Helpful defaults + labels** (✅ mostly) — we default Fri–Mon / Direct /
+   Cheapest; add "best value"/"popular" style badges to speed decisions.
+6. **Immediate feedback / micro-interactions** (✅) — hover states, fade-in,
+   smooth first-load done; skeletons are the missing piece (see 3).
+7. **Search prominence + flexibility** (✅) — auto-search + "anywhere + which
+   weekend" is the core advantage; keep it front and centre.
+8. **Mobile carries disproportionate revenue risk** (✅) — audited; padding +
+   touch targets tuned.
+9. **Visual/functional balance** (✅) — scannable list stays primary; imagery and
+   the serif headline are tasteful accents, not clutter.
+
+**Priority order:** the wins are trust/decision signals, not more chrome —
+(1) all-in "real price", (2) "is this a good deal" badge/sparkline,
+(3) skeletons, (4) freshness + currency.
+
+Sources: Baymard (flight-booking UX 2026), RALabs (booking UX), Smashing
+(flight-search UX), FTC (unfair/deceptive fees rule), Mediaboom (travel design).
+
+---
+
 ## Data-source caveats (for future maintenance)
 
 - **Airline names** (`src/lib/airlines.json`) come from a **Wikidata snapshot**
