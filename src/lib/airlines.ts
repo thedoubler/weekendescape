@@ -1,8 +1,9 @@
 import airlines from "@/lib/airlines.json";
 
-// IATA airline code -> display name (OpenFlights-derived, with corrections for
-// stale duplicate codes). Used to show carrier names on hover rather than bare
-// two-letter codes. Small enough (~28 KB) to import anywhere.
+// IATA airline code -> display name. Sourced from Wikidata (preferring carriers
+// with no dissolution date, so reused codes resolve to the airline flying today)
+// with curated overrides for the low-cost groups and a few flag carriers. Used
+// to show carrier names on hover rather than bare two-letter codes.
 const AIRLINES = airlines as Record<string, string>;
 
 // Full airline name for a code, or the code itself when unknown so the UI always
