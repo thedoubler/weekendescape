@@ -113,6 +113,10 @@ export default function Home() {
   const [showHidden, setShowHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [showJump, setShowJump] = useState(false);
+  // First-load only: while we detect location + run the initial search, show a
+  // quiet spinner instead of the empty form, so the UI doesn't flash the
+  // expanded panel and then snap it shut when results arrive.
+  const [booting, setBooting] = useState(true);
   const bootstrapped = useRef(false);
   const didAutoCollapse = useRef(false);
   // When we seed the search from URL params on load, the param-change effect
@@ -138,6 +142,13 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setSearched(true);
+    setBooting(false);
+    // Collapse the panel as the first search begins (not after it resolves) so
+    // results fill in place rather than the panel snapping shut beneath them.
+    if (!didAutoCollapse.current) {
+      didAutoCollapse.current = true;
+      setCollapsed(true);
+    }
     try {
       const qs = new URLSearchParams({
         flyFrom: c,
@@ -150,12 +161,6 @@ export default function Home() {
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
       setSelectedMonths([]);
-      // Collapse the search panel once, after the first successful search, so
-      // results are visible right away. Later edits keep it open.
-      if (!didAutoCollapse.current) {
-        didAutoCollapse.current = true;
-        setCollapsed(true);
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed");
       setRawDeals([]);
@@ -168,7 +173,13 @@ export default function Home() {
     const fallback = () => {
       const saved = loadHome();
       if (saved) runSearch(saved);
-      else inputRef.current?.focus();
+      else {
+        // No location and nothing saved — reveal the form for manual entry.
+        // Focus after the form has actually rendered (it isn't mounted while
+        // the boot spinner is showing).
+        setBooting(false);
+        setTimeout(() => inputRef.current?.focus(), 0);
+      }
     };
     if (!navigator.geolocation) {
       fallback();
@@ -186,7 +197,7 @@ export default function Home() {
       } catch {
         fallback();
       }
-    }, fallback);
+    }, fallback, { timeout: 8000 });
   }
 
   useEffect(() => {
@@ -378,6 +389,18 @@ export default function Home() {
         </div>
       </header>
 
+      {booting ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <span
+            aria-hidden
+            className="h-5 w-5 animate-spin rounded-full border-2 border-black/15 border-t-black/50 dark:border-white/20 dark:border-t-white/70"
+          />
+          <span className="text-sm text-black/50 dark:text-white/50">
+            Finding weekend escapes near you…
+          </span>
+        </div>
+      ) : (
+      <div className="flex flex-col gap-6 animate-fade-in">
       {collapsed ? (
         /* Compact summary once searched — each facet is individually tappable */
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.07] bg-black/[0.015] px-4 py-3 dark:border-white/10 dark:bg-white/[0.02]">
@@ -633,6 +656,8 @@ export default function Home() {
                 : undefined
           }
         />
+      )}
+      </div>
       )}
 
       {searched && showJump && (
