@@ -16,22 +16,6 @@ export function sortDeals(deals: Deal[], key: SortKey): Deal[] {
   return arr;
 }
 
-// Keep deals whose airport is within maxKm of the city — or whose distance we
-// couldn't measure (never hide a deal just because it's unknown).
-export function filterByMaxAirportKm(deals: Deal[], maxKm: number): Deal[] {
-  return deals.filter(
-    (d) => d.airportKmFromCity == null || d.airportKmFromCity <= maxKm
-  );
-}
-
-// How many deals are known to have a far-out airport (so the UI can decide
-// whether the "in-town only" control is worth showing).
-export function farAirportCount(deals: Deal[], maxKm: number): number {
-  return deals.filter(
-    (d) => d.airportKmFromCity != null && d.airportKmFromCity > maxKm
-  ).length;
-}
-
 export function monthsOf(deals: Deal[]): string[] {
   const set = new Set<string>();
   for (const deal of deals) set.add(deal.outDepart.slice(0, 7));

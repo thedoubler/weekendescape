@@ -10,12 +10,7 @@ import {
   filterByMonths,
   priceRange,
   filterByMaxPrice,
-  filterByMaxAirportKm,
-  farAirportCount,
 } from "@/lib/sort";
-
-// An airport within this many km of its city counts as "in town".
-const NEAR_AIRPORT_KM = 30;
 import {
   continentOf,
   continentsOf,
@@ -129,7 +124,6 @@ export default function Home() {
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(0);
-  const [nearAirportOnly, setNearAirportOnly] = useState(false);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -330,13 +324,8 @@ export default function Home() {
     let out = filterByMonths(rawDeals, selectedMonths);
     out = filterByContinents(out, selectedContinents);
     out = filterByMaxPrice(out, cap);
-    if (nearAirportOnly) out = filterByMaxAirportKm(out, NEAR_AIRPORT_KM);
     return sortDeals(out, sort);
-  }, [rawDeals, selectedMonths, selectedContinents, cap, sort, nearAirportOnly]);
-  const farAirportDeals = useMemo(
-    () => farAirportCount(rawDeals, NEAR_AIRPORT_KM),
-    [rawDeals]
-  );
+  }, [rawDeals, selectedMonths, selectedContinents, cap, sort]);
   // Layover trips with under a day at the destination are hidden by default.
   const hiddenCount = useMemo(
     () => filtered.filter(isShortLayoverTrip).length,
@@ -380,7 +369,6 @@ export default function Home() {
     setSelectedMonths([]);
     setSelectedContinents([]);
     setMaxPrice(bounds.max);
-    setNearAirportOnly(false);
   }
 
   const editSearch = () => setCollapsed(false);
@@ -405,13 +393,11 @@ export default function Home() {
     available.length > 0 ||
     availableContinents.length > 1 ||
     priceBucketList.length > 0 ||
-    hiddenCount > 0 ||
-    farAirportDeals > 0;
+    hiddenCount > 0;
   const activeFilters =
     selectedMonths.length +
     selectedContinents.length +
-    (cap < bounds.max ? 1 : 0) +
-    (nearAirportOnly ? 1 : 0);
+    (cap < bounds.max ? 1 : 0);
   const styleLabel =
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
 
@@ -630,12 +616,6 @@ export default function Home() {
                   onRemove={() => setMaxPrice(bounds.max)}
                 />
               )}
-              {nearAirportOnly && (
-                <FilterChip
-                  label="In-town airports"
-                  onRemove={() => setNearAirportOnly(false)}
-                />
-              )}
               <button
                 type="button"
                 onClick={clearAll}
@@ -701,23 +681,6 @@ export default function Home() {
                   Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with a
                   layover and under a day at the destination — more travel than
                   time there.
-                </span>
-              </label>
-            </Field>
-          )}
-          {farAirportDeals > 0 && (
-            <Field label="Airport" align="stretch">
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={nearAirportOnly}
-                  onChange={() => setNearAirportOnly((v) => !v)}
-                  className="mt-0.5 accent-black dark:accent-white"
-                />
-                <span className="text-black/70 dark:text-white/70">
-                  In-town airports only — hide {farAirportDeals} deal
-                  {farAirportDeals === 1 ? "" : "s"} whose airport is over{" "}
-                  {NEAR_AIRPORT_KM} km from the city (long transfer).
                 </span>
               </label>
             </Field>
