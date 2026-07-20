@@ -233,7 +233,7 @@ export function DealCard({
       {/* Peel the destination photo in from the top-right corner — but ONLY when
           that corner is hovered (a `peer`), so reading the rest of the card
           never triggers it. A dog-ear marks the spot. Collapsed cards only. */}
-      {!open && (
+      {!open && image?.url && (
         <div
           className="peer absolute right-0 top-0 z-30 h-14 w-14 cursor-pointer"
           aria-hidden
