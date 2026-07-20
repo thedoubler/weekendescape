@@ -54,6 +54,12 @@ const STOP_OPTIONS = [
   { value: "any" as StopMode, label: "Any" },
   { value: "direct" as StopMode, label: "Direct" },
 ];
+const ADULTS_OPTIONS = [
+  { value: 1, label: "1" },
+  { value: 2, label: "2" },
+  { value: 3, label: "3" },
+  { value: 4, label: "4" },
+];
 type StopMode = "any" | "direct";
 
 function Field({
@@ -112,7 +118,8 @@ export default function Home() {
   const [home, setHome] = useState("");
   const [style, setStyle] = useState<WeekendStyle>("frimon");
   const [months, setMonths] = useState(3);
-  const [stopMode, setStopMode] = useState<StopMode>("any");
+  const [stopMode, setStopMode] = useState<StopMode>("direct");
+  const [adults, setAdults] = useState(1);
   const [sort, setSort] = useState<SortKey>("cheapest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
@@ -140,10 +147,12 @@ export default function Home() {
   const styleRef = useRef(style);
   const monthsRef = useRef(months);
   const stopModeRef = useRef(stopMode);
+  const adultsRef = useRef(adults);
   useEffect(() => {
     styleRef.current = style;
     monthsRef.current = months;
     stopModeRef.current = stopMode;
+    adultsRef.current = adults;
   });
 
   async function runSearch(code: string) {
@@ -166,6 +175,7 @@ export default function Home() {
         flyFrom: c,
         style: styleRef.current,
         months: String(monthsRef.current),
+        adults: String(adultsRef.current),
       });
       if (stopModeRef.current === "direct") qs.set("direct", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
@@ -236,18 +246,26 @@ export default function Home() {
         ? (s as WeekendStyle)
         : "frimon";
       const months0 = [1, 2, 3, 6].includes(m) ? m : 3;
-      const stop0: StopMode = p.get("direct") === "1" ? "direct" : "any";
+      // Direct is the default now; an explicit direct=0 opts back into stops.
+      const stop0: StopMode = p.get("direct") === "0" ? "any" : "direct";
+      const a = Number(p.get("adults"));
+      const adults0 = [1, 2, 3, 4].includes(a) ? a : 1;
       // Seed refs synchronously so the immediate search uses the URL values
       // (state setters haven't flushed yet). Only guard the param-change effect
       // if a non-default value actually changed.
       styleRef.current = style0;
       monthsRef.current = months0;
       stopModeRef.current = stop0;
+      adultsRef.current = adults0;
       setStyle(style0);
       setMonths(months0);
       setStopMode(stop0);
+      setAdults(adults0);
       seededSearch.current =
-        style0 !== "frimon" || months0 !== 3 || stop0 !== "any";
+        style0 !== "frimon" ||
+        months0 !== 3 ||
+        stop0 !== "direct" ||
+        adults0 !== 1;
       runSearch(from);
     } else {
       detectLocation();
@@ -263,7 +281,7 @@ export default function Home() {
     }
     runSearch(home);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, months, stopMode]);
+  }, [style, months, stopMode, adults]);
 
   // Keep the URL in sync with the active search so it's shareable/bookmarkable.
   useEffect(() => {
@@ -272,14 +290,15 @@ export default function Home() {
     p.set("from", home);
     if (style !== "frimon") p.set("style", style);
     if (months !== 3) p.set("months", String(months));
-    if (stopMode === "direct") p.set("direct", "1");
+    if (stopMode === "any") p.set("direct", "0");
+    if (adults !== 1) p.set("adults", String(adults));
     const qs = p.toString();
     window.history.replaceState(
       null,
       "",
       qs ? `?${qs}` : window.location.pathname
     );
-  }, [home, style, months, stopMode, searched]);
+  }, [home, style, months, stopMode, adults, searched]);
 
   // Show a "back to controls" pill once the user scrolls deep into the list, so
   // sort/refine stay reachable without scrolling to the top (our month dividers
@@ -440,6 +459,14 @@ export default function Home() {
               <FacetButton onClick={editSearch}>
                 {stopMode === "direct" ? "Direct" : "Any stops"}
               </FacetButton>
+              {adults > 1 && (
+                <>
+                  <span className="text-black/25 dark:text-white/25">·</span>
+                  <FacetButton onClick={editSearch}>
+                    {adults} adults
+                  </FacetButton>
+                </>
+              )}
             </div>
           </div>
           <button
@@ -500,6 +527,14 @@ export default function Home() {
                 value={stopMode}
                 onChange={setStopMode}
                 ariaLabel="Stops"
+              />
+            </Field>
+            <Field label="Adults">
+              <SegmentedControl
+                options={ADULTS_OPTIONS}
+                value={adults}
+                onChange={setAdults}
+                ariaLabel="Adults"
               />
             </Field>
           </div>

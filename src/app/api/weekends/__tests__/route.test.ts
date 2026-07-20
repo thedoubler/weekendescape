@@ -105,6 +105,7 @@ describe("GET /api/weekends", () => {
     expect(params.nights_in_dst_from).toBe(1);
     expect(params.nights_in_dst_to).toBe(2);
     expect(params.one_for_city).toBe(1);
+    expect(params.adults).toBe(1); // defaults to a single traveller
     expect(params.sort).toBe("price");
     expect(params.curr).toBe("EUR");
     expect(params.price_to).toBe(200);

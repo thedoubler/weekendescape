@@ -23,6 +23,11 @@ export async function GET(request: NextRequest) {
     const direct = searchParams.get("direct") === "1";
     const style = (searchParams.get("style") || "frimon") as WeekendStyle;
     const months = parseInt(searchParams.get("months") || "3", 10);
+    // Passengers — Tequila prices scale with headcount. Default 1, clamp 1–9.
+    const adults = Math.min(
+      9,
+      Math.max(1, parseInt(searchParams.get("adults") || "1", 10) || 1)
+    );
     const maxPriceRaw = searchParams.get("maxPrice");
 
     if (!flyFrom) {
@@ -78,6 +83,7 @@ export async function GET(request: NextRequest) {
       // true cheapest weekend for that destination.
       ...(flyTo ? { fly_to: flyTo, one_for_city: 0 } : { one_for_city: 1 }),
       ...(direct ? { max_stopovers: 0 } : {}),
+      adults,
       sort: "price",
       curr: currency,
       limit: 200,
@@ -88,7 +94,7 @@ export async function GET(request: NextRequest) {
     // window is relative to "today").
     const cacheKey = `weekends:${flyFrom}:${flyTo ?? ""}:${style}:${months}:${
       direct ? 1 : 0
-    }:${maxPrice ?? ""}:${currency}:${dateFrom}`;
+    }:${adults}:${maxPrice ?? ""}:${currency}:${dateFrom}`;
     const raw = await cached(cacheKey, SEARCH_TTL_MS, async () => {
       const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
         headers: { apikey: apiKey },
