@@ -78,6 +78,9 @@ describe("Home page", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    // The page now seeds from / writes to the URL; reset it so a search left in
+    // window.location by one test doesn't seed the next (jsdom persists it).
+    window.history.replaceState(null, "", "/");
   });
 
   it("auto-searches via geolocation on mount and renders deals", async () => {

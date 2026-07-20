@@ -9,6 +9,10 @@ interface Suggestion {
   country: string;
 }
 
+// Session-lived cache of autocomplete results by lowercased term, so retyping or
+// backspacing to a prior query is instant and doesn't re-hit the API.
+const TERM_CACHE = new Map<string, Suggestion[]>();
+
 export function AirportInput({
   value,
   onSearch,
@@ -30,24 +34,42 @@ export function AirportInput({
     lastSearched.current = value;
   }, [value]);
 
-  // Debounced suggestion fetch.
+  // Debounced suggestion fetch — cached by term, cancels the in-flight request
+  // when the query changes so stale responses can't overwrite newer ones.
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2 || q.toUpperCase() === lastSearched.current) {
       setSuggestions([]);
       return;
     }
+    const key = q.toLowerCase();
+    const memo = TERM_CACHE.get(key);
+    if (memo) {
+      setSuggestions(memo);
+      setActive(-1);
+      return;
+    }
+    const ctrl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/airports?term=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/airports?term=${encodeURIComponent(q)}`, {
+          signal: ctrl.signal,
+        });
         const body = await res.json();
-        setSuggestions(Array.isArray(body.airports) ? body.airports : []);
+        const list: Suggestion[] = Array.isArray(body.airports)
+          ? body.airports
+          : [];
+        TERM_CACHE.set(key, list);
+        setSuggestions(list);
         setActive(-1);
       } catch {
-        setSuggestions([]);
+        // Aborted (query moved on) or network error — leave prior suggestions.
       }
     }, 220);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
   }, [query]);
 
   function choose(s: Suggestion) {

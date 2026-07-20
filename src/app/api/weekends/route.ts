@@ -5,6 +5,11 @@ import { timelineRange } from "@/lib/timeline";
 import { normalizeDeals } from "@/lib/deals";
 import { fetchHolidays, annotate } from "@/lib/holidays";
 import { airportCityKm } from "@/lib/cities";
+import { cached } from "@/lib/api-cache";
+
+// Identical searches are cheap to repeat and prices don't move by the second;
+// cache the (quota-costing) Tequila response for a while.
+const SEARCH_TTL_MS = 30 * 60 * 1000;
 
 const TEQUILA_BASE_URL = "https://tequila-api.kiwi.com";
 const VALID_STYLES: WeekendStyle[] = ["strict", "frimon", "loose"];
@@ -55,40 +60,48 @@ export async function GET(request: NextRequest) {
     const wp = weekendStyleToParams(style);
     const { dateFrom, dateTo } = timelineRange(months, new Date());
 
-    const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
-      headers: { apikey: apiKey },
-      params: {
-        fly_from: flyFrom,
-        date_from: dateFrom,
-        date_to: dateTo,
-        flight_type: "round",
-        fly_days: wp.flyDays.join(","),
-        fly_days_type: "departure",
-        ret_fly_days: wp.retFlyDays.join(","),
-        ret_fly_days_type: "arrival",
-        ret_from_diff_airport: false,
-        ret_to_diff_airport: false,
-        nights_in_dst_from: wp.nightsFrom,
-        nights_in_dst_to: wp.nightsTo,
-        // Board search: one (cheapish) flight per city for broad coverage.
-        // Single-city lookup (flyTo set): all options, so we can pick the
-        // true cheapest weekend for that destination.
-        ...(flyTo
-          ? { fly_to: flyTo, one_for_city: 0 }
-          : { one_for_city: 1 }),
-        ...(direct ? { max_stopovers: 0 } : {}),
-        sort: "price",
-        curr: currency,
-        limit: 200,
-        ...(maxPrice ? { price_to: maxPrice } : {}),
-      },
+    const params = {
+      fly_from: flyFrom,
+      date_from: dateFrom,
+      date_to: dateTo,
+      flight_type: "round",
+      fly_days: wp.flyDays.join(","),
+      fly_days_type: "departure",
+      ret_fly_days: wp.retFlyDays.join(","),
+      ret_fly_days_type: "arrival",
+      ret_from_diff_airport: false,
+      ret_to_diff_airport: false,
+      nights_in_dst_from: wp.nightsFrom,
+      nights_in_dst_to: wp.nightsTo,
+      // Board search: one (cheapish) flight per city for broad coverage.
+      // Single-city lookup (flyTo set): all options, so we can pick the
+      // true cheapest weekend for that destination.
+      ...(flyTo ? { fly_to: flyTo, one_for_city: 0 } : { one_for_city: 1 }),
+      ...(direct ? { max_stopovers: 0 } : {}),
+      sort: "price",
+      curr: currency,
+      limit: 200,
+      ...(maxPrice ? { price_to: maxPrice } : {}),
+    };
+
+    // dateFrom is in the key so the cache turns over at day boundaries (the
+    // window is relative to "today").
+    const cacheKey = `weekends:${flyFrom}:${flyTo ?? ""}:${style}:${months}:${
+      direct ? 1 : 0
+    }:${maxPrice ?? ""}:${currency}:${dateFrom}`;
+    const raw = await cached(cacheKey, SEARCH_TTL_MS, async () => {
+      const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
+        headers: { apikey: apiKey },
+        params,
+      });
+      return response.data;
     });
 
     // normalizeDeals returns price-ascending; for a single-city lookup keep only
     // the cheapest weekend.
     const deals = flyTo
-      ? normalizeDeals(response.data, currency).slice(0, 1)
-      : normalizeDeals(response.data, currency);
+      ? normalizeDeals(raw, currency).slice(0, 1)
+      : normalizeDeals(raw, currency);
 
     if (deals.length > 0) {
       const years = new Set<number>();
@@ -128,8 +141,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ deals });
+    return NextResponse.json(
+      { deals },
+      // Let the CDN/browser reuse a result briefly; matches the server cache.
+      { headers: { "Cache-Control": "private, max-age=300" } }
+    );
   } catch (error) {
+    // Tequila 422 = it rejected our parameters (usually an airport it can't
+    // route from). Surface that as an actionable message rather than a 500.
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    if (status === 422) {
+      const from =
+        new URL(request.url).searchParams.get("flyFrom") ?? "that airport";
+      return NextResponse.json(
+        {
+          error: `We couldn't search weekends from ${from}. Try a different airport or a longer window.`,
+        },
+        { status: 422 }
+      );
+    }
+    if (status === 429) {
+      return NextResponse.json(
+        { error: "Search is busy right now — give it a moment and try again." },
+        { status: 429 }
+      );
+    }
     console.error("Weekend search error:", error);
     return NextResponse.json(
       { error: "Failed to search weekend flights" },

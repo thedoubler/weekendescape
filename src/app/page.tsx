@@ -115,13 +115,20 @@ export default function Home() {
   const [showJump, setShowJump] = useState(false);
   const bootstrapped = useRef(false);
   const didAutoCollapse = useRef(false);
+  // When we seed the search from URL params on load, the param-change effect
+  // would otherwise fire a duplicate search; this lets it skip that one run.
+  const seededSearch = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Mirror the current filter values into refs so runSearch (called from effects
+  // and callbacks) always reads the latest, without being a dependency.
   const styleRef = useRef(style);
-  styleRef.current = style;
   const monthsRef = useRef(months);
-  monthsRef.current = months;
   const stopModeRef = useRef(stopMode);
-  stopModeRef.current = stopMode;
+  useEffect(() => {
+    styleRef.current = style;
+    monthsRef.current = months;
+    stopModeRef.current = stopMode;
+  });
 
   async function runSearch(code: string) {
     const c = code.trim().toUpperCase();
@@ -185,15 +192,63 @@ export default function Home() {
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
-    detectLocation();
+    // A shared/bookmarked link (?from=BCN&style=..&months=..&direct=1) wins over
+    // geolocation so the board reproduces exactly.
+    const p = new URLSearchParams(window.location.search);
+    const from = (p.get("from") || "").trim().toUpperCase();
+    if (from) {
+      const s = p.get("style");
+      const m = Number(p.get("months"));
+      const style0: WeekendStyle = (["strict", "frimon", "loose"] as const).includes(
+        s as WeekendStyle
+      )
+        ? (s as WeekendStyle)
+        : "frimon";
+      const months0 = [1, 2, 3, 6].includes(m) ? m : 3;
+      const stop0: StopMode = p.get("direct") === "1" ? "direct" : "any";
+      // Seed refs synchronously so the immediate search uses the URL values
+      // (state setters haven't flushed yet). Only guard the param-change effect
+      // if a non-default value actually changed.
+      styleRef.current = style0;
+      monthsRef.current = months0;
+      stopModeRef.current = stop0;
+      setStyle(style0);
+      setMonths(months0);
+      setStopMode(stop0);
+      seededSearch.current =
+        style0 !== "frimon" || months0 !== 3 || stop0 !== "any";
+      runSearch(from);
+    } else {
+      detectLocation();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!bootstrapped.current || !home) return;
+    if (seededSearch.current) {
+      seededSearch.current = false;
+      return;
+    }
     runSearch(home);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style, months, stopMode]);
+
+  // Keep the URL in sync with the active search so it's shareable/bookmarkable.
+  useEffect(() => {
+    if (!searched || !home) return;
+    const p = new URLSearchParams();
+    p.set("from", home);
+    if (style !== "frimon") p.set("style", style);
+    if (months !== 3) p.set("months", String(months));
+    if (stopMode === "direct") p.set("direct", "1");
+    const qs = p.toString();
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `?${qs}` : window.location.pathname
+    );
+  }, [home, style, months, stopMode, searched]);
 
   // Show a "back to controls" pill once the user scrolls deep into the list, so
   // sort/refine stay reachable without scrolling to the top (our month dividers
@@ -573,7 +628,9 @@ export default function Home() {
             selectedContinents.length > 0 ||
             cap < bounds.max
               ? "No escapes match these filters — try widening them."
-              : undefined
+              : rawDeals.length === 0
+                ? `No weekend routes found from ${home || "that airport"} — try a longer window or a different airport.`
+                : undefined
           }
         />
       )}

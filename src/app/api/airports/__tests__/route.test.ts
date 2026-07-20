@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import axios from "axios";
 import { GET } from "@/app/api/airports/route";
+import { clearApiCache } from "@/lib/api-cache";
 
 vi.mock("axios");
 
@@ -12,6 +13,7 @@ function req(qs: string) {
 describe("GET /api/airports", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    clearApiCache();
     process.env.TEQUILA_API_KEY = "test-key";
   });
 

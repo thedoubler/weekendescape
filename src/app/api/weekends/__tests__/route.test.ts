@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import axios from "axios";
 import { GET } from "@/app/api/weekends/route";
+import { clearApiCache } from "@/lib/api-cache";
 
 vi.mock("axios");
 
@@ -24,6 +25,9 @@ function req(qs: string) {
 describe("GET /api/weekends", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // The route caches upstream responses at module scope; clear it so cases
+    // with identical params don't reuse each other's mocked results.
+    clearApiCache();
     process.env.TEQUILA_API_KEY = "test-key";
     process.env.WEEKEND_CURRENCY = "EUR";
   });
@@ -208,5 +212,21 @@ describe("GET /api/weekends", () => {
     (axios.get as any).mockRejectedValue(new Error("upstream down"));
     const res = await GET(req("flyFrom=BCN"));
     expect(res.status).toBe(500);
+  });
+
+  it("maps a Tequila 422 to an actionable 422", async () => {
+    (axios.isAxiosError as any) = vi.fn(() => true);
+    (axios.get as any).mockRejectedValue({ response: { status: 422 } });
+    const res = await GET(req("flyFrom=ZZZ"));
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error).toMatch(/ZZZ/);
+  });
+
+  it("caches identical searches, hitting Tequila once", async () => {
+    (axios.get as any).mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN&style=loose&months=2"));
+    await GET(req("flyFrom=BCN&style=loose&months=2"));
+    expect((axios.get as any).mock.calls).toHaveLength(1);
   });
 });
