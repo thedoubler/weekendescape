@@ -14,8 +14,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Soft, slightly-cool off-black rather than pure #000 — avoids halation and
+       makes the warm orange/amber accents pop. Cards sit "closer" to the user
+       via translucent white overlays (dark:bg-white/[…]), which read as lighter,
+       desaturated surfaces above this base — Material's elevation approach. */
+    --background: #14161c;
+    --foreground: #e7e8ec;
   }
 }
 

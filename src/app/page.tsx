@@ -364,7 +364,7 @@ export default function Home() {
       <header className="flex items-center gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
         <span
           aria-hidden
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-black text-base text-white dark:bg-white dark:text-black"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-900 text-base text-white dark:bg-white dark:text-black"
         >
           ✦
         </span>
@@ -466,7 +466,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setCollapsed(true)}
-                className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
+                className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
               >
                 Done
               </button>
@@ -510,7 +510,7 @@ export default function Home() {
                 >
                   Refine
                   {activeFilters > 0 && (
-                    <span className="rounded-full bg-black px-1.5 text-xs text-white dark:bg-white dark:text-black">
+                    <span className="rounded-full bg-neutral-900 px-1.5 text-xs text-white dark:bg-white dark:text-black">
                       {activeFilters}
                     </span>
                   )}
@@ -639,7 +639,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-lg transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
+          className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-lg transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
         >
           ↑ Sort &amp; filter
         </button>
