@@ -5,8 +5,14 @@ import {
   filterByMonths,
   priceRange,
   filterByMaxPrice,
+  filterByMaxAirportKm,
+  farAirportCount,
 } from "@/lib/sort";
 import type { Deal } from "@/lib/deals";
+
+function withKm(deal: Deal, km: number | null): Deal {
+  return { ...deal, airportKmFromCity: km };
+}
 
 function d(cityTo: string, outDepart: string, price: number): Deal {
   return {
@@ -39,6 +45,23 @@ const deals = [
   d("Paris", "2026-08-22T06:00:00.000Z", 37),
 ];
 
+describe("airport-distance filter", () => {
+  const list = [
+    withKm(d("Near", "2026-09-01T00:00", 10), 8),
+    withKm(d("Far", "2026-09-01T00:00", 10), 90),
+    withKm(d("Unknown", "2026-09-01T00:00", 10), null),
+  ];
+  it("keeps in-town and unknown-distance deals", () => {
+    expect(filterByMaxAirportKm(list, 30).map((x) => x.cityTo)).toEqual([
+      "Near",
+      "Unknown",
+    ]);
+  });
+  it("counts only deals known to be far", () => {
+    expect(farAirportCount(list, 30)).toBe(1);
+  });
+});
+
 describe("sortDeals", () => {
   it("soonest orders by departure, tie-break price", () => {
     expect(sortDeals(deals, "soonest").map((x) => x.cityTo)).toEqual([
@@ -52,6 +75,20 @@ describe("sortDeals", () => {
       "Ibiza",
       "Paris",
       "Rome",
+    ]);
+  });
+  it("closest orders by airport distance, unknowns last", () => {
+    const withDist = [
+      withKm(d("Far", "2026-09-01T00:00", 50), 90),
+      withKm(d("Near", "2026-09-01T00:00", 60), 8),
+      withKm(d("Unknown", "2026-09-01T00:00", 40), null),
+      withKm(d("Mid", "2026-09-01T00:00", 70), 30),
+    ];
+    expect(sortDeals(withDist, "closest").map((x) => x.cityTo)).toEqual([
+      "Near",
+      "Mid",
+      "Far",
+      "Unknown",
     ]);
   });
   it("does not mutate the input", () => {
