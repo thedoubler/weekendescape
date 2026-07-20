@@ -151,6 +151,54 @@ If it ever needs slimming with **no coverage loss**:
 
 ---
 
+## Flight data sources — fallbacks & complements
+
+The app's magic = **aggregating low-cost carriers + flexible "cheapest weekend"
+search**. That combo is rare, which is what makes replacing Tequila hard.
+
+**Kiwi Tequila (current primary)** — uniquely good at LCC + flexible-date
+search, but access is precarious: docs confirm parameters are being deprecated
+(`flight_type` explicitly), commercial/production access needs a **partnership**,
+and via Travelpayouts the Kiwi affiliate API requires **50,000+ MAU**. Keep the
+key, but don't treat it as a guaranteed long-term foundation.
+
+Options, ranked for this app:
+1. **Travelpayouts (Aviasales/Jetradar) Data API — best complement + fallback.**
+   Free with affiliate signup, **includes LCCs**, deal-shaped endpoints (cheapest
+   tickets, price calendar, "cheap flights from city", month matrix). Bonus:
+   built-in **monetization** (booking commission). Caveat: prices are *cached*
+   from prior searches, not always live/bookable — fine for discovery.
+2. **Amadeus Self-Service — live prices, wrong for budget.** Has the perfect-fit
+   Flight Cheapest Date Search + Flight Inspiration Search, generous free tier —
+   **but no low-cost carriers on Self-Service** (nor AA/Delta/BA). Dealbreaker as
+   a primary; useful only as a complement for legacy-carrier routes / price checks.
+3. **Duffel** — modern, booking-grade, some LCCs via NDC. Right if we add in-app
+   booking; per-booking pricing, not free at scale.
+4. **Skyscanner** — partner-only, no open self-service. Skip.
+5. **RapidAPI scraper wrappers** (unofficial Skyscanner/Kiwi/Google) — cheap free
+   tiers, ToS/reliability risk. Throwaway fallback only. (Google Flights/QPX has
+   no public API.)
+
+Two concrete moves:
+- **Abstract flight-search behind an adapter.** We already normalize Tequila into
+  the `Deal` shape (`normalizeDeals`) — formalize as an interface so Tequila /
+  Travelpayouts / Amadeus are swappable with automatic fallback.
+- **De-Tequila the airport lookup (free resilience win).** Autocomplete +
+  nearest-airport currently hit Tequila `/locations`, but we already bundle
+  `airports.json` (6k airports + coords) — serve both locally, removing one
+  Tequila dependency entirely.
+
+Recommendation: keep Tequila primary, add **Travelpayouts** as the LCC fallback +
+monetization layer, treat **Amadeus** as an optional live-price complement, and
+move airport lookup to the bundled data.
+
+Sources: [Tequila](https://tequila.kiwi.com/) ·
+[Kiwi affiliate 50k MAU](https://support.travelpayouts.com/hc/en-us/articles/360019237899-Kiwi-com-affiliate-program-API) ·
+[Amadeus Cheapest Date Search](https://developers.amadeus.com/self-service/category/flights/api-doc/flight-cheapest-date-search) ·
+[Amadeus pricing](https://developers.amadeus.com/pricing)
+
+---
+
 ## Data-source caveats (for future maintenance)
 
 - **Airline names** (`src/lib/airlines.json`) come from a **Wikidata snapshot**
