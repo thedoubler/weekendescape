@@ -12,9 +12,34 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Absolute base for OG image URLs. Prefers an explicit env var, then Vercel's
+// stable production domain, else localhost in dev.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
+const title = "Weekend Escape — cheapest weekend flights";
+const description =
+  "Find the cheapest weekend round-trips from your home airport.";
+
 export const metadata: Metadata = {
-  title: "Weekend Escape — cheapest weekend flights",
-  description: "Find the cheapest weekend round-trips from your home airport.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  // og:image / twitter:image are added automatically from src/app/opengraph-image.tsx
+  openGraph: {
+    title,
+    description,
+    siteName: "Weekend Escape",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 export default function RootLayout({
