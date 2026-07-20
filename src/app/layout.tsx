@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Geist_Mono } from "next/font/google";
+import { Space_Grotesk, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -10,6 +10,14 @@ const spaceGrotesk = Space_Grotesk({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Display serif for headlines only — its warmth against Space Grotesk's
+// geometry gives the brand personality without touching the UI/data type.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 // Absolute base for OG image URLs. Prefers an explicit env var, then Vercel's
@@ -50,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${geistMono.variable} h-full`}
+      className={`${spaceGrotesk.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full`}
     >
       <body className="min-h-full flex flex-col overflow-x-hidden">
         {children}

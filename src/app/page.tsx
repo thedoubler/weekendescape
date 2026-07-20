@@ -419,7 +419,7 @@ export default function Home() {
           ✦
         </span>
         <div className="leading-tight">
-          <h1 className="text-lg font-semibold tracking-tight">
+          <h1 className="font-serif text-2xl leading-none tracking-tight">
             Weekend Escape
           </h1>
           <p className="text-[13px] text-black/50 dark:text-white/50">
