@@ -62,9 +62,12 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Don't let the browser cache this long — the server already caches results
+    // in-memory (so Unsplash isn't hammered), and a short client cache keeps the
+    // DESTINATION_IMAGES kill switch (and cache invalidation) effective.
     return NextResponse.json(
       { image },
-      { headers: { "Cache-Control": "public, max-age=86400" } }
+      { headers: { "Cache-Control": "no-store" } }
     );
   } catch {
     return NextResponse.json({ image: null });
