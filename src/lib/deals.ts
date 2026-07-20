@@ -28,10 +28,15 @@ export interface Deal {
   backLayovers: Layover[];
   price: number;
   currency: string;
+  bagPrice?: number | null;
+  airlines?: string[];
   deepLink: string;
   ptoDays?: number;
   homeHoliday?: HolidayRef | null;
   destHoliday?: HolidayRef | null;
+  // Straight-line km from the arrival airport to its marketed city centre.
+  // Set server-side; flags secondary airports (e.g. Charleroi sold as Brussels).
+  airportKmFromCity?: number | null;
 }
 
 // A getaway that connects (has a layover) AND gives under a full day at the
@@ -148,6 +153,13 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       backLayovers: layoversOf(inSegs),
       price,
       currency,
+      bagPrice:
+        typeof item?.bags_price?.["1"] === "number"
+          ? item.bags_price["1"]
+          : null,
+      airlines: Array.isArray(item?.airlines)
+        ? item.airlines.filter((c: unknown): c is string => typeof c === "string")
+        : [],
       deepLink,
     });
   }

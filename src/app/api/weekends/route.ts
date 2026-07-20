@@ -4,6 +4,7 @@ import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
 import { timelineRange } from "@/lib/timeline";
 import { normalizeDeals } from "@/lib/deals";
 import { fetchHolidays, annotate } from "@/lib/holidays";
+import { airportCityKm } from "@/lib/cities";
 
 const TEQUILA_BASE_URL = "https://tequila-api.kiwi.com";
 const VALID_STYLES: WeekendStyle[] = ["strict", "frimon", "loose"];
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
         d.ptoDays = info.ptoDays;
         d.homeHoliday = info.homeHoliday;
         d.destHoliday = info.destHoliday;
+        d.airportKmFromCity = airportCityKm(d.flyTo, d.cityTo, d.countryToCode);
       }
     }
 

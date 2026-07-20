@@ -47,7 +47,7 @@ describe("CheapestWeekend", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/cheapest weekend/i)).toBeInTheDocument()
+      expect(screen.getByText(/cheaper weekend/i)).toBeInTheDocument()
     );
     expect(screen.getByText(/36 EUR/)).toBeInTheDocument();
     // dates include the month so they're unambiguous
@@ -79,7 +79,7 @@ describe("CheapestWeekend", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/this is the cheapest weekend for ibiza/i)
+        screen.getByText(/cheapest weekend for ibiza/i)
       ).toBeInTheDocument()
     );
   });

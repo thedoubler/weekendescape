@@ -2,6 +2,9 @@ export interface DayCell {
   weekday: string;
   day: number;
   month: string;
+  // "YYYY-MM-DD" for this cell, so callers can match it against dated events
+  // (e.g. a destination public holiday) without recomputing the calendar.
+  date: string;
   isWeekend: boolean;
   role: "arrive" | "leave" | "middle" | "solo";
   fillStart: number;
@@ -222,6 +225,7 @@ export function dayBlocks(outArrive: string, backDepart: string): DayCell[] {
       weekday: WD[wd],
       day: dt.getUTCDate(),
       month: MO[dt.getUTCMonth()],
+      date: dt.toISOString().slice(0, 10),
       isWeekend: wd === 0 || wd === 6,
       role,
       fillStart,

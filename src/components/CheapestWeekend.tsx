@@ -57,20 +57,20 @@ export function CheapestWeekend({
 
   if (loading)
     return (
-      <div className="text-xs opacity-60">Finding the cheapest weekend…</div>
+      <div className="text-xs opacity-60">Checking for a cheaper weekend…</div>
     );
   if (!deal) return null;
 
   if (deal.price >= currentPrice)
     return (
       <div className="text-xs opacity-60">
-        ✓ This is the cheapest weekend for {cityTo}.
+        ✓ Cheapest weekend for {cityTo}.
       </div>
     );
 
   return (
     <div className="text-sm">
-      💡 Cheapest weekend:{" "}
+      💡 Cheaper weekend:{" "}
       <span className="font-medium">
         {deal.price} {deal.currency}
       </span>{" "}

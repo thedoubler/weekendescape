@@ -49,10 +49,10 @@ describe("DealCard", () => {
     expect(screen.getByText(/return/i)).toBeInTheDocument();
   });
 
-  it("shows the round-trip flying time", () => {
+  it("shows the time on the ground", () => {
     render(<DealCard deal={base} />);
-    // 65m out + 95m back = 160m = 2h 40m, no layovers
-    expect(screen.getByText(/2h 40m flying/)).toBeInTheDocument();
+    // arrive → return departure = 2915 min ≈ 2 days at the destination
+    expect(screen.getByText(/2d on the ground/)).toBeInTheDocument();
   });
 
   it("labels a direct trip and shows layover detail on expand", () => {
@@ -76,7 +76,7 @@ describe("DealCard", () => {
     expect(screen.getByText(/MAD \(1h 40m\)/)).toBeInTheDocument();
   });
 
-  it("renders holiday badges when present", () => {
+  it("renders the home-holiday pill and marks a destination holiday on its day", () => {
     const withHols: Deal = {
       ...base,
       ptoDays: 0,
@@ -84,10 +84,22 @@ describe("DealCard", () => {
       destHoliday: { date: "2026-08-08", name: "Ferragosto" },
     };
     render(<DealCard deal={withHols} />);
+    // Home holiday stays a prominent pill.
     expect(screen.getByText(/Assumption · Fri 7 Aug/)).toBeInTheDocument();
     expect(screen.getByText(/no day off needed/i)).toBeInTheDocument();
+    // Destination holiday is a dot on its day (announced via the cell label),
+    // not a redundant dated line.
     expect(
-      screen.getByText(/Public holiday · Ferragosto · Sat 8 Aug/i)
+      screen.getByLabelText(/Sat 8,.*public holiday: Ferragosto/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Sat 8 Aug/i)).not.toBeInTheDocument();
+    // The named note shows only in the expanded panel.
+    expect(
+      screen.queryByText(/Public holiday at destination/i)
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /show details/i }));
+    expect(
+      screen.getByText(/Public holiday at destination · Ferragosto/i)
     ).toBeInTheDocument();
   });
 });

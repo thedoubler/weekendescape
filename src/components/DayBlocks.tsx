@@ -4,10 +4,16 @@ export function DayBlocks({
   cells,
   arrival,
   departure,
+  holiday,
 }: {
   cells: DayCell[];
   arrival: { time: string; night: boolean; plusOne: boolean };
   departure: { time: string; night: boolean };
+  // A destination public holiday falling within the trip, marked with a dot on
+  // its day. The name is announced via aria-label and shown in the card's
+  // expanded panel (the strip can't own a tooltip — it's inside the expand
+  // button), so the dot stays a quiet visual cue here.
+  holiday?: { date: string; name: string } | null;
 }) {
   const months: string[] = [];
   for (const c of cells) if (!months.includes(c.month)) months.push(c.month);
@@ -22,20 +28,26 @@ export function DayBlocks({
           const usable = Math.round((c.fillEnd - c.fillStart) * 100);
           const showArrive = c.role === "arrive" || c.role === "solo";
           const showLeave = c.role === "leave" || c.role === "solo";
+          const isHoliday = !!holiday && holiday.date === c.date;
           return (
             <div
               key={i}
               role="listitem"
-              aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable`}
+              aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable${
+                isHoliday ? `, public holiday: ${holiday!.name}` : ""
+              }`}
               className="min-w-0 flex-1 rounded-md bg-black/5 px-1 py-1 text-center text-xs dark:bg-white/10"
             >
               <div className="text-black/60 dark:text-white/60">{c.weekday}</div>
-              <div
-                className={`font-medium ${
-                  c.isWeekend ? "text-orange-700 dark:text-orange-300" : ""
-                }`}
-              >
+              <div className="font-medium">
                 {c.day}
+                {isHoliday && (
+                  <span
+                    aria-hidden
+                    title="Public holiday"
+                    className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-middle dark:bg-amber-400"
+                  />
+                )}
               </div>
               <div className="relative my-1 h-1.5 rounded-full bg-black/10 dark:bg-white/15">
                 <div

@@ -199,7 +199,7 @@ describe("Home page", () => {
 
     // collapsed: the search controls are gone, a summary is shown
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByText(/weekend escapes from/i)).toBeInTheDocument();
+    expect(screen.getByText(/^weekend getaways from$/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /edit/i }));
     expect(screen.getByRole("combobox")).toBeInTheDocument();

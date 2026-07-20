@@ -116,6 +116,8 @@ describe("normalizeDeals", () => {
       backLayovers: [],
       price: 37,
       currency: "EUR",
+      bagPrice: null,
+      airlines: [],
       deepLink: "https://kiwi.com/deep/ibiza",
     });
     expect(deals[1].cityTo).toBe("Lisbon");

@@ -28,9 +28,9 @@ import { FilterChip } from "@/components/FilterChip";
 import { DealList } from "@/components/DealList";
 
 const STYLE_OPTIONS = [
-  { value: "strict" as WeekendStyle, label: "Strict" },
+  { value: "strict" as WeekendStyle, label: "Fri–Sun" },
   { value: "frimon" as WeekendStyle, label: "Fri–Mon" },
-  { value: "loose" as WeekendStyle, label: "Loose" },
+  { value: "loose" as WeekendStyle, label: "Thu–Mon" },
 ];
 const MONTH_OPTIONS = [
   { value: 1, label: "1" },
@@ -40,7 +40,7 @@ const MONTH_OPTIONS = [
 ];
 const STOP_OPTIONS = [
   { value: "any" as StopMode, label: "Any" },
-  { value: "direct" as StopMode, label: "Direct only" },
+  { value: "direct" as StopMode, label: "Direct" },
 ];
 type StopMode = "any" | "direct";
 
@@ -328,7 +328,7 @@ export default function Home() {
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.07] bg-black/[0.015] px-4 py-3 dark:border-white/10 dark:bg-white/[0.02]">
           <div className="min-w-0">
             <div className="text-xs text-black/45 dark:text-white/45">
-              Weekend escapes from
+              Weekend getaways from
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 font-medium">
               <FacetButton onClick={editFrom}>{home}</FacetButton>
@@ -340,7 +340,7 @@ export default function Home() {
               </FacetButton>
               <span className="text-black/25 dark:text-white/25">·</span>
               <FacetButton onClick={editSearch}>
-                {stopMode === "direct" ? "Direct only" : "Any flights"}
+                {stopMode === "direct" ? "Direct" : "Any stops"}
               </FacetButton>
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function Home() {
                 onClick={detectLocation}
                 className="text-xs text-black/55 underline-offset-2 transition hover:text-black hover:underline dark:text-white/55 dark:hover:text-white"
               >
-                📍 Use my location
+                📍 Find my airport
               </button>
             </div>
             <AirportInput
@@ -380,10 +380,7 @@ export default function Home() {
 
           {/* When & how — refinements to the trip */}
           <div className="flex flex-wrap gap-x-8 gap-y-5">
-            <Field
-              label="Weekend length"
-              hint="Strict = Fri–Sun · Loose = Thu–Mon"
-            >
+            <Field label="Weekend length">
               <SegmentedControl
                 options={STYLE_OPTIONS}
                 value={style}
@@ -391,7 +388,7 @@ export default function Home() {
                 ariaLabel="Weekend length"
               />
             </Field>
-            <Field label="Timeline" hint="months ahead">
+            <Field label="Months ahead">
               <SegmentedControl
                 options={MONTH_OPTIONS}
                 value={months}
@@ -449,18 +446,12 @@ export default function Home() {
                 onChange={setSort}
                 ariaLabel="Sort"
               />
-            </div>
-          </div>
-          {/* Secondary: Refine trigger + the active filters as removable chips,
-              so filter state stays visible while the panel is closed. */}
-          {!loading && !error && hasRefinements && (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+              {!loading && !error && hasRefinements && (
                 <button
                   type="button"
                   onClick={() => setShowRefine((v) => !v)}
                   aria-expanded={showRefine}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                  className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-sm text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
                 >
                   Refine
                   {activeFilters > 0 && (
@@ -470,38 +461,40 @@ export default function Home() {
                   )}
                   <span aria-hidden>{showRefine ? "▴" : "▾"}</span>
                 </button>
-              </div>
-              {activeFilters > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {selectedMonths.map((m) => (
-                    <FilterChip
-                      key={m}
-                      label={monthShort(m)}
-                      onRemove={() => toggleMonth(m)}
-                    />
-                  ))}
-                  {selectedContinents.map((c) => (
-                    <FilterChip
-                      key={c}
-                      label={c}
-                      onRemove={() => toggleContinent(c)}
-                    />
-                  ))}
-                  {cap < bounds.max && (
-                    <FilterChip
-                      label={`≤ ${cap} ${currency}`}
-                      onRemove={() => setMaxPrice(bounds.max)}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={clearAll}
-                    className="ml-0.5 text-sm text-black/50 underline underline-offset-2 hover:text-black/80 dark:text-white/50 dark:hover:text-white/80"
-                  >
-                    Clear all
-                  </button>
-                </div>
               )}
+            </div>
+          </div>
+          {/* Secondary: active filters as removable chips, so filter state
+              stays visible while the Refine panel is closed. */}
+          {!loading && !error && hasRefinements && activeFilters > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {selectedMonths.map((m) => (
+                <FilterChip
+                  key={m}
+                  label={monthShort(m)}
+                  onRemove={() => toggleMonth(m)}
+                />
+              ))}
+              {selectedContinents.map((c) => (
+                <FilterChip
+                  key={c}
+                  label={c}
+                  onRemove={() => toggleContinent(c)}
+                />
+              ))}
+              {cap < bounds.max && (
+                <FilterChip
+                  label={`≤ ${cap} ${currency}`}
+                  onRemove={() => setMaxPrice(bounds.max)}
+                />
+              )}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="ml-0.5 text-sm text-black/50 underline underline-offset-2 hover:text-black/80 dark:text-white/50 dark:hover:text-white/80"
+              >
+                Clear all
+              </button>
             </div>
           )}
         </div>
