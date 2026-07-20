@@ -402,7 +402,7 @@ export default function Home() {
           <button
             type="button"
             onClick={editSearch}
-            className="shrink-0 rounded-lg border border-black/15 px-3 py-1.5 text-sm text-black/70 transition hover:bg-black/[0.04] dark:border-white/20 dark:text-white/70 dark:hover:bg-white/[0.06]"
+            className="shrink-0 rounded-lg border border-black/15 px-3 py-1.5 text-sm text-black/70 transition duration-200 hover:bg-black/[0.04] motion-safe:hover:scale-105 dark:border-white/20 dark:text-white/70 dark:hover:bg-white/[0.06]"
           >
             Edit
           </button>
@@ -466,7 +466,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setCollapsed(true)}
-                className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition hover:opacity-90 dark:bg-white dark:text-black"
+                className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
               >
                 Done
               </button>
@@ -506,7 +506,7 @@ export default function Home() {
                   type="button"
                   onClick={() => setShowRefine((v) => !v)}
                   aria-expanded={showRefine}
-                  className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-sm text-black/70 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                  className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-sm text-black/70 transition duration-200 hover:bg-black/5 motion-safe:hover:scale-105 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
                 >
                   Refine
                   {activeFilters > 0 && (
@@ -639,7 +639,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:opacity-90 dark:bg-white dark:text-black"
+          className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-lg transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
         >
           ↑ Sort &amp; filter
         </button>

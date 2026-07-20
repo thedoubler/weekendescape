@@ -203,7 +203,7 @@ export function DealCard({
   const airlines = deal.airlines ?? [];
 
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
+    <div className="rounded-xl border border-black/10 p-4 transition duration-200 hover:border-black/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:hover:border-white/20">
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
@@ -293,7 +293,7 @@ export function DealCard({
             target="_blank"
             rel="noopener noreferrer sponsored"
             aria-label={`Find a hotel in ${deal.cityTo}`}
-            className="inline-flex items-center gap-1.5 text-sm text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white"
+            className="inline-flex items-center gap-1.5 text-sm text-black/55 transition duration-200 hover:text-black motion-safe:hover:scale-105 dark:text-white/55 dark:hover:text-white"
           >
             <BedIcon className="h-4 w-4 shrink-0" />
             <span className="underline underline-offset-2">Stay</span>
@@ -303,7 +303,7 @@ export function DealCard({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Book ${deal.cityTo}`}
-            className="inline-flex items-center gap-1 text-sm font-medium text-black dark:text-white"
+            className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 motion-safe:hover:scale-105 dark:text-white"
           >
             <span className="underline underline-offset-2">Book</span>
             <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
