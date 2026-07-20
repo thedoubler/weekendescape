@@ -27,6 +27,18 @@ import { PriceFilter } from "@/components/PriceFilter";
 import { FilterChip } from "@/components/FilterChip";
 import { DealList } from "@/components/DealList";
 
+// Fetch that aborts after `ms` so a stalled request (slow upstream, a dropped
+// tunnel connection) fails into a retryable error instead of spinning forever.
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 const STYLE_OPTIONS = [
   { value: "strict" as WeekendStyle, label: "Fri–Sun" },
   { value: "frimon" as WeekendStyle, label: "Fri–Mon" },
@@ -156,13 +168,20 @@ export default function Home() {
         months: String(monthsRef.current),
       });
       if (stopModeRef.current === "direct") qs.set("direct", "1");
-      const res = await fetch(`/api/weekends?${qs.toString()}`);
+      const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
       setSelectedMonths([]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Search failed");
+      const timedOut = e instanceof DOMException && e.name === "AbortError";
+      setError(
+        timedOut
+          ? "Search timed out — check your connection and try again."
+          : e instanceof Error
+            ? e.message
+            : "Search failed"
+      );
       setRawDeals([]);
     } finally {
       setLoading(false);
@@ -187,8 +206,9 @@ export default function Home() {
     }
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
-        const res = await fetch(
-          `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+        const res = await fetchWithTimeout(
+          `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`,
+          8000
         );
         const body = res.ok ? await res.json() : null;
         const code = body?.airports?.[0]?.code;

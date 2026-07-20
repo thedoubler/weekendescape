@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
       const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
         headers: { apikey: apiKey },
         params,
+        timeout: 15000,
       });
       return response.data;
     });
@@ -150,6 +151,12 @@ export async function GET(request: NextRequest) {
     // Tequila 422 = it rejected our parameters (usually an airport it can't
     // route from). Surface that as an actionable message rather than a 500.
     const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
+      return NextResponse.json(
+        { error: "Search is taking too long — please try again." },
+        { status: 504 }
+      );
+    }
     if (status === 422) {
       const from =
         new URL(request.url).searchParams.get("flyFrom") ?? "that airport";

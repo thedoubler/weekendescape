@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
               limit: 8,
               active_only: true,
             },
+            timeout: 8000,
           })
         : await axios.get(`${TEQUILA_BASE_URL}/locations/radius`, {
             headers: { apikey: apiKey },
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
               limit: 5,
               active_only: true,
             },
+            timeout: 8000,
           });
       return response.data;
     });
