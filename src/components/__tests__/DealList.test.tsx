@@ -3,9 +3,13 @@ import { render, screen } from "@testing-library/react";
 import { DealList } from "@/components/DealList";
 
 describe("DealList", () => {
-  it("shows a loading state", () => {
+  it("shows a loading state (skeleton placeholders)", () => {
     render(<DealList deals={[]} loading={true} error={null} />);
-    expect(screen.getByText(/searching/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/searching/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/searching/i)).toHaveAttribute(
+      "aria-busy",
+      "true"
+    );
   });
 
   it("shows an error", () => {
