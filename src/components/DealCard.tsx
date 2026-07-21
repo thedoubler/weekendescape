@@ -218,7 +218,9 @@ export function DealCard({
       city: deal.cityTo,
       country: deal.countryTo,
     });
-    fetch(`/api/destination-image?${params.toString()}`)
+    // no-store so the DESTINATION_IMAGES kill switch takes effect immediately,
+    // bypassing any image response cached while it was on.
+    fetch(`/api/destination-image?${params.toString()}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setImage(d?.image ?? null))
       .catch(() => setImage(null));
