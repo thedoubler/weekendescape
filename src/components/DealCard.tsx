@@ -511,7 +511,10 @@ export function DealCard({
                       }}
                     />
                   ))}
-                  {airlines.length > 3 && <span>+{airlines.length - 3}</span>}
+                  <span className="text-black/70 dark:text-white/70">
+                    {airlines.slice(0, 3).map(airlineName).join(", ")}
+                    {airlines.length > 3 ? ` +${airlines.length - 3}` : ""}
+                  </span>
                 </span>
               )}
               {deal.bagPrice != null && (
