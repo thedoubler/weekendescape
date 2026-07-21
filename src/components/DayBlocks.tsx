@@ -61,7 +61,7 @@ export function DayBlocks({
       <div className="mb-1 text-[11px] text-black/40 dark:text-white/40">
         {months.join(" – ")}
       </div>
-      <div className="flex gap-1" role="list" aria-label="Trip days">
+      <div className="flex gap-1.5" role="list" aria-label="Trip days">
         {cells.map((c, i) => {
           const usable = Math.round((c.fillEnd - c.fillStart) * 100);
           const showArrive = c.role === "arrive" || c.role === "solo";
@@ -74,10 +74,12 @@ export function DayBlocks({
               aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable${
                 isHoliday ? `, public holiday: ${holiday!.name}` : ""
               }`}
-              className="min-w-0 flex-1 rounded-md bg-black/5 px-1 py-1 text-center text-xs dark:bg-white/10"
+              className="min-w-0 flex-1 rounded-lg bg-black/[0.04] px-1.5 py-2.5 text-center dark:bg-white/[0.06]"
             >
-              <div className="text-black/60 dark:text-white/60">{c.weekday}</div>
-              <div className="font-medium">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-black/45 dark:text-white/45">
+                {c.weekday}
+              </div>
+              <div className="mt-0.5 text-sm font-semibold leading-none">
                 {c.day}
                 {isHoliday && (
                   <span
@@ -87,9 +89,10 @@ export function DayBlocks({
                   />
                 )}
               </div>
-              <div className="relative my-1 h-1.5 rounded-full bg-black/10 dark:bg-white/15">
+              {/* Hours at the destination as a slice of the day (arrival→departure). */}
+              <div className="relative my-2.5 h-2 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.12]">
                 <div
-                  className="absolute inset-y-0 rounded-full bg-orange-300 dark:bg-orange-400/70"
+                  className="absolute inset-y-0 rounded-full bg-gradient-to-r from-orange-300 to-orange-400 dark:from-orange-400/80 dark:to-orange-500/70"
                   style={{
                     left: `${c.fillStart * 100}%`,
                     width: `${(c.fillEnd - c.fillStart) * 100}%`,
@@ -97,10 +100,10 @@ export function DayBlocks({
                 />
               </div>
               {showArrive && (
-                <div className="flex items-center justify-center gap-0.5 text-black/70 dark:text-white/70">
+                <div className="flex items-center justify-center gap-0.5 text-[11px] text-black/70 dark:text-white/70">
                   <PlaneLandingIcon className="h-3.5 w-3.5 shrink-0" />
                   <span className="sr-only">Arrives </span>
-                  <span>{arrival.time}</span>
+                  <span className="tabular-nums">{arrival.time}</span>
                   {arrival.plusOne && <span>+1</span>}
                   {arrival.night && (
                     <span aria-label="Night flight" className="ml-0.5">
@@ -110,10 +113,10 @@ export function DayBlocks({
                 </div>
               )}
               {showLeave && (
-                <div className="flex items-center justify-center gap-0.5 text-black/70 dark:text-white/70">
+                <div className="flex items-center justify-center gap-0.5 text-[11px] text-black/70 dark:text-white/70">
                   <PlaneTakeoffIcon className="h-3.5 w-3.5 shrink-0" />
                   <span className="sr-only">Departs </span>
-                  <span>{departure.time}</span>
+                  <span className="tabular-nums">{departure.time}</span>
                   {departure.night && (
                     <span aria-label="Night flight" className="ml-0.5">
                       🌙
@@ -122,7 +125,9 @@ export function DayBlocks({
                 </div>
               )}
               {c.role === "middle" && (
-                <div className="text-black/40 dark:text-white/40">full day</div>
+                <div className="text-[11px] text-black/40 dark:text-white/40">
+                  full day
+                </div>
               )}
             </div>
           );
