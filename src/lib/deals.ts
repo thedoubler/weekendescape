@@ -37,6 +37,8 @@ export interface Deal {
   // Straight-line km from the arrival airport to its marketed city centre.
   // Set server-side; flags secondary airports (e.g. Charleroi sold as Brussels).
   airportKmFromCity?: number | null;
+  // Rough per-person round-trip CO₂ estimate (kg). Set server-side.
+  co2Kg?: number | null;
 }
 
 // A getaway that connects (has a layover) AND gives under a full day at the

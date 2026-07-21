@@ -5,6 +5,7 @@ import { timelineRange } from "@/lib/timeline";
 import { normalizeDeals } from "@/lib/deals";
 import { fetchHolidays, annotate } from "@/lib/holidays";
 import { airportCityKm } from "@/lib/cities";
+import { estimateFlightCo2Kg } from "@/lib/co2";
 import { cached } from "@/lib/api-cache";
 
 // Identical searches are cheap to repeat and prices don't move by the second;
@@ -145,6 +146,7 @@ export async function GET(request: NextRequest) {
         d.homeHoliday = info.homeHoliday;
         d.destHoliday = info.destHoliday;
         d.airportKmFromCity = airportCityKm(d.flyTo, d.cityTo, d.countryToCode);
+        d.co2Kg = estimateFlightCo2Kg(d.flyFrom, d.flyTo);
       }
     }
 

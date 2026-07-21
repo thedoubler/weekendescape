@@ -32,6 +32,8 @@ import { DayBlocks } from "@/components/DayBlocks";
 // Below this the airport is "in town" enough not to warrant a caveat; above it
 // (Charleroi/Brussels, Beauvais/Paris…) the transfer is worth surfacing.
 const FAR_AIRPORT_KM = 30;
+// A round-trip weekend flight under this earns a subtle "greener" treatment.
+const LOW_CO2_KG = 200;
 
 function Leg({
   label,
@@ -120,6 +122,24 @@ function Leg({
 
 // Inline icons (Lucide, currentColor) so the Stay/Book actions render
 // consistently across platforms and adapt to light/dark — unlike emoji.
+function LeafIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+    </svg>
+  );
+}
+
 function BedIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -347,6 +367,18 @@ export function DealCard({
           >
             {stay} to explore
           </span>
+          {deal.co2Kg != null && (
+            <span
+              title="Estimated round-trip CO₂ per person (great-circle estimate)"
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                deal.co2Kg <= LOW_CO2_KG
+                  ? "bg-green-100 text-green-900 dark:bg-green-300/20 dark:text-green-100"
+                  : "bg-black/[0.06] text-black/55 dark:bg-white/10 dark:text-white/55"
+              }`}
+            >
+              <LeafIcon className="h-3.5 w-3.5 shrink-0" />~{deal.co2Kg} kg CO₂
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <a
@@ -453,6 +485,15 @@ export function DealCard({
                     {weather.years}-yr avg
                   </span>
                 )}
+              </span>
+            </div>
+          )}
+          {deal.co2Kg != null && (
+            <div className="inline-flex items-start gap-1.5 text-black/55 dark:text-white/55">
+              <LeafIcon className="mt-[2px] h-3.5 w-3.5 shrink-0" />
+              <span>
+                Est. ~{deal.co2Kg} kg CO₂ round trip, per person —
+                great-circle estimate, economy.
               </span>
             </div>
           )}
