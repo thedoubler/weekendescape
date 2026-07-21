@@ -404,7 +404,27 @@ export default function Home() {
           {/* "Weekend" native sans, "Escape" serif-italic for lift. */}
           <h1 className="text-2xl leading-[0.95] tracking-[-0.01em] sm:text-[28px]">
             <span className="font-semibold">Weekend</span>{" "}
-            <span className="font-serif italic">Escape</span>
+            <span className="relative inline-block font-serif italic">
+              Escape
+              {/* Signature motif: a dotted flight-path arc rising under the word. */}
+              <svg
+                aria-hidden
+                viewBox="0 0 100 8"
+                preserveAspectRatio="none"
+                fill="none"
+                className="pointer-events-none absolute inset-x-0 -bottom-[3px] h-[7px] w-full overflow-visible"
+              >
+                <path
+                  d="M2 6.5 Q 50 0.5 98 3"
+                  stroke="#f97316"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeDasharray="0.1 13"
+                  vectorEffect="non-scaling-stroke"
+                  opacity="0.7"
+                />
+              </svg>
+            </span>
           </h1>
           <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-black/50 dark:text-white/55">
             Est. cheapest weekends
