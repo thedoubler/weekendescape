@@ -9,6 +9,41 @@ interface MonthSection {
   deals: Deal[];
 }
 
+// Placeholder that mirrors a collapsed DealCard's shape, so results swap in
+// without the layout jumping. Pulses (unless the user prefers reduced motion).
+function SkeletonCard() {
+  const bar = "rounded bg-black/[0.06] dark:bg-white/[0.08]";
+  return (
+    <div className="rounded-xl border border-black/10 p-4 motion-safe:animate-pulse dark:border-white/10">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <div className={`h-5 w-6 ${bar}`} />
+            <div className={`h-5 w-32 ${bar}`} />
+          </div>
+          <div className={`mt-2 h-3 w-44 ${bar}`} />
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <div className={`h-5 w-16 ${bar}`} />
+          <div className={`h-3 w-12 ${bar}`} />
+        </div>
+      </div>
+      <div className="mt-3 flex gap-1">
+        <div className={`h-16 flex-1 ${bar}`} />
+        <div className={`h-16 flex-1 ${bar}`} />
+        <div className={`h-16 flex-1 ${bar}`} />
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <div className={`h-7 w-28 rounded-full ${bar}`} />
+        <div className="flex gap-3">
+          <div className={`h-4 w-10 ${bar}`} />
+          <div className={`h-4 w-12 ${bar}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Consecutive deals (soonest sort is date-ascending) collapse into month runs.
 function toSections(deals: Deal[]): MonthSection[] {
   const sections: MonthSection[] = [];
@@ -38,7 +73,18 @@ export function DealList({
   groupByMonth?: boolean;
   onClearFilters?: () => void;
 }) {
-  if (loading) return <p className="opacity-70">Searching for escapes…</p>;
+  if (loading)
+    return (
+      <div
+        className="flex flex-col gap-3"
+        aria-busy="true"
+        aria-label="Searching for escapes"
+      >
+        {Array.from({ length: 5 }).map((_, i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </div>
+    );
   if (error) return <p className="text-red-500">{error}</p>;
   if (deals.length === 0)
     return (
