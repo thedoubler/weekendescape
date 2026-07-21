@@ -367,18 +367,6 @@ export function DealCard({
           >
             {stay} to explore
           </span>
-          {deal.co2Kg != null && (
-            <span
-              title="Estimated round-trip CO₂ per person (great-circle estimate)"
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                deal.co2Kg <= LOW_CO2_KG
-                  ? "bg-green-100 text-green-900 dark:bg-green-300/20 dark:text-green-100"
-                  : "bg-black/[0.06] text-black/55 dark:bg-white/10 dark:text-white/55"
-              }`}
-            >
-              <LeafIcon className="h-3.5 w-3.5 shrink-0" />~{deal.co2Kg} kg CO₂
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-3">
           <a
@@ -489,7 +477,13 @@ export function DealCard({
             </div>
           )}
           {deal.co2Kg != null && (
-            <div className="inline-flex items-start gap-1.5 text-black/55 dark:text-white/55">
+            <div
+              className={`inline-flex items-start gap-1.5 ${
+                deal.co2Kg <= LOW_CO2_KG
+                  ? "text-green-700 dark:text-green-400"
+                  : "text-black/55 dark:text-white/55"
+              }`}
+            >
               <LeafIcon className="mt-[2px] h-3.5 w-3.5 shrink-0" />
               <span>
                 Est. ~{deal.co2Kg} kg CO₂ round trip, per person —
