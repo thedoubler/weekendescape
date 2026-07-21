@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   flagEmoji,
   normalizeDeals,
-  isShortLayoverTrip,
+  isShortStay,
   type Deal,
 } from "@/lib/deals";
 
@@ -32,19 +32,15 @@ function dealWith(partial: Partial<Deal>): Deal {
   };
 }
 
-describe("isShortLayoverTrip", () => {
-  it("is true only for a layover with under a day at the destination", () => {
-    expect(
-      isShortLayoverTrip(dealWith({ outStops: 1, stayMinutes: 600 }))
-    ).toBe(true);
-    // direct but short -> keep
-    expect(
-      isShortLayoverTrip(dealWith({ outStops: 0, stayMinutes: 600 }))
-    ).toBe(false);
-    // layover but a long stay -> keep
-    expect(
-      isShortLayoverTrip(dealWith({ backStops: 1, stayMinutes: 3000 }))
-    ).toBe(false);
+describe("isShortStay", () => {
+  it("is true for any trip with under a day at the destination", () => {
+    // under 24h -> short (regardless of stops)
+    expect(isShortStay(dealWith({ outStops: 1, stayMinutes: 600 }))).toBe(true);
+    expect(isShortStay(dealWith({ outStops: 0, stayMinutes: 600 }))).toBe(true);
+    // a full day or more -> keep
+    expect(isShortStay(dealWith({ backStops: 1, stayMinutes: 3000 }))).toBe(
+      false
+    );
   });
 });
 

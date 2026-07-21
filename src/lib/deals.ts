@@ -41,12 +41,11 @@ export interface Deal {
   co2Kg?: number | null;
 }
 
-// A getaway that connects (has a layover) AND gives under a full day at the
-// destination isn't much of a weekend escape — hidden by default in the UI.
-export function isShortLayoverTrip(deal: Deal): boolean {
-  return (
-    (deal.outStops > 0 || deal.backStops > 0) && deal.stayMinutes < 24 * 60
-  );
+// Under a full day at the destination — more travel than time there. Hidden by
+// default in the UI (a toggle reveals them). Applies to any trip, so it still
+// works when Direct is the default and there are no layovers.
+export function isShortStay(deal: Deal): boolean {
+  return deal.stayMinutes < 24 * 60;
 }
 
 export function flagEmoji(countryCode: string): string {

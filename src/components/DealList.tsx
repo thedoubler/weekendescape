@@ -11,7 +11,7 @@ interface MonthSection {
 
 // Placeholder that mirrors a collapsed DealCard's shape, so results swap in
 // without the layout jumping. Pulses (unless the user prefers reduced motion).
-function SkeletonCard() {
+export function SkeletonCard() {
   const bar = "rounded bg-black/[0.06] dark:bg-white/[0.08]";
   return (
     <div className="rounded-xl border border-black/10 p-4 motion-safe:animate-pulse dark:border-white/10">

@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { WeekendStyle } from "@/lib/weekend";
-import { type Deal, isShortLayoverTrip } from "@/lib/deals";
+import { type Deal, isShortStay } from "@/lib/deals";
 import {
   type SortKey,
   sortDeals,
@@ -25,7 +25,7 @@ import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
 import { FilterChip } from "@/components/FilterChip";
-import { DealList } from "@/components/DealList";
+import { DealList, SkeletonCard } from "@/components/DealList";
 
 // Fetch that aborts after `ms` so a stalled request (slow upstream, a dropped
 // tunnel connection) fails into a retryable error instead of spinning forever.
@@ -138,9 +138,6 @@ export default function Home() {
   const [booting, setBooting] = useState(true);
   const bootstrapped = useRef(false);
   const didAutoCollapse = useRef(false);
-  // When we seed the search from URL params on load, the param-change effect
-  // would otherwise fire a duplicate search; this lets it skip that one run.
-  const seededSearch = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Mirror the current filter values into refs so runSearch (called from effects
   // and callbacks) always reads the latest, without being a dependency.
@@ -261,11 +258,6 @@ export default function Home() {
       setMonths(months0);
       setStopMode(stop0);
       setAdults(adults0);
-      seededSearch.current =
-        style0 !== "frimon" ||
-        months0 !== 3 ||
-        stop0 !== "direct" ||
-        adults0 !== 1;
       runSearch(from);
     } else {
       detectLocation();
@@ -273,15 +265,8 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!bootstrapped.current || !home) return;
-    if (seededSearch.current) {
-      seededSearch.current = false;
-      return;
-    }
-    runSearch(home);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, months, stopMode, adults]);
+  // Changing the trip options no longer auto-searches — the Search button in the
+  // panel is the single trigger, so a network round-trip is always intentional.
 
   // Keep the URL in sync with the active search so it's shareable/bookmarkable.
   useEffect(() => {
@@ -328,19 +313,19 @@ export default function Home() {
   }, [rawDeals, selectedMonths, selectedContinents, cap, sort]);
   // Layover trips with under a day at the destination are hidden by default.
   const hiddenCount = useMemo(
-    () => filtered.filter(isShortLayoverTrip).length,
+    () => filtered.filter(isShortStay).length,
     [filtered]
   );
   const visible = showHidden
     ? filtered
-    : filtered.filter((d) => !isShortLayoverTrip(d));
+    : filtered.filter((d) => !isShortStay(d));
 
   // Per-option counts for the Refine pills, over the base universe the user can
   // actually see (respecting the short-stay toggle) but ignoring month/region/
   // price selections — so each pill shows how many trips it would surface.
   const countable = useMemo(
     () =>
-      showHidden ? rawDeals : rawDeals.filter((d) => !isShortLayoverTrip(d)),
+      showHidden ? rawDeals : rawDeals.filter((d) => !isShortStay(d)),
     [rawDeals, showHidden]
   );
   const monthCounts = useMemo(() => {
@@ -421,14 +406,16 @@ export default function Home() {
       </header>
 
       {booting ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-          <span
-            aria-hidden
-            className="h-5 w-5 animate-spin rounded-full border-2 border-black/15 border-t-black/50 dark:border-white/20 dark:border-t-white/70"
-          />
-          <span className="text-sm text-black/50 dark:text-white/50">
-            Finding weekend escapes near you…
-          </span>
+        /* First load: same skeletons as a search, so there's a single, consistent
+           loading state (not a spinner then skeletons). */
+        <div
+          className="flex flex-col gap-3"
+          aria-busy="true"
+          aria-label="Finding weekend escapes"
+        >
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : (
       <div className="flex flex-col gap-6 animate-fade-in">
@@ -470,7 +457,7 @@ export default function Home() {
           </button>
         </div>
       ) : (
-        /* Full search — defines the trip; changing these runs a new search */
+        /* Full search — set the trip, then hit Search (the only trigger) */
         <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
           {/* Origin — the primary input, given room to breathe */}
           <div>
@@ -491,7 +478,7 @@ export default function Home() {
             </div>
             <AirportInput
               value={home}
-              onSearch={runSearch}
+              onSearch={(code) => setHome(code.trim().toUpperCase())}
               inputRef={inputRef}
             />
           </div>
@@ -534,17 +521,28 @@ export default function Home() {
             </Field>
           </div>
 
-          {searched && (
-            <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-4">
+            {searched && (
               <button
                 type="button"
                 onClick={() => setCollapsed(true)}
-                className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
+                className="text-sm text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white"
               >
-                Done
+                Cancel
               </button>
-            </div>
-          )}
+            )}
+            <button
+              type="button"
+              disabled={!home.trim()}
+              onClick={() => {
+                runSearch(home);
+                setCollapsed(true);
+              }}
+              className="rounded-full bg-neutral-900 px-6 py-2 text-sm font-medium text-white transition duration-200 hover:opacity-90 disabled:opacity-40 motion-safe:enabled:hover:scale-105 dark:bg-white dark:text-black"
+            >
+              {searched ? "Update search" : "Search"}
+            </button>
+          </div>
         </section>
       )}
 
@@ -678,9 +676,8 @@ export default function Home() {
                   className="mt-0.5 accent-black dark:accent-white"
                 />
                 <span className="text-black/70 dark:text-white/70">
-                  Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with a
-                  layover and under a day at the destination — more travel than
-                  time there.
+                  Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with
+                  under a day at the destination — more travel than time there.
                 </span>
               </label>
             </Field>

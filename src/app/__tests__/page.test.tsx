@@ -188,7 +188,7 @@ describe("Home page", () => {
     // The short-stay filter now lives under Refine, as a labeled toggle.
     fireEvent.click(screen.getByRole("button", { name: /refine/i }));
     fireEvent.click(
-      screen.getByRole("checkbox", { name: /layover and under a day/i })
+      screen.getByRole("checkbox", { name: /under a day at the destination/i })
     );
     expect(screen.getByText("Doha")).toBeInTheDocument();
   });
