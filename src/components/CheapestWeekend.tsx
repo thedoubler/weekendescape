@@ -5,6 +5,16 @@ import type { Deal } from "@/lib/deals";
 import type { WeekendStyle } from "@/lib/weekend";
 import { dateWithMonth } from "@/lib/format";
 
+// Session cache of the cheapest-weekend lookup, keyed by the full query — so
+// re-opening a card (or the same destination) never re-fetches. Combined with
+// the server-side cache, each destination costs at most one upstream search.
+const CACHE = new Map<string, Deal | null>();
+
+// Test hook — reset the session cache so cases don't leak into one another.
+export function clearCheapestWeekendCache(): void {
+  CACHE.clear();
+}
+
 export function CheapestWeekend({
   flyFrom,
   flyTo,
@@ -13,6 +23,7 @@ export function CheapestWeekend({
   style,
   months,
   direct,
+  adults,
 }: {
   flyFrom: string;
   flyTo: string;
@@ -21,26 +32,38 @@ export function CheapestWeekend({
   style: WeekendStyle;
   months: number;
   direct: boolean;
+  adults: number;
 }) {
-  const [loading, setLoading] = useState(true);
-  const [deal, setDeal] = useState<Deal | null>(null);
+  const key = `${flyFrom}:${flyTo}:${style}:${months}:${direct ? 1 : 0}:${adults}`;
+  const [loading, setLoading] = useState(!CACHE.has(key));
+  const [deal, setDeal] = useState<Deal | null>(() => CACHE.get(key) ?? null);
 
   useEffect(() => {
+    if (CACHE.has(key)) {
+      setDeal(CACHE.get(key) ?? null);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     (async () => {
       try {
+        // Match the same passenger count so the comparison price is apples-to-
+        // apples (without adults it always priced 1 traveller — a false "cheaper").
         const qs = new URLSearchParams({
           flyFrom,
           flyTo,
           style,
           months: String(months),
+          adults: String(adults),
         });
         if (direct) qs.set("direct", "1");
         const res = await fetch(`/api/weekends?${qs.toString()}`);
         const body = await res.json();
+        const d: Deal | null = body.deals?.[0] ?? null;
         if (!cancelled) {
-          setDeal(body.deals?.[0] ?? null);
+          CACHE.set(key, d);
+          setDeal(d);
           setLoading(false);
         }
       } catch {
@@ -53,7 +76,7 @@ export function CheapestWeekend({
     return () => {
       cancelled = true;
     };
-  }, [flyFrom, flyTo, style, months, direct]);
+  }, [key, flyFrom, flyTo, style, months, direct, adults]);
 
   if (loading)
     return (

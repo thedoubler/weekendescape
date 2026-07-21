@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { CheapestWeekend } from "@/components/CheapestWeekend";
+import {
+  CheapestWeekend,
+  clearCheapestWeekendCache,
+} from "@/components/CheapestWeekend";
 
 const cheaper = {
   cityTo: "Ibiza",
@@ -26,7 +29,10 @@ const cheaper = {
 };
 
 describe("CheapestWeekend", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    clearCheapestWeekendCache();
+  });
 
   it("shows a cheaper weekend when one exists", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
@@ -43,6 +49,7 @@ describe("CheapestWeekend", () => {
         style="frimon"
         months={3}
         direct={false}
+        adults={1}
       />
     );
 
@@ -74,6 +81,7 @@ describe("CheapestWeekend", () => {
         style="frimon"
         months={3}
         direct={false}
+        adults={1}
       />
     );
 

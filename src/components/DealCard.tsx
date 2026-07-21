@@ -184,7 +184,7 @@ export function DealCard({
   cheapest,
 }: {
   deal: Deal;
-  cheapest?: { style: WeekendStyle; months: number; direct: boolean };
+  cheapest?: { style: WeekendStyle; months: number; direct: boolean; adults: number };
 }) {
   const [open, setOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherResult | null>(null);
@@ -536,6 +536,7 @@ export function DealCard({
                 style={cheapest.style}
                 months={cheapest.months}
                 direct={cheapest.direct}
+                adults={cheapest.adults}
               />
             </div>
           )}

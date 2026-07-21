@@ -691,7 +691,7 @@ export default function Home() {
           loading={loading}
           error={error}
           groupByMonth={sort === "soonest"}
-          cheapest={{ style, months, direct: stopMode === "direct" }}
+          cheapest={{ style, months, direct: stopMode === "direct", adults }}
           onClearFilters={activeFilters > 0 ? clearAll : undefined}
           emptyMessage={
             selectedMonths.length > 0 ||

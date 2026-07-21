@@ -69,7 +69,7 @@ export function DealList({
   loading: boolean;
   error: string | null;
   emptyMessage?: string;
-  cheapest?: { style: WeekendStyle; months: number; direct: boolean };
+  cheapest?: { style: WeekendStyle; months: number; direct: boolean; adults: number };
   groupByMonth?: boolean;
   onClearFilters?: () => void;
 }) {
