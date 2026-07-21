@@ -388,19 +388,26 @@ export default function Home() {
 
   return (
     <main className="max-w-2xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-6">
-      <header className="flex items-center gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
+      <header className="flex items-start gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
+        {/* Mark: a sparkle with a detached "destination dot". The badge inverts
+            by theme so the warm accent is always present but never floods. */}
         <span
           aria-hidden
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-900 text-base text-white dark:bg-white dark:text-black"
+          className="mt-[3px] grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-900 text-[#f97316] dark:bg-[#f97316] dark:text-[#14161c]"
         >
-          ✦
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+            <circle cx="19.6" cy="4.4" r="1.7" />
+          </svg>
         </span>
         <div className="leading-tight">
-          <h1 className="font-serif text-2xl leading-none tracking-tight">
-            Weekend Escape
+          {/* "Weekend" native sans, "Escape" serif-italic for lift. */}
+          <h1 className="text-2xl leading-[0.95] tracking-[-0.01em] sm:text-[28px]">
+            <span className="font-semibold">Weekend</span>{" "}
+            <span className="font-serif italic">Escape</span>
           </h1>
-          <p className="text-[13px] text-black/50 dark:text-white/50">
-            Cheapest weekend getaways from home
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-black/50 dark:text-white/55">
+            Est. cheapest weekends
           </p>
         </div>
       </header>
