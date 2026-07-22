@@ -385,6 +385,17 @@ export default function Home() {
     (cap < bounds.max ? 1 : 0);
   const styleLabel =
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
+  // The next-larger search window, for the end-of-list "look further ahead" CTA.
+  const nextWindow = MONTH_OPTIONS.find((o) => o.value > months)?.value;
+
+  // Widen the search window a tier and re-search, keeping the current options.
+  function widenWindow() {
+    if (!nextWindow || !home) return;
+    monthsRef.current = nextWindow;
+    setMonths(nextWindow);
+    runSearch(home);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <main className="max-w-2xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-6">
@@ -730,6 +741,24 @@ export default function Home() {
                 : undefined
           }
         />
+      )}
+
+      {/* End-of-list escape hatch: widen the search window without re-opening
+          Edit. Keeps the current trip options; the client filters carry over. */}
+      {searched && !loading && !error && nextWindow && (
+        <div className="flex flex-col items-center gap-1.5 pt-1 text-center">
+          <button
+            type="button"
+            onClick={widenWindow}
+            className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium text-black/75 transition duration-200 hover:bg-black/[0.04] motion-safe:hover:scale-[1.03] dark:border-white/15 dark:text-white/75 dark:hover:bg-white/[0.06]"
+          >
+            Search the next {nextWindow} months
+            <span aria-hidden>→</span>
+          </button>
+          <span className="text-xs text-black/40 dark:text-white/40">
+            Look further ahead for more escapes
+          </span>
+        </div>
       )}
       </div>
       )}
