@@ -126,6 +126,7 @@ export default function Home() {
   const [maxPrice, setMaxPrice] = useState(0);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
@@ -388,13 +389,31 @@ export default function Home() {
   // The next-larger search window, for the end-of-list "look further ahead" CTA.
   const nextWindow = MONTH_OPTIONS.find((o) => o.value > months)?.value;
 
-  // Widen the search window a tier and re-search, keeping the current options.
-  function widenWindow() {
-    if (!nextWindow || !home) return;
-    monthsRef.current = nextWindow;
-    setMonths(nextWindow);
-    runSearch(home);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // Widen the search window a tier and fold the wider results into the list in
+  // place — no skeleton takeover, no scroll jump — so it reads as "load more".
+  async function widenWindow() {
+    if (!nextWindow || !home || loadingMore) return;
+    const next = nextWindow;
+    monthsRef.current = next;
+    setMonths(next);
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const qs = new URLSearchParams({
+        flyFrom: home,
+        style: styleRef.current,
+        months: String(next),
+        adults: String(adultsRef.current),
+      });
+      if (stopModeRef.current === "direct") qs.set("direct", "1");
+      const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
+      const body = await res.json();
+      if (res.ok) setRawDeals(body.deals ?? []);
+    } catch {
+      /* keep the current list on failure */
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   return (
@@ -746,14 +765,27 @@ export default function Home() {
       {/* End-of-list escape hatch: widen the search window without re-opening
           Edit. Keeps the current trip options; the client filters carry over. */}
       {searched && !loading && !error && nextWindow && (
-        <div className="flex flex-col items-center gap-1.5 pt-1 text-center">
+        <div className="flex flex-col items-center gap-1.5 pt-1 pb-2 text-center">
           <button
             type="button"
             onClick={widenWindow}
-            className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium text-black/75 transition duration-200 hover:bg-black/[0.04] motion-safe:hover:scale-[1.03] dark:border-white/15 dark:text-white/75 dark:hover:bg-white/[0.06]"
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium text-black/75 transition duration-200 hover:bg-black/[0.04] disabled:opacity-60 motion-safe:enabled:hover:scale-[1.03] dark:border-white/15 dark:text-white/75 dark:hover:bg-white/[0.06]"
           >
-            Search the next {nextWindow} months
-            <span aria-hidden>→</span>
+            {loadingMore ? (
+              <>
+                <span
+                  aria-hidden
+                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60"
+                />
+                Searching…
+              </>
+            ) : (
+              <>
+                Search the next {nextWindow} months
+                <span aria-hidden>→</span>
+              </>
+            )}
           </button>
           <span className="text-xs text-black/40 dark:text-white/40">
             Look further ahead for more escapes
@@ -767,7 +799,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-lg transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
+          className="fixed bottom-5 left-4 z-30 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-lg transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
         >
           ↑ Sort &amp; filter
         </button>
