@@ -62,13 +62,33 @@ const ADULTS_OPTIONS = [
 ];
 type StopMode = "any" | "direct";
 
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 function Field({
   label,
   hint,
   align = "start",
   children,
 }: {
-  label: string;
+  label: ReactNode;
   hint?: string;
   align?: "start" | "end" | "stretch";
   children: ReactNode;
@@ -290,7 +310,13 @@ export default function Home() {
   // sort/refine stay reachable without scrolling to the top (our month dividers
   // are already sticky, so we avoid a second sticky bar that would overlap them).
   useEffect(() => {
-    const onScroll = () => setShowJump(window.scrollY > 700);
+    const onScroll = () => {
+      // Hide near the bottom so it never overlaps the end-of-list CTA.
+      const nearBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 220;
+      setShowJump(window.scrollY > 700 && !nearBottom);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -568,7 +594,14 @@ export default function Home() {
                 ariaLabel="Stops"
               />
             </Field>
-            <Field label="Adults">
+            <Field
+              label={
+                <span className="inline-flex items-center gap-1">
+                  <UsersIcon className="h-3.5 w-3.5" />
+                  Adults
+                </span>
+              }
+            >
               <SegmentedControl
                 options={ADULTS_OPTIONS}
                 value={adults}
@@ -764,28 +797,26 @@ export default function Home() {
 
       {/* End-of-list escape hatch: widen the search window without re-opening
           Edit. Keeps the current trip options; the client filters carry over. */}
-      {searched && !loading && !error && nextWindow && (
+      {searched && !loading && !error && loadingMore && (
+        <div
+          className="flex flex-col gap-3"
+          aria-busy="true"
+          aria-label="Loading more escapes"
+        >
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      )}
+      {searched && !loading && !error && !loadingMore && nextWindow && (
         <div className="flex flex-col items-center gap-1.5 pt-1 pb-2 text-center">
           <button
             type="button"
             onClick={widenWindow}
-            disabled={loadingMore}
-            className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium text-black/75 transition duration-200 hover:bg-black/[0.04] disabled:opacity-60 motion-safe:enabled:hover:scale-[1.03] dark:border-white/15 dark:text-white/75 dark:hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium text-black/75 transition duration-200 hover:bg-black/[0.04] motion-safe:hover:scale-[1.03] dark:border-white/15 dark:text-white/75 dark:hover:bg-white/[0.06]"
           >
-            {loadingMore ? (
-              <>
-                <span
-                  aria-hidden
-                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60"
-                />
-                Searching…
-              </>
-            ) : (
-              <>
-                Search the next {nextWindow} months
-                <span aria-hidden>→</span>
-              </>
-            )}
+            Search the next {nextWindow} months
+            <span aria-hidden>→</span>
           </button>
           <span className="text-xs text-black/40 dark:text-white/40">
             Look further ahead for more escapes

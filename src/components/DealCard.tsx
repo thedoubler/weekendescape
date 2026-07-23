@@ -336,9 +336,17 @@ export function DealCard({
           <div className="text-lg font-semibold">
             {deal.price} {deal.currency}
           </div>
-          {days > 0 && (
-            <div className="text-xs text-black/50 dark:text-white/50">
-              in {days} days
+          {/* Only surface the countdown when it's soon — a "book now" cue.
+              Far-out trips already say their date, so the number is just noise. */}
+          {days > 0 && days <= 21 && (
+            <div
+              className={`text-xs ${
+                days <= 7
+                  ? "font-medium text-amber-700 dark:text-amber-400/90"
+                  : "text-black/50 dark:text-white/50"
+              }`}
+            >
+              in {days} day{days === 1 ? "" : "s"}
             </div>
           )}
         </div>
