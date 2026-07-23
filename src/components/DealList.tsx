@@ -1,5 +1,9 @@
 import type { Deal } from "@/lib/deals";
-import type { WeekendStyle } from "@/lib/weekend";
+import {
+  type WeekendStyle,
+  WEEKEND_SHAPE,
+  matchesWeekendShape,
+} from "@/lib/weekend";
 import { monthKey, monthTitle } from "@/lib/format";
 import { DealCard } from "@/components/DealCard";
 
@@ -63,6 +67,7 @@ export function DealList({
   emptyMessage,
   cheapest,
   groupByMonth = false,
+  splitShape,
   onClearFilters,
 }: {
   deals: Deal[];
@@ -71,6 +76,11 @@ export function DealList({
   emptyMessage?: string;
   cheapest?: { style: WeekendStyle; months: number; direct: boolean; adults: number };
   groupByMonth?: boolean;
+  // When set, split results into "exactly this shape" first, then a labelled
+  // "close matches" section for the rest — so the list is honest about the
+  // preset without throwing away the cheaper near-miss inventory. Omitted in
+  // bridge-days mode, where off-shape puentes are the whole point.
+  splitShape?: WeekendStyle;
   onClearFilters?: () => void;
 }) {
   if (loading)
@@ -113,27 +123,57 @@ export function DealList({
     />
   );
 
-  if (!groupByMonth) {
-    return <div className="flex flex-col gap-3">{deals.map(card)}</div>;
+  // Render a list either flat or grouped into sticky-header month runs.
+  const renderDeals = (list: Deal[]) =>
+    groupByMonth
+      ? toSections(list).map((section) => (
+          <section key={section.key} className="flex flex-col gap-3">
+            <div className="sticky top-0 z-10 flex items-baseline gap-2 bg-background/85 pb-1 pt-1 backdrop-blur-sm">
+              <span className="text-sm font-semibold tracking-tight">
+                {section.title}
+              </span>
+              <span className="text-xs text-black/40 dark:text-white/40">
+                {section.deals.length}
+              </span>
+            </div>
+            {section.deals.map(card)}
+          </section>
+        ))
+      : list.map(card);
+
+  // No shape split (or bridge mode): render the list as-is.
+  if (!splitShape) {
+    return <div className="flex flex-col gap-3">{renderDeals(deals)}</div>;
   }
 
-  // Each month is its own section so the sticky header leaves with its run
-  // instead of piling up under the previous one.
+  // Exactly the shape the preset names, then everything else as "close matches".
+  const exact = deals.filter((d) =>
+    matchesWeekendShape(d.outArrive, d.backDepart, splitShape)
+  );
+  const close = deals.filter(
+    (d) => !matchesWeekendShape(d.outArrive, d.backDepart, splitShape)
+  );
+  const label = WEEKEND_SHAPE[splitShape].label;
+
   return (
     <div className="flex flex-col gap-3">
-      {toSections(deals).map((section) => (
-        <section key={section.key} className="flex flex-col gap-3">
-          <div className="sticky top-0 z-10 flex items-baseline gap-2 bg-background/85 pb-1 pt-1 backdrop-blur-sm">
-            <span className="text-sm font-semibold tracking-tight">
-              {section.title}
+      {exact.length > 0 && renderDeals(exact)}
+      {close.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 pt-2">
+            <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+            <span className="text-xs font-medium text-black/50 dark:text-white/50">
+              {exact.length === 0
+                ? `No exact ${label} — closest matches`
+                : `Not exactly ${label} · ${close.length} close ${
+                    close.length === 1 ? "match" : "matches"
+                  }`}
             </span>
-            <span className="text-xs text-black/40 dark:text-white/40">
-              {section.deals.length}
-            </span>
+            <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
           </div>
-          {section.deals.map(card)}
-        </section>
-      ))}
+          {renderDeals(close)}
+        </>
+      )}
     </div>
   );
 }

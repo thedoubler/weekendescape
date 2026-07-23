@@ -807,6 +807,7 @@ export default function Home() {
           error={error}
           groupByMonth={sort === "soonest"}
           cheapest={{ style, months, direct: stopMode === "direct", adults }}
+          splitShape={bridges ? undefined : style}
           onClearFilters={activeFilters > 0 ? clearAll : undefined}
           emptyMessage={
             selectedMonths.length > 0 ||
