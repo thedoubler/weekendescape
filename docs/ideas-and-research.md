@@ -37,18 +37,24 @@ Roughly ordered by leverage. Items marked ✅ shipped this session.
 
 ### Weekend-delight ideas (brainstormed 2026-07)
 Ranked by fit × delight for a weekend-getaway tool:
-1. **Bridge-day / long-weekend detector ("puentes")** — *building now (full).* Use
-   the home-country holidays we already fetch (Nager.Date) to flag when ≤1 day of
-   PTO turns a weekend into a 3–4 day escape. Chosen scope: **full** — on top of a
-   prominent badge + "Long weekends only" filter, run holiday-anchored supplementary
-   searches for the puentes the fixed weekend windows miss:
-   - **Tue holiday** → depart Fri/Sat, return Tue (take Mon off) — 4-day, 1 PTO.
-   - **Thu holiday** → depart Wed/Thu, return Sun (take Fri off) — 4-day, 1 PTO.
-   - Mon/Fri holidays already fall out of the normal Fri/Sat search, so we don't
-     add extra searches for them (avoid duplicate cards).
+1. **Bridge-day / long-weekend detector ("puentes")** — ✅ *shipped as an opt-in
+   mode.* A "Hunt for bridge days" toggle in the search panel (default OFF → plain
+   search, no home-holiday fetch, no bridge queries; `bridges=1` in the shareable
+   URL when on). When ON the API returns **only** long-weekend escapes and marks
+   them up. Holiday source: Nager.Date (home = national only for honest PTO;
+   destinations keep national+regional so "holiday there" stays accurate).
+   Holiday-anchored windows the fixed weekend windows miss (Kiwi DOW 0=Sun…6=Sat):
+   - **Tue holiday** → depart Fri/Sat, return Tue (take Mon off) — 1 day off.
+   - **Wed holiday** → depart Wed, return Sun (take Thu+Fri off) — 2 days off.
+   - **Thu holiday** → depart Wed/Thu, return Sun (take Fri off) — 1 day off.
+   - Mon/Fri holidays fall out of the normal windows (kept via the main search,
+     filtered to `isBridge`), so no extra query for them.
    Extra searches run in parallel with the main board search (latency = max, not
-   sum), each cached; only on the board search (not single-city), skipped when no
-   qualifying holiday sits in the window. Kiwi day-of-week: 0=Sun … 6=Sat.
+   sum), each cached; board search only (single-city skips). Card badge states the
+   real cost ("no day off needed" / "1 day off" / "2 days off required"); the
+   DayBlocks strip tints the holiday day and tags the workdays you'd book off.
+   **Follow-up:** map home airport → ISO region to re-add a resident's own regional
+   holidays (e.g. Catalonia's Diada for BCN) — currently national-only for home.
 2. **Total weekend cost, not just airfare** — rough flight + 2-nights hotel
    estimate so the card shows the real all-in (~€120), not just the teaser fare.
 3. **"Warm this weekend" near-term mode** — toggle for this weekend / next 2–3
