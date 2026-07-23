@@ -22,6 +22,14 @@ export async function fetchHolidays(
     const data = await res.json();
     if (!Array.isArray(data)) return [];
     return data
+      // National holidays only (Nager marks these global: true, counties: null).
+      // Regional ones (e.g. Catalonia's Diada, Day of Extremadura) don't apply to
+      // every resident, so counting them would claim days off the traveller may
+      // not actually have. TODO: map the home airport → ISO region to re-include
+      // that region's own holidays.
+      .filter(
+        (h: { global?: boolean }) => h.global === true || h.global === undefined
+      )
       .map((h: { date?: string; localName?: string; name?: string }) => ({
         date: h.date ?? "",
         name: h.name || h.localName || "",
