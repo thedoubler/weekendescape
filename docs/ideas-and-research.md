@@ -35,6 +35,17 @@ Roughly ordered by leverage. Items marked ✅ shipped this session.
 - Show prices in the user's currency (free FX API: Frankfurter / exchangerate.host).
 - Deal freshness — "prices checked 2h ago".
 
+### Parked — revisit if the shape changes
+- **Air quality index (AQI).** Considered 2026-07; skipped for now. Open-Meteo
+  has a free Air Quality API (same provider we use for weather), but AQI can't
+  be forecast beyond ~5–7 days, and our deals are booked 1–2 months out — so
+  for the typical card there's no meaningful value to show, and AQI seasonal
+  climatology (unlike temperature) isn't an intuitive, trusted signal. It also
+  rarely changes the decision for European weekend breaks, and the card is
+  already dense. **Revisit if we add a near-term "this weekend / next few weeks"
+  mode** — there real AQI forecasts exist and would make a good expanded-detail
+  line (not a headline chip).
+
 ### Growth
 - Price-drop alerts (email/push) for a saved route.
 - Multiple home airports in one search.
