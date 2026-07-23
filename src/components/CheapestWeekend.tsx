@@ -91,22 +91,34 @@ export function CheapestWeekend({
       </div>
     );
 
+  const saved = currentPrice - deal.price;
+  const pct = Math.round((saved / currentPrice) * 100);
+
   return (
-    <div className="text-sm">
-      💡 Cheaper weekend:{" "}
-      <span className="font-medium">
-        {deal.price} {deal.currency}
-      </span>{" "}
-      · {dateWithMonth(deal.outDepart)} → {dateWithMonth(deal.backArrive)}{" "}
-      <a
-        href={deal.deepLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Book cheapest ${cityTo}`}
-        className="underline"
-      >
-        Book
-      </a>
+    <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-medium">💡 Cheaper weekend</span>
+        {pct > 0 && (
+          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-300/20 dark:text-green-100">
+            {pct}% cheaper · save {saved} {deal.currency}
+          </span>
+        )}
+      </div>
+      <div className="text-black/70 dark:text-white/70">
+        <span className="font-medium">
+          {deal.price} {deal.currency}
+        </span>{" "}
+        · {dateWithMonth(deal.outDepart)} → {dateWithMonth(deal.backArrive)}{" "}
+        <a
+          href={deal.deepLink}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          aria-label={`Book cheaper ${cityTo} weekend on Kiwi.com (opens a new tab)`}
+          className="underline underline-offset-2"
+        >
+          Book on Kiwi
+        </a>
+      </div>
     </div>
   );
 }

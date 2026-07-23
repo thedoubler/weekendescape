@@ -59,7 +59,7 @@ describe("CheapestWeekend", () => {
     expect(screen.getByText(/36 EUR/)).toBeInTheDocument();
     // dates include the month so they're unambiguous
     expect(screen.getByText(/Sat 1 Aug → Mon 3 Aug/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /book cheapest ibiza/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /book cheaper ibiza/i })).toHaveAttribute(
       "href",
       "https://kiwi.com/deep/ibiza-36"
     );
