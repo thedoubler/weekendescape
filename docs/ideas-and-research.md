@@ -342,6 +342,20 @@ Recommendation: keep Tequila primary, add **Travelpayouts** as the LCC fallback 
 monetization layer, treat **Amadeus** as an optional live-price complement, and
 move airport lookup to the bundled data.
 
+### Price-history / "is this a good deal?" baseline (for the real value signal)
+Kiwi gives only *current* fares — a true "below typical" badge needs history:
+- **Amadeus Flight Price Analysis** — purpose-built: returns min / median /
+  **quartile** price metrics per route+date, so "cheap / typical / expensive"
+  drops out directly. Free dev tier, paid prod quota. **Best fit.**
+  [docs](https://developers.amadeus.com/self-service/category/flights/api-doc/flight-price-analysis)
+- **Travelpayouts / Aviasales Data API** — cheapest-fare price **calendar +
+  monthly history** per route; **free** with affiliate signup (and earns
+  commission). Derive the baseline yourself.
+- Skyscanner / Google Flights would be ideal but are partner-only / no public API.
+Shipped meanwhile: **price-per-night** (`≈ X EUR/night`, `DealCard`) as an honest,
+source-free value normalisation. A cross-destination percentile was rejected —
+it's redundant with the price sort and misleads.
+
 Sources: [Tequila](https://tequila.kiwi.com/) ·
 [Kiwi affiliate 50k MAU](https://support.travelpayouts.com/hc/en-us/articles/360019237899-Kiwi-com-affiliate-program-API) ·
 [Amadeus Cheapest Date Search](https://developers.amadeus.com/self-service/category/flights/api-doc/flight-cheapest-date-search) ·
