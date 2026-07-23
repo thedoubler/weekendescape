@@ -83,6 +83,12 @@ export function DayBlocks({
   const months: string[] = [];
   for (const c of cells) if (!months.includes(c.month)) months.push(c.month);
 
+  // When any day carries a "you're off" / "book off" tag, reserve that row on
+  // every cell (invisible on the untagged ones) so the orange hours-bar stays on
+  // one straight line across the strip instead of dropping under the tagged days.
+  const hasTags =
+    (homeHolidays?.length ?? 0) > 0 || (daysOff?.length ?? 0) > 0;
+
   return (
     <div>
       <div className="mb-1 text-[11px] text-black/40 dark:text-white/40">
@@ -122,15 +128,17 @@ export function DayBlocks({
                   <MapPinIcon className="h-3 w-3 shrink-0 text-teal-600 dark:text-teal-400" />
                 )}
               </div>
-              {(isHomeHoliday || isDayOff) && (
+              {hasTags && (
                 <div
-                  className={`mt-1 rounded-full px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-wide ${
+                  className={`mt-1 rounded-full border px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-wide ${
                     isHomeHoliday
-                      ? "bg-amber-200/80 text-amber-900 dark:bg-amber-300/25 dark:text-amber-100"
-                      : "border border-dashed border-black/25 text-black/50 dark:border-white/30 dark:text-white/55"
+                      ? "border-transparent bg-amber-200/80 text-amber-900 dark:bg-amber-300/25 dark:text-amber-100"
+                      : isDayOff
+                        ? "border-dashed border-black/25 text-black/50 dark:border-white/30 dark:text-white/55"
+                        : "invisible border-transparent"
                   }`}
                 >
-                  {isHomeHoliday ? "you’re off" : "book off"}
+                  {isHomeHoliday ? "you’re off" : isDayOff ? "book off" : " "}
                 </div>
               )}
               {/* Hours at the destination as a slice of the day (arrival→departure). */}
