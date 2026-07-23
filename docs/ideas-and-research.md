@@ -174,6 +174,28 @@ so it leans flexible. Proposed:
 planner (strict default + opt-in flex). Other filters (Direct, max price, months)
 are already honest; the weekend preset is the lone offender.
 
+### ✅ Shipped: exact-shape vs "close matches" split (2026-07-23)
+Kept the broad search; the list now leads with trips that EXACTLY match the
+preset's shape, then a labelled "Not exactly {label} · N close matches" divider,
+then the rest (falls back to "No exact {label} — closest matches" when none match).
+Classified by **arrival-at-destination + departure-from-destination** (matches the
+card's shown dates; a Fri-night red-eye that lands Saturday is a close Sat–Mon, not
+exact Fri–Mon). Off in bridge mode. See `WEEKEND_SHAPE` / `matchesWeekendShape`
+(`src/lib/weekend.ts`) + `DealList` `splitShape`.
+
+### ⏳ Follow-up (noted, revisit later): exact-shape results are sparse
+Observed live (BCN / Fri–Mon / 2mo): only ~15 of 70 are *exactly* Fri–Mon. Root
+cause is the **board search returns each city's *cheapest* option** (`one_for_city:1`),
+which is usually a shorter/cheaper shape — so the split is honest but the "exact"
+section stays thin. The split alone doesn't make exact-shape results *plentiful*.
+Levers if we want more genuine exact matches:
+- **Tighten the search params** for a stricter mode (single `fly_days`/`ret_fly_days`,
+  fixed `nights_in_dst_from=to`) — fewer but on-shape.
+- **Per-city "cheapest exact shape" fetch** (like the existing expand-time "cheaper
+  weekend?" check) so each city can show its exact-shape option even when a shorter
+  trip is cheaper.
+Tie this to the still-open default-posture decision above.
+
 ---
 
 ## Events integration (concerts / festivals)
