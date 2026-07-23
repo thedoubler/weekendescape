@@ -4,13 +4,11 @@ import { pillClass } from "@/lib/pill";
 export function MonthFilter({
   months,
   selected,
-  counts,
   onToggle,
   onClear,
 }: {
   months: string[];
   selected: string[];
-  counts?: Record<string, number>;
   onToggle: (m: string) => void;
   onClear: () => void;
 }) {
@@ -36,11 +34,6 @@ export function MonthFilter({
         >
           {sel.has(m) && <span aria-hidden>✓ </span>}
           {monthShort(m)}
-          {counts?.[m] != null && (
-            <span aria-hidden className="ml-1.5 opacity-55">
-              {counts[m]}
-            </span>
-          )}
         </button>
       ))}
     </div>

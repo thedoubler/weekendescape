@@ -62,6 +62,15 @@ const ADULTS_OPTIONS = [
 ];
 type StopMode = "any" | "direct";
 
+// "just now" / "3 min ago" / "2 h ago" — for the price-freshness stamp.
+function agoLabel(ts: number): string {
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  return `${h} h ago`;
+}
+
 function Field({
   label,
   hint,
@@ -128,6 +137,7 @@ export default function Home() {
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(0);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
+  const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +196,7 @@ export default function Home() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
+      setFetchedAt(body.fetchedAt ?? Date.now());
       setSelectedMonths([]);
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "AbortError";
@@ -345,14 +356,6 @@ export default function Home() {
       showHidden ? rawDeals : rawDeals.filter((d) => !isShortStay(d)),
     [rawDeals, showHidden]
   );
-  const monthCounts = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const d of countable) {
-      const k = d.outDepart.slice(0, 7);
-      m[k] = (m[k] ?? 0) + 1;
-    }
-    return m;
-  }, [countable]);
   const continentCounts = useMemo(() => {
     const m: Record<string, number> = {};
     for (const d of countable) {
@@ -371,6 +374,7 @@ export default function Home() {
     setSelectedMonths([]);
     setSelectedContinents([]);
     setMaxPrice(bounds.max);
+    setShowHidden(false);
   }
 
   const editSearch = () => setCollapsed(false);
@@ -425,7 +429,10 @@ export default function Home() {
       if (bridgesRef.current) qs.set("bridges", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
-      if (res.ok) setRawDeals(body.deals ?? []);
+      if (res.ok) {
+        setRawDeals(body.deals ?? []);
+        setFetchedAt(body.fetchedAt ?? Date.now());
+      }
     } catch {
       /* keep the current list on failure */
     } finally {
@@ -480,16 +487,30 @@ export default function Home() {
       </header>
 
       {booting ? (
-        /* First load: same skeletons as a search, so there's a single, consistent
-           loading state (not a spinner then skeletons). */
-        <div
-          className="flex flex-col gap-3"
-          aria-busy="true"
-          aria-label="Finding weekend escapes"
-        >
-          {Array.from({ length: 5 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+        /* First load: explain the tool + what's happening (we're detecting the
+           nearest airport, which may prompt for location), then the same
+           skeletons as a search for one consistent loading state. */
+        <div className="flex flex-col gap-3">
+          <div className="rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 text-sm dark:border-white/10 dark:bg-white/[0.02]">
+            <p className="text-black/70 dark:text-white/70">
+              The cheapest round-trip{" "}
+              <span className="font-medium">weekend flights</span> from your home
+              airport — tap a deal to book on Kiwi. Prices are live estimates.
+            </p>
+            <p className="mt-1.5 text-black/55 dark:text-white/60">
+              📍 Finding your nearest airport… we only use your location for
+              this — or type it in below.
+            </p>
+          </div>
+          <div
+            className="flex flex-col gap-3"
+            aria-busy="true"
+            aria-label="Finding weekend escapes"
+          >
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         </div>
       ) : (
       <div className="flex flex-col gap-6 animate-fade-in">
@@ -535,6 +556,12 @@ export default function Home() {
       ) : (
         /* Full search — set the trip, then hit Search (the only trigger) */
         <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
+          {!searched && (
+            <p className="text-sm text-black/60 dark:text-white/65">
+              Cheapest round-trip weekend flights from your home airport — tap a
+              deal to book on Kiwi.
+            </p>
+          )}
           {/* Origin — the primary input, given room to breathe */}
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -665,15 +692,34 @@ export default function Home() {
       {searched && (
         <div className="flex flex-col gap-2.5">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <span className="text-lg font-semibold tracking-tight">
-              {loading
-                ? "Searching…"
-                : error
-                  ? "Couldn’t load results"
-                  : `${visible.length} ${bridges ? "bridge" : "weekend"} escape${
-                      visible.length === 1 ? "" : "s"
-                    }`}
-            </span>
+            <div className="flex flex-col">
+              <span className="text-lg font-semibold tracking-tight">
+                {loading
+                  ? "Searching…"
+                  : error
+                    ? "Couldn’t load results"
+                    : `${visible.length} ${bridges ? "bridge" : "weekend"} escape${
+                        visible.length === 1 ? "" : "s"
+                      }`}
+              </span>
+              {!loading && !error && fetchedAt && visible.length > 0 && (
+                <span className="text-[11px] text-black/55 dark:text-white/60">
+                  Prices from Kiwi · checked {agoLabel(fetchedAt)} · fares can
+                  change at booking
+                </span>
+              )}
+              {!loading && !error && hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowHidden((v) => !v)}
+                  className="self-start text-[11px] text-black/55 underline-offset-2 hover:underline dark:text-white/60"
+                >
+                  {showHidden
+                    ? `Hide ${hiddenCount} short-stay trip${hiddenCount === 1 ? "" : "s"}`
+                    : `${hiddenCount} short-stay trip${hiddenCount === 1 ? "" : "s"} hidden · show`}
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-black/45 dark:text-white/45">
                 Sort
@@ -753,7 +799,6 @@ export default function Home() {
               <MonthFilter
                 months={available}
                 selected={selectedMonths}
-                counts={monthCounts}
                 onToggle={toggleMonth}
                 onClear={() => setSelectedMonths([])}
               />
@@ -846,11 +891,18 @@ export default function Home() {
             Search the next {nextWindow} months
             <span aria-hidden>→</span>
           </button>
-          <span className="text-xs text-black/40 dark:text-white/40">
+          <span className="text-xs text-black/55 dark:text-white/60">
             Look further ahead for more escapes
           </span>
         </div>
       )}
+      {/* Terminal state at the widest window, so the list has a definite bottom. */}
+      {searched && !loading && !error && !loadingMore && !nextWindow &&
+        visible.length > 0 && (
+          <p className="pt-1 pb-2 text-center text-xs text-black/55 dark:text-white/60">
+            That’s every weekend in the next {months} months.
+          </p>
+        )}
       </div>
       )}
 

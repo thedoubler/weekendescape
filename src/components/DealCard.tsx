@@ -251,6 +251,7 @@ export function DealCard({
   // so the colour isn't a false "good" signal.
   const goodStay = deal.stayMinutes >= 36 * 60;
   const days = daysUntil(deal.outDepart, new Date());
+  const adults = cheapest?.adults ?? 1;
   const arrival = {
     time: timeLabel(deal.outArrive),
     night: isNightHour(deal.outArrive),
@@ -359,8 +360,13 @@ export function DealCard({
           <div className="text-lg font-semibold">
             {deal.price} {deal.currency}
           </div>
+          {/* Kiwi prices the whole party — say so, so it isn't read as per-person
+              (the CO₂ line in the details is per-person). */}
+          <div className="text-[11px] text-black/55 dark:text-white/60">
+            round trip{adults > 1 ? ` · ${adults} travellers` : ""}
+          </div>
           {days > 0 && (
-            <div className="text-xs text-black/50 dark:text-white/50">
+            <div className="text-xs text-black/55 dark:text-white/60">
               in {days} days
             </div>
           )}
@@ -406,45 +412,46 @@ export function DealCard({
         </div>
         <div className="flex items-center gap-3">
           <a
-            href={hotelUrl(deal)}
+            href={hotelUrl(deal, adults)}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            aria-label={`Find a hotel in ${deal.cityTo}`}
+            aria-label={`Find a hotel in ${deal.cityTo} on Booking.com (opens a new tab)`}
             className="inline-flex items-center gap-1.5 text-sm text-black/55 transition duration-200 hover:text-black motion-safe:hover:scale-105 dark:text-white/55 dark:hover:text-white"
           >
             <BedIcon className="h-4 w-4 shrink-0" />
             <span className="underline underline-offset-2">Stay</span>
+            <ExternalLinkIcon className="h-3 w-3 shrink-0 opacity-60" />
           </a>
           <a
             href={deal.deepLink}
             target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Book ${deal.cityTo}`}
+            rel="noopener noreferrer sponsored"
+            aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
             className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 motion-safe:hover:scale-105 dark:text-white"
           >
-            <span className="underline underline-offset-2">Book</span>
+            <span className="underline underline-offset-2">Book on Kiwi</span>
             <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
           </a>
         </div>
       </div>
 
       {isBridge(deal) && deal.homeHoliday && (
-        <div className="mt-2.5">
-          <span className="inline-flex flex-wrap items-baseline gap-x-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
-            <span aria-hidden>🌉</span>
-            <span>
+        <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug text-amber-900 ring-1 ring-inset ring-amber-200/70 dark:bg-amber-300/[0.08] dark:text-amber-100 dark:ring-amber-300/20">
+          <span aria-hidden className="mt-px shrink-0">
+            🌉
+          </span>
+          <span>
+            <span className="font-semibold">
               {(deal.ptoDays ?? 0) <= 1 ? "Long weekend" : "Bridge trip"}
-              <span className="font-normal text-amber-900/75 dark:text-amber-100/75">
-                {" · "}
-                {deal.ptoDays === 0
-                  ? "no day off needed"
-                  : deal.ptoDays === 1
+            </span>
+            <span className="text-amber-900/70 dark:text-amber-100/70">
+              {" · "}
+              {deal.ptoDays === 0
+                ? "no day off needed"
+                : deal.ptoDays === 1
                   ? "1 day off"
                   : `${deal.ptoDays} days off required`}
-              </span>
-            </span>
-            <span className="font-normal text-amber-900/75 dark:text-amber-100/75">
-              You’re off for{" "}
+              {" — you’re off for "}
               {(() => {
                 const hols = deal.homeHolidays?.length
                   ? deal.homeHolidays

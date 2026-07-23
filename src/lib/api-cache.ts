@@ -7,6 +7,7 @@
 interface Entry<T> {
   value: T;
   expires: number;
+  fetchedAt: number;
 }
 
 const store = new Map<string, Entry<unknown>>();
@@ -31,7 +32,8 @@ export async function cached<T>(
   const p = (async () => {
     try {
       const value = await fn();
-      store.set(key, { value, expires: Date.now() + ttlMs });
+      const t = Date.now();
+      store.set(key, { value, expires: t + ttlMs, fetchedAt: t });
       return value;
     } finally {
       inflight.delete(key);
@@ -39,6 +41,14 @@ export async function cached<T>(
   })();
   inflight.set(key, p);
   return p;
+}
+
+// When the cached value for `key` was actually fetched upstream (epoch ms), or
+// null if there's no live entry — so callers can show an honest "checked X ago"
+// rather than pretending a 29-min-old cached price is live.
+export function cacheFetchedAt(key: string): number | null {
+  const hit = store.get(key);
+  return hit && hit.expires > Date.now() ? hit.fetchedAt : null;
 }
 
 // Test hook — drop all cached and in-flight entries so cases don't leak into

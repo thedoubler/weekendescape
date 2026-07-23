@@ -9,6 +9,23 @@ prioritized synthesis. **Items flagged by ≥2 audits are marked ⭐ (high confi
 > directional. Qualitative principles are corroborated across sources. WCAG
 > contrast ratios were computed locally against the app's actual theme tokens.
 
+## Status (2026-07-23)
+**Shipped this pass:** price "round trip · N travellers" label; price-freshness
+stamp ("checked X ago · fares can change at booking") via `fetchedAt`; hand-off
+labels ("Book on Kiwi" + external-link icons, opens-new-tab aria); hotel
+`group_adults` bug fixed (uses party size); airport autocomplete no-results state +
+don't-submit-invalid + `aria-activedescendant` + focus-visible ring + 44px option
+rows; first-load explainer (value prop + location-use note) instead of bare
+skeletons; short-stay hidden count surfaced + reset in "Clear all"; widen-window
+terminal state. Also (per user taste) **removed** month-chip counts and skipped the
+"add max-price counts" rec.
+**Deferred (user: "note for later"):** the rest of the Tier-1 a11y bundle —
+site-wide low-opacity grey contrast sweep, `aria-live`/`role=alert` on the result
+count & errors, tap-target sizing for filter pills/segments, light-mode hours-bar
+contrast, bridge-chip contrast. Kept here as the next a11y batch.
+**Open questions:** make CO₂ comparative (low/avg/high) vs leave; value-signal
+approach (#1 free percentile now vs #3 price-history API later).
+
 ## Context that shapes priorities
 No on-site checkout — the product **deep-links out to Kiwi** to book (and a hotel
 partner for "Stay"). So **hand-off trust + price honesty** and **search recovery**

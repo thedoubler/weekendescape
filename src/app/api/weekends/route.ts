@@ -7,7 +7,7 @@ import { fetchHolidays, annotate } from "@/lib/holidays";
 import { computeBridges } from "@/lib/bridges";
 import { airportCityKm } from "@/lib/cities";
 import { estimateFlightCo2Kg } from "@/lib/co2";
-import { cached } from "@/lib/api-cache";
+import { cached, cacheFetchedAt } from "@/lib/api-cache";
 
 // Identical searches are cheap to repeat and prices don't move by the second;
 // cache the (quota-costing) Tequila response for a while.
@@ -233,8 +233,12 @@ export async function GET(request: NextRequest) {
       ? deals.filter(isBridge).sort((a, b) => a.price - b.price)
       : deals;
 
+    // When the underlying prices were actually fetched from Kiwi (for an honest
+    // "checked X ago" stamp) — falls back to now for a fresh miss.
+    const fetchedAt = cacheFetchedAt(`${cacheKeyBase}:main`) ?? Date.now();
+
     return NextResponse.json(
-      { deals: responseDeals },
+      { deals: responseDeals, fetchedAt },
       // Let the CDN/browser reuse a result briefly; matches the server cache.
       { headers: { "Cache-Control": "private, max-age=300" } }
     );
