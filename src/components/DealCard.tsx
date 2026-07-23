@@ -322,15 +322,20 @@ export function DealCard({
               {stops}
             </span>
           </div>
-          {deal.airportKmFromCity != null &&
-            deal.airportKmFromCity >= FAR_AIRPORT_KM && (
-              <div className="mt-1 inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400/90">
-                <span aria-hidden>✈</span>
-                <span>
-                  Airport {deal.airportKmFromCity} km from {deal.cityTo}
-                </span>
-              </div>
-            )}
+          {deal.airportKmFromCity != null && (
+            <div
+              className={`mt-1 inline-flex items-center gap-1 text-xs ${
+                deal.airportKmFromCity >= FAR_AIRPORT_KM
+                  ? "text-amber-700 dark:text-amber-400/90"
+                  : "text-black/45 dark:text-white/45"
+              }`}
+            >
+              <span aria-hidden>✈</span>
+              <span>
+                Airport {deal.airportKmFromCity} km from {deal.cityTo}
+              </span>
+            </div>
+          )}
         </button>
         <div className="shrink-0 text-right">
           <div className="text-lg font-semibold">
