@@ -89,6 +89,93 @@ Ranked by fit × delight for a weekend-getaway tool:
 
 ---
 
+## Filter strictness & the weekend presets (research, 2026-07-23)
+
+Friend feedback: *"If I pick Fri–Mon, why do I get other shapes? Should results
+always match what I selected?"* Researched via two agents (UX best-practice +
+travel-search incumbents). Full findings below; **no code changed yet — pending a
+decision on default posture.**
+
+### The confirmed problem
+Each preset labels ONE shape but the search returns a **bag of shapes**, because
+the preset secretly bundles two things — **departure day** *and* **trip length
+(nights)** — and varies both:
+
+| Label shown | Departs | Returns | Nights | Can actually return |
+|---|---|---|---|---|
+| Fri–Sun (`strict`) | Fri | Sun | 1–2 | Fri→Sat (1n), Fri→Sun |
+| Fri–Mon (`frimon`) | Fri/Sat | Sun/Mon | 1–3 | Fri→Sat, Fri→Sun, Fri→Mon, Sat→Sun, Sat→Mon |
+| Thu–Mon (`loose`) | Thu/Fri/Sat | Sun/Mon | 1–4 | anything Thu→Sun … 1-night Sat→Sun |
+
+So a "Fri–Mon" pick can surface a 1-night Fri→Sat. See `src/lib/weekend.ts`
+(`fly_days`/`ret_fly_days`/`nights_in_dst_from/to`).
+
+### Verdict
+**The bug is label↔behaviour mismatch, not strict-vs-flexible.** A filter is read
+as a promise ("remove non-matches"); violating it erodes trust. But pure-strict
+risks dead-end "0 results" in a thin niche (a top abandonment driver). The
+evidence-backed resolution: **honest default → explicit, named flexibility opt-in
+→ "no exact matches, here are the closest" fallback.**
+
+### UX principles (Baymard, NN/g)
+- Applied filters are a promise; unlabelled non-matches cause disorientation &
+  distrust. Label-vs-behaviour mismatch reads as a mild dark pattern.
+- Users conflate filtering (removes non-matches) with sorting (reorders) — so an
+  off-spec result under a filter directly contradicts the operation's meaning.
+- Zero-results is a real, high-abandonment risk → mitigate with *labelled*
+  relaxation, never by silently padding with off-spec items.
+- Sources: Baymard [applied filters](https://baymard.com/blog/how-to-design-applied-filters),
+  [no-results](https://baymard.com/blog/no-results-page),
+  [5 filter types](https://baymard.com/blog/5-essential-filters);
+  NN/g [faceted search](https://www.nngroup.com/reports/ecommerce-ux-search-including-faceted-search/),
+  [match system↔real world](https://www.nngroup.com/articles/match-system-real-world/),
+  [recognition vs recall](https://www.nngroup.com/articles/recognition-and-recall/).
+
+### What incumbents do
+- Flexibility is **always an explicit, named opt-in on an exact default**:
+  momondo literally labels it **"exact dates" vs "±3 days"**; Google **"Date grid /
+  Flexible dates"** with a Duration-in-nights range; Kayak **"±3 days"** price
+  calendar; Skyscanner **"Whole month / Cheapest month"**; Hopper **"Flex Watch"**;
+  Airbnb length chips **"Weekend / Week / Month."**
+- Flexibility is tied to an explicit **length**, so a "weekend" can't leak a
+  1-nighter unless asked (Google Duration, Airbnb "Weekend", Kiwi `nights_in_dst`).
+- Kiwi/Tequila (our API) gives strict-able knobs: `fly_days` / `ret_fly_days`
+  (weekday lists, 0=Sun…6=Sat), `*_fly_days_type` (departure/arrival),
+  `nights_in_dst_from/to` (min/max stay). Strict Fri→Sun 2-night =
+  `fly_days=5` + `ret_fly_days=0` + `nights_in_dst 2/2`. We broaden only because we
+  pass multiple day values + a wide night band.
+- Sources: [Google](https://support.google.com/faqs/answer/2736592?hl=en),
+  [Skyscanner](https://www.skyscanner.com/tips-and-inspiration/where-should-i-go-us/skyscanner-tips-and-tools-how-to-search-flight-prices-across-whole-month),
+  [Kayak](https://www.kayak.com/news/flexible-dates/),
+  [momondo](https://www.momondo.com/about/why-travelers-choose-momondo),
+  [Hopper Flex Watch](https://techcrunch.com/2017/09/14/hopper-debuts-flex-watch-a-personalized-flight-deal-finder-for-flexible-travel-dates),
+  [Airbnb](https://www.airbnb.com/help/article/252),
+  [Kiwi API params (Travelpayouts mirror)](https://support.travelpayouts.com/hc/en-us/articles/360019237899-Kiwi-com-affiliate-program-API).
+
+### Who's annoyed (the Fri→Saturday question)
+Opposite failures: the **planner** ("I have Monday off") hates the loose junk; the
+**bargain-hunter** ("cheapest, I'm flexible") hates strict hiding a cheaper Fri→Sun.
+Don't pick a side — (a) never leak *length* (bound nights per shape), (b) let the
+user choose posture explicitly.
+
+### Recommendation (pending decision)
+Weekend Escape is a *discovery* board (cards already show exact dates + timeline),
+so it leans flexible. Proposed:
+1. **Must-fix (the real bug):** bound `nights_in_dst` per shape so a "weekend"
+   can't return a 1-nighter by accident.
+2. **Make presets honest** — pick one:
+   - **A — length-family labels** (Airbnb-style): rename e.g. "Long weekend ·
+     2–3 nights", keep useful breadth. *(Leaning here.)*
+   - **B — strict shape + "Flexible dates" toggle** (momondo/Kayak-style): presets
+     mean exactly their label; a toggle widens days/nights for deal-hunters.
+3. Optional **"Exact dates only"** toggle for planners regardless of A/B.
+
+**Open decision:** default posture — deal-hunter (flexible-but-honest default) vs
+planner (strict default + opt-in flex). Other filters (Direct, max price, months)
+are already honest; the weekend preset is the lone offender.
+
+---
+
 ## Events integration (concerts / festivals)
 
 Goal: "Oktoberfest is on during your trip" — pairs with the holiday feature and
