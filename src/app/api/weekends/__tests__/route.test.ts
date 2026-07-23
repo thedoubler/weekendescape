@@ -198,12 +198,21 @@ describe("GET /api/weekends", () => {
       },
     });
 
-    const res = await GET(req("flyFrom=BCN&style=frimon&months=3"));
+    // Default (no bridge flag): destination holidays are always annotated, but
+    // home-holiday / PTO fields stay off (that's opt-in bridge mode).
+    const plain = await GET(req("flyFrom=BCN&style=frimon&months=3"));
+    expect(plain.status).toBe(200);
+    const plainBody = await plain.json();
+    expect(plainBody.deals[0].destHoliday).toEqual({ date: "2026-09-05", name: "Dest Holiday" });
+    expect(plainBody.deals[0].homeHoliday).toBeUndefined();
+    expect(plainBody.deals[0].ptoDays).toBeUndefined();
+
+    // Bridge mode: the home (ES) holiday lands on the Friday workday (0 days off),
+    // and the distinct destination (IT) holiday on Sat 09-05 is detected in-span —
+    // proving home vs. dest calendars aren't swapped.
+    const res = await GET(req("flyFrom=BCN&style=frimon&months=3&bridges=1"));
     expect(res.status).toBe(200);
     const body = await res.json();
-    // Trip Fri 2026-09-04 -> Sun 2026-09-06. The home (ES) holiday lands on the
-    // Friday workday (0 days off), and the distinct destination (IT) holiday on
-    // Sat 09-05 is detected in-span — proving home vs. dest calendars aren't swapped.
     expect(body.deals[0].ptoDays).toBe(0);
     expect(body.deals[0].homeHoliday).toEqual({ date: "2026-09-04", name: "Home Holiday" });
     expect(body.deals[0].destHoliday).toEqual({ date: "2026-09-05", name: "Dest Holiday" });

@@ -43,6 +43,8 @@ export function DayBlocks({
   arrival,
   departure,
   holiday,
+  homeHoliday,
+  daysOff,
 }: {
   cells: DayCell[];
   arrival: { time: string; night: boolean; plusOne: boolean };
@@ -52,6 +54,10 @@ export function DayBlocks({
   // expanded panel (the strip can't own a tooltip — it's inside the expand
   // button), so the dot stays a quiet visual cue here.
   holiday?: { date: string; name: string } | null;
+  // Bridge mode: the home public holiday that makes this a long weekend, and the
+  // workdays you'd book off — tagged on their days so the puente reads at a glance.
+  homeHoliday?: { date: string; name: string } | null;
+  daysOff?: string[] | null;
 }) {
   const months: string[] = [];
   for (const c of cells) if (!months.includes(c.month)) months.push(c.month);
@@ -67,14 +73,22 @@ export function DayBlocks({
           const showArrive = c.role === "arrive" || c.role === "solo";
           const showLeave = c.role === "leave" || c.role === "solo";
           const isHoliday = !!holiday && holiday.date === c.date;
+          const isHomeHoliday = !!homeHoliday && homeHoliday.date === c.date;
+          const isDayOff = !!daysOff && daysOff.includes(c.date);
           return (
             <div
               key={i}
               role="listitem"
               aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable${
+                isHomeHoliday ? `, public holiday off work: ${homeHoliday!.name}` : ""
+              }${isDayOff ? ", day off needed" : ""}${
                 isHoliday ? `, public holiday: ${holiday!.name}` : ""
               }`}
-              className="min-w-0 flex-1 rounded-lg bg-black/[0.04] px-1.5 py-2.5 text-center dark:bg-white/[0.06]"
+              className={`min-w-0 flex-1 rounded-lg px-1.5 py-2.5 text-center ${
+                isHomeHoliday
+                  ? "bg-amber-100/70 dark:bg-amber-300/15"
+                  : "bg-black/[0.04] dark:bg-white/[0.06]"
+              }`}
             >
               <div className="text-[10px] font-medium uppercase tracking-wider text-black/45 dark:text-white/45">
                 {c.weekday}
@@ -89,6 +103,17 @@ export function DayBlocks({
                   />
                 )}
               </div>
+              {(isHomeHoliday || isDayOff) && (
+                <div
+                  className={`mt-1 rounded-full px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-wide ${
+                    isHomeHoliday
+                      ? "bg-amber-200/80 text-amber-900 dark:bg-amber-300/25 dark:text-amber-100"
+                      : "border border-dashed border-black/25 text-black/50 dark:border-white/30 dark:text-white/55"
+                  }`}
+                >
+                  {isHomeHoliday ? "holiday" : "day off"}
+                </div>
+              )}
               {/* Hours at the destination as a slice of the day (arrival→departure). */}
               <div className="relative my-2.5 h-2 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.12]">
                 <div

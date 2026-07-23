@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
 import { timelineRange } from "@/lib/timeline";
-import { normalizeDeals, type Deal } from "@/lib/deals";
+import { normalizeDeals, isBridge, type Deal } from "@/lib/deals";
 import { fetchHolidays, annotate } from "@/lib/holidays";
 import { computeBridges } from "@/lib/bridges";
 import { airportCityKm } from "@/lib/cities";
@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
     const flyFrom = searchParams.get("flyFrom");
     const flyTo = searchParams.get("flyTo");
     const direct = searchParams.get("direct") === "1";
+    // Opt-in "bridge days" mode: run the holiday-anchored searches and return
+    // only the long-weekend / puente escapes. Off by default (a plain search).
+    const bridgeMode = searchParams.get("bridges") === "1" && !flyTo;
     const style = (searchParams.get("style") || "frimon") as WeekendStyle;
     const months = parseInt(searchParams.get("months") || "3", 10);
     // Passengers — Tequila prices scale with headcount. Default 1, clamp 1–9.
@@ -139,15 +142,22 @@ export async function GET(request: NextRequest) {
         ]),
       ];
 
-      const homeCal = (
-        await Promise.all(yearList.map((y) => fetchHolidays(homeCC, y)))
-      ).flat();
+      // Home-country holidays (national only, for honest PTO math) drive the
+      // bridge logic — fetched only when the user opted into bridge mode.
+      const homeCal = bridgeMode
+        ? (
+            await Promise.all(
+              yearList.map((y) =>
+                fetchHolidays(homeCC, y, { nationalOnly: true })
+              )
+            )
+          ).flat()
+        : [];
 
-      // Puentes: on a board search, surface the holiday-bridged long weekends the
-      // fixed weekend windows miss (Tue/Thu holidays). Each window is its own
-      // cached Kiwi search; they run in parallel, so latency is the slowest one
-      // rather than the sum. Single-city lookups skip this.
-      if (!flyTo) {
+      // Bridge mode: run the holiday-anchored windows the fixed weekend windows
+      // miss (Tue/Wed/Thu). Each is its own cached Kiwi search; they run in
+      // parallel, so latency is the slowest one rather than the sum.
+      if (bridgeMode) {
         const bridges = computeBridges(homeCal, startMs, endMs);
         if (bridges.length > 0) {
           const bridgeResults = await Promise.all(
@@ -166,9 +176,8 @@ export async function GET(request: NextRequest) {
             )
           );
 
-          // Merge in only the long weekends the main search missed: dedupe
-          // bridged deals to the cheapest per city, and drop any trip (same city
-          // + dates) the main search already returned.
+          // Merge in the bridged trips the main search missed: dedupe to the
+          // cheapest per city, and drop any trip (same city + dates) already present.
           const tripKey = (d: Deal) =>
             `${d.cityTo}|${d.outDepart.slice(0, 10)}|${d.backDepart.slice(0, 10)}`;
           const existing = new Set(deals.map(tripKey));
@@ -185,6 +194,8 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Destination public holidays stay on for every search (so "there's a
+      // holiday there" is always accurate) — regional ones included.
       const destCCs = [...new Set(deals.map((d) => d.countryToCode).filter(Boolean))];
       const destPairs = await Promise.all(
         destCCs.map(async (cc) => {
@@ -203,21 +214,26 @@ export async function GET(request: NextRequest) {
           homeCal,
           destCalByCC.get(d.countryToCode) ?? []
         );
-        d.ptoDays = info.ptoDays;
-        d.homeHoliday = info.homeHoliday;
+        // Home-holiday / PTO fields only in bridge mode; destination holiday always.
+        if (bridgeMode) {
+          d.ptoDays = info.ptoDays;
+          d.ptoDates = info.ptoDates;
+          d.homeHoliday = info.homeHoliday;
+        }
         d.destHoliday = info.destHoliday;
         d.airportKmFromCity = airportCityKm(d.flyTo, d.cityTo, d.countryToCode);
         d.co2Kg = estimateFlightCo2Kg(d.flyFrom, d.flyTo);
       }
-
-      // Bridged trips were appended after the main list; re-sort so the cheapest
-      // lead regardless of source (the client re-sorts too, but keep the payload
-      // coherent for consumers that don't).
-      deals.sort((a, b) => a.price - b.price);
     }
 
+    // Bridge mode returns only the holiday-anchored escapes (Mon/Fri from the
+    // normal windows, Tue/Wed/Thu from the bridge searches), cheapest first.
+    const responseDeals = bridgeMode
+      ? deals.filter(isBridge).sort((a, b) => a.price - b.price)
+      : deals;
+
     return NextResponse.json(
-      { deals },
+      { deals: responseDeals },
       // Let the CDN/browser reuse a result briefly; matches the server cache.
       { headers: { "Cache-Control": "private, max-age=300" } }
     );

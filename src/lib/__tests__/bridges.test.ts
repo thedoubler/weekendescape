@@ -33,10 +33,20 @@ describe("computeBridges", () => {
     expect(b.retFlyDays).toEqual([0]);
   });
 
-  it("ignores Mon/Wed/Fri/weekend holidays (no extra window needed)", () => {
+  it("bridges a Wednesday holiday into a Wed → Sun long break (2 days off)", () => {
+    // 2026-08-19 is a Wednesday.
+    const hols: Holiday[] = [{ date: "2026-08-19", name: "Test Wed" }];
+    const [b] = computeBridges(hols, start, end);
+    expect(b.kind).toBe("wed");
+    expect(b.dateFrom).toBe("19/08/2026"); // Wed
+    expect(b.dateTo).toBe("19/08/2026"); // Wed
+    expect(b.flyDays).toEqual([3]);
+    expect(b.retFlyDays).toEqual([0]);
+  });
+
+  it("ignores Mon/Fri/weekend holidays (no extra window needed)", () => {
     const hols: Holiday[] = [
       { date: "2026-08-17", name: "Mon" },
-      { date: "2026-08-19", name: "Wed" },
       { date: "2026-08-21", name: "Fri" },
       { date: "2026-08-22", name: "Sat" },
     ];

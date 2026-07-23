@@ -32,6 +32,8 @@ export interface Deal {
   airlines?: string[];
   deepLink: string;
   ptoDays?: number;
+  // The trip's workdays you'd have to book off (empty when a holiday covers them).
+  ptoDates?: string[];
   homeHoliday?: HolidayRef | null;
   destHoliday?: HolidayRef | null;
   // Straight-line km from the arrival airport to its marketed city centre.
@@ -56,6 +58,17 @@ export function isLongWeekend(deal: Deal): boolean {
     deal.homeHoliday != null &&
     typeof deal.ptoDays === "number" &&
     deal.ptoDays <= 1
+  );
+}
+
+// A bridge-day escape: a home holiday cuts the trip's PTO to two days or fewer
+// (Mon/Fri = 0, Tue/Thu = 1, Wed = 2). Used to filter the "bridge days" search
+// mode down to just the holiday-anchored trips.
+export function isBridge(deal: Deal): boolean {
+  return (
+    deal.homeHoliday != null &&
+    typeof deal.ptoDays === "number" &&
+    deal.ptoDays <= 2
   );
 }
 

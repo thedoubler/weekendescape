@@ -5,13 +5,16 @@ export interface Holiday {
 
 export interface DealHolidayInfo {
   ptoDays: number;
+  // Workdays in the trip you'd have to book off (the "days off required").
+  ptoDates: string[];
   homeHoliday: Holiday | null;
   destHoliday: Holiday | null;
 }
 
 export async function fetchHolidays(
   countryCode: string,
-  year: number
+  year: number,
+  opts?: { nationalOnly?: boolean }
 ): Promise<Holiday[]> {
   try {
     const res = await fetch(
@@ -21,15 +24,16 @@ export async function fetchHolidays(
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];
+    const nationalOnly = opts?.nationalOnly ?? false;
     return data
-      // National holidays only (Nager marks these global: true, counties: null).
-      // Regional ones (e.g. Catalonia's Diada, Day of Extremadura) don't apply to
-      // every resident, so counting them would claim days off the traveller may
-      // not actually have. TODO: map the home airport → ISO region to re-include
-      // that region's own holidays.
-      .filter(
-        (h: { global?: boolean }) => h.global === true || h.global === undefined
-      )
+      // For the *home* country we count national holidays only (Nager marks
+      // these global: true). Regional ones (e.g. Catalonia's Diada, Day of
+      // Extremadura) don't apply to every resident, so counting them would claim
+      // days off the traveller may not actually have. Destinations keep every
+      // official holiday so "there's a public holiday there" stays accurate.
+      // TODO: map the home airport → ISO region to re-include a resident's own
+      // regional holidays.
+      .filter((h: { global?: boolean }) => !nationalOnly || h.global !== false)
       .map((h: { date?: string; localName?: string; name?: string }) => ({
         date: h.date ?? "",
         name: h.name || h.localName || "",
@@ -72,7 +76,7 @@ export function annotate(
 ): DealHolidayInfo {
   const workdays = tripWorkdays(outArrive, backDepart);
   const homeByDate = new Map(homeHolidays.map((h) => [h.date, h]));
-  const ptoDays = workdays.filter((d) => !homeByDate.has(d)).length;
+  const ptoDates = workdays.filter((d) => !homeByDate.has(d));
   const homeHoliday =
     workdays.map((d) => homeByDate.get(d)).find(Boolean) ?? null;
 
@@ -80,5 +84,5 @@ export function annotate(
   const destByDate = new Map(destHolidays.map((h) => [h.date, h]));
   const destHoliday = span.map((d) => destByDate.get(d)).find(Boolean) ?? null;
 
-  return { ptoDays, homeHoliday, destHoliday };
+  return { ptoDays: ptoDates.length, ptoDates, homeHoliday, destHoliday };
 }

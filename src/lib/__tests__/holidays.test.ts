@@ -58,6 +58,11 @@ describe("annotate", () => {
 
   it("returns nulls when there are no matching holidays", () => {
     const info = annotate(outArrive, backDepart, [], []);
-    expect(info).toEqual({ ptoDays: 2, homeHoliday: null, destHoliday: null });
+    expect(info).toEqual({
+      ptoDays: 2,
+      ptoDates: ["2026-08-07", "2026-08-10"],
+      homeHoliday: null,
+      destHoliday: null,
+    });
   });
 });

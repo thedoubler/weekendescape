@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { WeekendStyle } from "@/lib/weekend";
-import { type Deal, isShortStay, isLongWeekend } from "@/lib/deals";
+import { type Deal, isShortStay } from "@/lib/deals";
 import {
   type SortKey,
   sortDeals,
@@ -120,6 +120,9 @@ export default function Home() {
   const [months, setMonths] = useState(3);
   const [stopMode, setStopMode] = useState<StopMode>("direct");
   const [adults, setAdults] = useState(1);
+  // Opt-in "bridge days" mode — off by default (a plain search). When on, the
+  // API runs the holiday-anchored searches and returns only long-weekend escapes.
+  const [bridges, setBridges] = useState(false);
   const [sort, setSort] = useState<SortKey>("cheapest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
@@ -131,7 +134,6 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  const [longWeekendsOnly, setLongWeekendsOnly] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [showJump, setShowJump] = useState(false);
   // First-load only: while we detect location + run the initial search, show a
@@ -147,11 +149,13 @@ export default function Home() {
   const monthsRef = useRef(months);
   const stopModeRef = useRef(stopMode);
   const adultsRef = useRef(adults);
+  const bridgesRef = useRef(bridges);
   useEffect(() => {
     styleRef.current = style;
     monthsRef.current = months;
     stopModeRef.current = stopMode;
     adultsRef.current = adults;
+    bridgesRef.current = bridges;
   });
 
   async function runSearch(code: string) {
@@ -177,6 +181,7 @@ export default function Home() {
         adults: String(adultsRef.current),
       });
       if (stopModeRef.current === "direct") qs.set("direct", "1");
+      if (bridgesRef.current) qs.set("bridges", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
@@ -249,6 +254,7 @@ export default function Home() {
       const stop0: StopMode = p.get("direct") === "0" ? "any" : "direct";
       const a = Number(p.get("adults"));
       const adults0 = [1, 2, 3, 4].includes(a) ? a : 1;
+      const bridges0 = p.get("bridges") === "1";
       // Seed refs synchronously so the immediate search uses the URL values
       // (state setters haven't flushed yet). Only guard the param-change effect
       // if a non-default value actually changed.
@@ -256,10 +262,12 @@ export default function Home() {
       monthsRef.current = months0;
       stopModeRef.current = stop0;
       adultsRef.current = adults0;
+      bridgesRef.current = bridges0;
       setStyle(style0);
       setMonths(months0);
       setStopMode(stop0);
       setAdults(adults0);
+      setBridges(bridges0);
       runSearch(from);
     } else {
       detectLocation();
@@ -279,13 +287,14 @@ export default function Home() {
     if (months !== 3) p.set("months", String(months));
     if (stopMode === "any") p.set("direct", "0");
     if (adults !== 1) p.set("adults", String(adults));
+    if (bridges) p.set("bridges", "1");
     const qs = p.toString();
     window.history.replaceState(
       null,
       "",
       qs ? `?${qs}` : window.location.pathname
     );
-  }, [home, style, months, stopMode, adults, searched]);
+  }, [home, style, months, stopMode, adults, bridges, searched]);
 
   // Show a "back to controls" pill once the user scrolls deep into the list, so
   // sort/refine stay reachable without scrolling to the top (our month dividers
@@ -324,11 +333,9 @@ export default function Home() {
     () => filtered.filter(isShortStay).length,
     [filtered]
   );
-  const visible = useMemo(() => {
-    let out = showHidden ? filtered : filtered.filter((d) => !isShortStay(d));
-    if (longWeekendsOnly) out = out.filter(isLongWeekend);
-    return out;
-  }, [filtered, showHidden, longWeekendsOnly]);
+  const visible = showHidden
+    ? filtered
+    : filtered.filter((d) => !isShortStay(d));
 
   // Per-option counts for the Refine pills, over the base universe the user can
   // actually see (respecting the short-stay toggle) but ignoring month/region/
@@ -354,10 +361,6 @@ export default function Home() {
     }
     return m;
   }, [countable]);
-  const longWeekendCount = useMemo(
-    () => countable.filter(isLongWeekend).length,
-    [countable]
-  );
   const currency = rawDeals[0]?.currency ?? "EUR";
   const priceBucketList = useMemo(
     () => priceBuckets(rawDeals.map((d) => d.price)),
@@ -368,7 +371,6 @@ export default function Home() {
     setSelectedMonths([]);
     setSelectedContinents([]);
     setMaxPrice(bounds.max);
-    setLongWeekendsOnly(false);
   }
 
   const editSearch = () => setCollapsed(false);
@@ -393,13 +395,11 @@ export default function Home() {
     available.length > 0 ||
     availableContinents.length > 1 ||
     priceBucketList.length > 0 ||
-    longWeekendCount > 0 ||
     hiddenCount > 0;
   const activeFilters =
     selectedMonths.length +
     selectedContinents.length +
-    (cap < bounds.max ? 1 : 0) +
-    (longWeekendsOnly ? 1 : 0);
+    (cap < bounds.max ? 1 : 0);
   const styleLabel =
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
   // The next-larger search window, for the end-of-list "look further ahead" CTA.
@@ -422,6 +422,7 @@ export default function Home() {
         adults: String(adultsRef.current),
       });
       if (stopModeRef.current === "direct") qs.set("direct", "1");
+      if (bridgesRef.current) qs.set("bridges", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
       if (res.ok) setRawDeals(body.deals ?? []);
@@ -515,6 +516,12 @@ export default function Home() {
               <FacetButton onClick={editSearch}>
                 {adults} adult{adults === 1 ? "" : "s"}
               </FacetButton>
+              {bridges && (
+                <>
+                  <span className="text-black/25 dark:text-white/25">·</span>
+                  <FacetButton onClick={editSearch}>🌉 Bridge days</FacetButton>
+                </>
+              )}
             </div>
           </div>
           <button
@@ -590,6 +597,45 @@ export default function Home() {
             </Field>
           </div>
 
+          {/* Opt-in bridge-days mode — off by default (a plain search). */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={bridges}
+            onClick={() => setBridges((v) => !v)}
+            className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors ${
+              bridges
+                ? "border-amber-300 bg-amber-100/70 dark:border-amber-300/40 dark:bg-amber-300/15"
+                : "border-black/10 bg-black/[0.015] hover:bg-black/[0.03] dark:border-white/10 dark:bg-white/[0.02] dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <span aria-hidden className="text-xl leading-none">
+              🌉
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">
+                Hunt for bridge days
+              </span>
+              <span className="block text-xs text-black/50 dark:text-white/50">
+                Only long weekends — where a public holiday means one day off (or
+                none) buys you three or four.
+              </span>
+            </span>
+            <span
+              className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
+                bridges
+                  ? "bg-amber-500 dark:bg-amber-400"
+                  : "bg-black/15 dark:bg-white/20"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${
+                  bridges ? "left-[18px]" : "left-0.5"
+                }`}
+              />
+            </span>
+          </button>
+
           <div className="flex items-center justify-end gap-4">
             {searched && (
               <button
@@ -624,7 +670,7 @@ export default function Home() {
                 ? "Searching…"
                 : error
                   ? "Couldn’t load results"
-                  : `${visible.length} weekend escape${
+                  : `${visible.length} ${bridges ? "bridge" : "weekend"} escape${
                       visible.length === 1 ? "" : "s"
                     }`}
             </span>
@@ -683,12 +729,6 @@ export default function Home() {
                   onRemove={() => setMaxPrice(bounds.max)}
                 />
               )}
-              {longWeekendsOnly && (
-                <FilterChip
-                  label="🌉 Long weekends"
-                  onRemove={() => setLongWeekendsOnly(false)}
-                />
-              )}
               <button
                 type="button"
                 onClick={clearAll}
@@ -708,38 +748,6 @@ export default function Home() {
           <p className="text-xs text-black/45 dark:text-white/45">
             Narrows the results below instantly — no new search.
           </p>
-          {longWeekendCount > 0 && (
-            <Field label="Long weekends" align="stretch">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={longWeekendsOnly}
-                onClick={() => setLongWeekendsOnly((v) => !v)}
-                className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
-                  longWeekendsOnly
-                    ? "border-amber-300 bg-amber-100/70 text-amber-900 dark:border-amber-300/40 dark:bg-amber-300/15 dark:text-amber-100"
-                    : "border-black/10 bg-white/50 hover:bg-black/[0.03] dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                }`}
-              >
-                <span aria-hidden className="text-base">
-                  🌉
-                </span>
-                <span className="flex-1">
-                  Only long weekends — a holiday does the heavy lifting, so you
-                  spend at most one day off.
-                </span>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                    longWeekendsOnly
-                      ? "bg-amber-200/80 text-amber-900 dark:bg-amber-300/25 dark:text-amber-100"
-                      : "bg-black/[0.06] text-black/55 dark:bg-white/10 dark:text-white/55"
-                  }`}
-                >
-                  {longWeekendCount}
-                </span>
-              </button>
-            </Field>
-          )}
           {available.length > 0 && (
             <Field label="Month" align="stretch">
               <MonthFilter
@@ -806,7 +814,9 @@ export default function Home() {
             cap < bounds.max
               ? "No escapes match these filters — try widening them."
               : rawDeals.length === 0
-                ? `No weekend routes found from ${home || "that airport"} — try a longer window or a different airport.`
+                ? bridges
+                  ? `No bridge-day escapes from ${home || "that airport"} in this window — try a longer window, or turn off "Hunt for bridge days".`
+                  : `No weekend routes found from ${home || "that airport"} — try a longer window or a different airport.`
                 : undefined
           }
         />

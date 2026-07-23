@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { type Deal, isLongWeekend } from "@/lib/deals";
+import { type Deal, isBridge } from "@/lib/deals";
 import type { WeatherResult } from "@/lib/weather";
 
 interface DestinationImage {
@@ -360,6 +360,8 @@ export function DealCard({
           arrival={arrival}
           departure={departure}
           holiday={deal.destHoliday}
+          homeHoliday={deal.homeHoliday}
+          daysOff={deal.ptoDates}
         />
       </button>
 
@@ -399,15 +401,19 @@ export function DealCard({
         </div>
       </div>
 
-      {isLongWeekend(deal) && deal.homeHoliday ? (
+      {isBridge(deal) && deal.homeHoliday && (
         <div className="mt-2.5">
           <span className="inline-flex flex-wrap items-baseline gap-x-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
             <span aria-hidden>🌉</span>
             <span>
-              Long weekend
+              {(deal.ptoDays ?? 0) <= 1 ? "Long weekend" : "Bridge trip"}
               <span className="font-normal text-amber-900/75 dark:text-amber-100/75">
-                {" "}
-                · {deal.ptoDays === 0 ? "no day off" : "1 day off"}
+                {" · "}
+                {deal.ptoDays === 0
+                  ? "no day off needed"
+                  : deal.ptoDays === 1
+                  ? "1 day off"
+                  : `${deal.ptoDays} days off required`}
               </span>
             </span>
             <span className="font-normal text-amber-900/75 dark:text-amber-100/75">
@@ -415,15 +421,6 @@ export function DealCard({
             </span>
           </span>
         </div>
-      ) : (
-        deal.homeHoliday && (
-          <div className="mt-2 flex flex-wrap items-start gap-2">
-            <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-sm leading-snug text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
-              🎉 {deal.homeHoliday.name} · {holidayDate(deal.homeHoliday.date)} —{" "}
-              {`${deal.ptoDays} day${deal.ptoDays === 1 ? "" : "s"} off`}
-            </span>
-          </div>
-        )
       )}
 
       {open && (
