@@ -35,6 +35,30 @@ Roughly ordered by leverage. Items marked ✅ shipped this session.
 - Show prices in the user's currency (free FX API: Frankfurter / exchangerate.host).
 - Deal freshness — "prices checked 2h ago".
 
+### Weekend-delight ideas (brainstormed 2026-07)
+Ranked by fit × delight for a weekend-getaway tool:
+1. **Bridge-day / long-weekend detector ("puentes")** — *building now (full).* Use
+   the home-country holidays we already fetch (Nager.Date) to flag when ≤1 day of
+   PTO turns a weekend into a 3–4 day escape. Chosen scope: **full** — on top of a
+   prominent badge + "Long weekends only" filter, run holiday-anchored supplementary
+   searches for the puentes the fixed weekend windows miss:
+   - **Tue holiday** → depart Fri/Sat, return Tue (take Mon off) — 4-day, 1 PTO.
+   - **Thu holiday** → depart Wed/Thu, return Sun (take Fri off) — 4-day, 1 PTO.
+   - Mon/Fri holidays already fall out of the normal Fri/Sat search, so we don't
+     add extra searches for them (avoid duplicate cards).
+   Extra searches run in parallel with the main board search (latency = max, not
+   sum), each cached; only on the board search (not single-city), skipped when no
+   qualifying holiday sits in the window. Kiwi day-of-week: 0=Sun … 6=Sat.
+2. **Total weekend cost, not just airfare** — rough flight + 2-nights hotel
+   estimate so the card shows the real all-in (~€120), not just the teaser fare.
+3. **"Warm this weekend" near-term mode** — toggle for this weekend / next 2–3
+   weeks; unlocks real weather forecasts (and the parked AQI idea).
+4. **Vibe tags** — Beach · City · Nightlife · Hikes · Food, from a curated
+   per-city map (no live API), so a glance tells you the kind of weekend.
+5. **Surprise me** — one button → one full-bleed random great deal. Spontaneity.
+6. **Watchlist + price-drop alerts** — star a route, get pinged on a drop. The
+   retention feature (turns a one-visit tool into a recurring one).
+
 ### Parked — revisit if the shape changes
 - **Air quality index (AQI).** Considered 2026-07; skipped for now. Open-Meteo
   has a free Air Quality API (same provider we use for weather), but AQI can't

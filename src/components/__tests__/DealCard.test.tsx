@@ -84,9 +84,10 @@ describe("DealCard", () => {
       destHoliday: { date: "2026-08-08", name: "Ferragosto" },
     };
     render(<DealCard deal={withHols} />);
-    // Home holiday stays a prominent pill.
+    // A holiday on a workday of the trip (0 days off) → prominent long-weekend badge.
+    expect(screen.getByText(/Long weekend/i)).toBeInTheDocument();
     expect(screen.getByText(/Assumption · Fri 7 Aug/)).toBeInTheDocument();
-    expect(screen.getByText(/no day off needed/i)).toBeInTheDocument();
+    expect(screen.getByText(/no day off/i)).toBeInTheDocument();
     // Destination holiday is a dot on its day (announced via the cell label),
     // not a redundant dated line.
     expect(

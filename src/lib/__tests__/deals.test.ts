@@ -3,6 +3,7 @@ import {
   flagEmoji,
   normalizeDeals,
   isShortStay,
+  isLongWeekend,
   type Deal,
 } from "@/lib/deals";
 
@@ -41,6 +42,23 @@ describe("isShortStay", () => {
     expect(isShortStay(dealWith({ backStops: 1, stayMinutes: 3000 }))).toBe(
       false
     );
+  });
+});
+
+describe("isLongWeekend", () => {
+  const hol = { date: "2026-08-18", name: "Holiday" };
+  it("is true when a home holiday cuts PTO to one day or fewer", () => {
+    expect(isLongWeekend(dealWith({ homeHoliday: hol, ptoDays: 0 }))).toBe(true);
+    expect(isLongWeekend(dealWith({ homeHoliday: hol, ptoDays: 1 }))).toBe(true);
+  });
+  it("is false without a holiday or when it still costs two+ days off", () => {
+    expect(isLongWeekend(dealWith({ homeHoliday: null, ptoDays: 0 }))).toBe(
+      false
+    );
+    expect(isLongWeekend(dealWith({ homeHoliday: hol, ptoDays: 2 }))).toBe(
+      false
+    );
+    expect(isLongWeekend(dealWith({ homeHoliday: hol }))).toBe(false);
   });
 });
 

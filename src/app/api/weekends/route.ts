@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
 import { timelineRange } from "@/lib/timeline";
-import { normalizeDeals } from "@/lib/deals";
+import { normalizeDeals, type Deal } from "@/lib/deals";
 import { fetchHolidays, annotate } from "@/lib/holidays";
+import { computeBridges } from "@/lib/bridges";
 import { airportCityKm } from "@/lib/cities";
 import { estimateFlightCo2Kg } from "@/lib/co2";
 import { cached } from "@/lib/api-cache";
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     const wp = weekendStyleToParams(style);
     const { dateFrom, dateTo } = timelineRange(months, new Date());
 
-    const params = {
+    const baseParams = {
       fly_from: flyFrom,
       date_from: dateFrom,
       date_to: dateTo,
@@ -92,37 +93,97 @@ export async function GET(request: NextRequest) {
     };
 
     // dateFrom is in the key so the cache turns over at day boundaries (the
-    // window is relative to "today").
-    const cacheKey = `weekends:${flyFrom}:${flyTo ?? ""}:${style}:${months}:${
+    // window is relative to "today"). Each search variant (main + each bridge
+    // window) gets its own suffix so they cache independently.
+    const cacheKeyBase = `weekends:${flyFrom}:${flyTo ?? ""}:${style}:${months}:${
       direct ? 1 : 0
     }:${adults}:${maxPrice ?? ""}:${currency}:${dateFrom}`;
-    const raw = await cached(cacheKey, SEARCH_TTL_MS, async () => {
-      const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
-        headers: { apikey: apiKey },
-        params,
-        timeout: 15000,
-      });
-      return response.data;
-    });
+
+    async function searchDeals(
+      overrides: Record<string, unknown>,
+      keyExtra: string
+    ): Promise<Deal[]> {
+      const raw = await cached(
+        `${cacheKeyBase}:${keyExtra}`,
+        SEARCH_TTL_MS,
+        async () => {
+          const response = await axios.get(`${TEQUILA_BASE_URL}/v2/search`, {
+            headers: { apikey: apiKey },
+            params: { ...baseParams, ...overrides },
+            timeout: 15000,
+          });
+          return response.data;
+        }
+      );
+      return normalizeDeals(raw, currency);
+    }
 
     // normalizeDeals returns price-ascending; for a single-city lookup keep only
     // the cheapest weekend.
-    const deals = flyTo
-      ? normalizeDeals(raw, currency).slice(0, 1)
-      : normalizeDeals(raw, currency);
+    const mainDeals = await searchDeals({}, "main");
+    const deals = flyTo ? mainDeals.slice(0, 1) : mainDeals;
 
     if (deals.length > 0) {
-      const years = new Set<number>();
-      for (const d of deals) {
-        years.add(Number(d.outArrive.slice(0, 4)));
-        years.add(Number(d.backDepart.slice(0, 4)));
-      }
-      const yearList = [...years];
       const homeCC = deals[0].countryFromCode;
+
+      // Holiday years span the search window (relative to today), not the deals.
+      const now = new Date();
+      const startMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const windowEnd = new Date(startMs);
+      windowEnd.setUTCMonth(windowEnd.getUTCMonth() + months);
+      const endMs = windowEnd.getTime();
+      const yearList = [
+        ...new Set([
+          new Date(startMs).getUTCFullYear(),
+          new Date(endMs).getUTCFullYear(),
+        ]),
+      ];
 
       const homeCal = (
         await Promise.all(yearList.map((y) => fetchHolidays(homeCC, y)))
       ).flat();
+
+      // Puentes: on a board search, surface the holiday-bridged long weekends the
+      // fixed weekend windows miss (Tue/Thu holidays). Each window is its own
+      // cached Kiwi search; they run in parallel, so latency is the slowest one
+      // rather than the sum. Single-city lookups skip this.
+      if (!flyTo) {
+        const bridges = computeBridges(homeCal, startMs, endMs);
+        if (bridges.length > 0) {
+          const bridgeResults = await Promise.all(
+            bridges.map((b) =>
+              searchDeals(
+                {
+                  date_from: b.dateFrom,
+                  date_to: b.dateTo,
+                  fly_days: b.flyDays.join(","),
+                  ret_fly_days: b.retFlyDays.join(","),
+                  nights_in_dst_from: b.nightsFrom,
+                  nights_in_dst_to: b.nightsTo,
+                },
+                `bridge:${b.kind}:${b.dateFrom}`
+              ).catch(() => [] as Deal[])
+            )
+          );
+
+          // Merge in only the long weekends the main search missed: dedupe
+          // bridged deals to the cheapest per city, and drop any trip (same city
+          // + dates) the main search already returned.
+          const tripKey = (d: Deal) =>
+            `${d.cityTo}|${d.outDepart.slice(0, 10)}|${d.backDepart.slice(0, 10)}`;
+          const existing = new Set(deals.map(tripKey));
+          const byCity = new Map<string, Deal>();
+          for (const d of bridgeResults.flat()) {
+            if (existing.has(tripKey(d))) continue;
+            const cur = byCity.get(d.cityTo);
+            if (!cur || d.price < cur.price) byCity.set(d.cityTo, d);
+          }
+          const extra = [...byCity.values()]
+            .sort((a, b) => a.price - b.price)
+            .slice(0, 40);
+          deals.push(...extra);
+        }
+      }
 
       const destCCs = [...new Set(deals.map((d) => d.countryToCode).filter(Boolean))];
       const destPairs = await Promise.all(
@@ -148,6 +209,11 @@ export async function GET(request: NextRequest) {
         d.airportKmFromCity = airportCityKm(d.flyTo, d.cityTo, d.countryToCode);
         d.co2Kg = estimateFlightCo2Kg(d.flyFrom, d.flyTo);
       }
+
+      // Bridged trips were appended after the main list; re-sort so the cheapest
+      // lead regardless of source (the client re-sorts too, but keep the payload
+      // coherent for consumers that don't).
+      deals.sort((a, b) => a.price - b.price);
     }
 
     return NextResponse.json(

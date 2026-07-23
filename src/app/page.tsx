@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { WeekendStyle } from "@/lib/weekend";
-import { type Deal, isShortStay } from "@/lib/deals";
+import { type Deal, isShortStay, isLongWeekend } from "@/lib/deals";
 import {
   type SortKey,
   sortDeals,
@@ -131,6 +131,7 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [longWeekendsOnly, setLongWeekendsOnly] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [showJump, setShowJump] = useState(false);
   // First-load only: while we detect location + run the initial search, show a
@@ -323,9 +324,11 @@ export default function Home() {
     () => filtered.filter(isShortStay).length,
     [filtered]
   );
-  const visible = showHidden
-    ? filtered
-    : filtered.filter((d) => !isShortStay(d));
+  const visible = useMemo(() => {
+    let out = showHidden ? filtered : filtered.filter((d) => !isShortStay(d));
+    if (longWeekendsOnly) out = out.filter(isLongWeekend);
+    return out;
+  }, [filtered, showHidden, longWeekendsOnly]);
 
   // Per-option counts for the Refine pills, over the base universe the user can
   // actually see (respecting the short-stay toggle) but ignoring month/region/
@@ -351,6 +354,10 @@ export default function Home() {
     }
     return m;
   }, [countable]);
+  const longWeekendCount = useMemo(
+    () => countable.filter(isLongWeekend).length,
+    [countable]
+  );
   const currency = rawDeals[0]?.currency ?? "EUR";
   const priceBucketList = useMemo(
     () => priceBuckets(rawDeals.map((d) => d.price)),
@@ -361,6 +368,7 @@ export default function Home() {
     setSelectedMonths([]);
     setSelectedContinents([]);
     setMaxPrice(bounds.max);
+    setLongWeekendsOnly(false);
   }
 
   const editSearch = () => setCollapsed(false);
@@ -385,11 +393,13 @@ export default function Home() {
     available.length > 0 ||
     availableContinents.length > 1 ||
     priceBucketList.length > 0 ||
+    longWeekendCount > 0 ||
     hiddenCount > 0;
   const activeFilters =
     selectedMonths.length +
     selectedContinents.length +
-    (cap < bounds.max ? 1 : 0);
+    (cap < bounds.max ? 1 : 0) +
+    (longWeekendsOnly ? 1 : 0);
   const styleLabel =
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
   // The next-larger search window, for the end-of-list "look further ahead" CTA.
@@ -673,6 +683,12 @@ export default function Home() {
                   onRemove={() => setMaxPrice(bounds.max)}
                 />
               )}
+              {longWeekendsOnly && (
+                <FilterChip
+                  label="🌉 Long weekends"
+                  onRemove={() => setLongWeekendsOnly(false)}
+                />
+              )}
               <button
                 type="button"
                 onClick={clearAll}
@@ -692,6 +708,38 @@ export default function Home() {
           <p className="text-xs text-black/45 dark:text-white/45">
             Narrows the results below instantly — no new search.
           </p>
+          {longWeekendCount > 0 && (
+            <Field label="Long weekends" align="stretch">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={longWeekendsOnly}
+                onClick={() => setLongWeekendsOnly((v) => !v)}
+                className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+                  longWeekendsOnly
+                    ? "border-amber-300 bg-amber-100/70 text-amber-900 dark:border-amber-300/40 dark:bg-amber-300/15 dark:text-amber-100"
+                    : "border-black/10 bg-white/50 hover:bg-black/[0.03] dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                }`}
+              >
+                <span aria-hidden className="text-base">
+                  🌉
+                </span>
+                <span className="flex-1">
+                  Only long weekends — a holiday does the heavy lifting, so you
+                  spend at most one day off.
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    longWeekendsOnly
+                      ? "bg-amber-200/80 text-amber-900 dark:bg-amber-300/25 dark:text-amber-100"
+                      : "bg-black/[0.06] text-black/55 dark:bg-white/10 dark:text-white/55"
+                  }`}
+                >
+                  {longWeekendCount}
+                </span>
+              </button>
+            </Field>
+          )}
           {available.length > 0 && (
             <Field label="Month" align="stretch">
               <MonthFilter

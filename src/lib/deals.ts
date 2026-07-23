@@ -48,6 +48,17 @@ export function isShortStay(deal: Deal): boolean {
   return deal.stayMinutes < 24 * 60;
 }
 
+// A "long weekend" / puente: a home public holiday lands on a workday of the
+// trip, so it costs at most one day of PTO. Covers both a normal weekend that
+// happens to contain a holiday and the holiday-anchored windows we search for.
+export function isLongWeekend(deal: Deal): boolean {
+  return (
+    deal.homeHoliday != null &&
+    typeof deal.ptoDays === "number" &&
+    deal.ptoDays <= 1
+  );
+}
+
 export function flagEmoji(countryCode: string): string {
   if (!countryCode || countryCode.length !== 2) return "🏳️";
   const A = 0x1f1e6;
