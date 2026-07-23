@@ -403,14 +403,6 @@ export function DealCard({
           >
             {stay} to explore
           </span>
-          {/* Local holiday at the destination — teal + pin, distinct from the
-              amber "your day off" language. Shown in every mode. */}
-          {deal.destHoliday && (
-            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-teal-800 ring-1 ring-inset ring-teal-500/30 dark:text-teal-200 dark:ring-teal-400/30">
-              <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
-              Local holiday · {deal.destHoliday.name}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-3">
           <a

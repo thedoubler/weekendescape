@@ -94,16 +94,15 @@ describe("DealCard", () => {
     expect(
       screen.getByText(/You’re off for Assumption & National Day/i)
     ).toBeInTheDocument();
-    // Destination holiday reads as "local" — teal chip in the collapsed row…
-    expect(screen.getByText(/Local holiday · Ferragosto/i)).toBeInTheDocument();
-    // …and its day is announced as a local holiday.
+    // Collapsed, the destination holiday is only the subtle day-cell pin,
+    // announced via aria-label — no "Local holiday" text until expanded.
     expect(
       screen.getByLabelText(/Sat 8,.*local holiday in Ibiza: Ferragosto/i)
     ).toBeInTheDocument();
-    // The dated "Local holiday in <city>" line shows only in the expanded panel.
     expect(
-      screen.queryByText(/Local holiday in Ibiza/i)
+      screen.queryByText(/Local holiday/i)
     ).not.toBeInTheDocument();
+    // The named "Local holiday in <city>" line shows only in the expanded panel.
     fireEvent.click(screen.getByRole("button", { name: /show details/i }));
     expect(
       screen.getByText(/Local holiday in Ibiza · Ferragosto/i)
