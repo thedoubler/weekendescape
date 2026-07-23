@@ -352,9 +352,14 @@ Kiwi gives only *current* fares — a true "below typical" badge needs history:
   monthly history** per route; **free** with affiliate signup (and earns
   commission). Derive the baseline yourself.
 - Skyscanner / Google Flights would be ideal but are partner-only / no public API.
-Shipped meanwhile: **price-per-night** (`≈ X EUR/night`, `DealCard`) as an honest,
-source-free value normalisation. A cross-destination percentile was rejected —
-it's redundant with the price sort and misleads.
+**Parked value-signal experiments:**
+- **price-per-night** (`≈ X EUR/night` = total ÷ nights) — tried on the card, then
+  removed 2026-07-24: marginal for 2–3-night weekends and not self-explanatory.
+  Revisit only if trips get longer/variable or paired with a "best value" sort.
+- **cross-destination percentile** ("cheapest 10%") — rejected: redundant with the
+  price sort and misleads (compares destinations, not "good for this route").
+The only *real* value signal ("below typical for this route") needs the price
+history source above (Amadeus Price Analysis / Travelpayouts).
 
 Sources: [Tequila](https://tequila.kiwi.com/) ·
 [Kiwi affiliate 50k MAU](https://support.travelpayouts.com/hc/en-us/articles/360019237899-Kiwi-com-affiliate-program-API) ·
