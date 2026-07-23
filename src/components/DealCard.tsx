@@ -252,6 +252,10 @@ export function DealCard({
   const goodStay = deal.stayMinutes >= 36 * 60;
   const days = daysUntil(deal.outDepart, new Date());
   const adults = cheapest?.adults ?? 1;
+  // Honest, source-free value normalisation: a 3-night trip at €58 beats a
+  // 1-night at €58. Skipped for sub-2-night trips (per-night is meaningless and
+  // those are already the "short stay" the toggle hides).
+  const perNight = deal.nights >= 2 ? Math.round(deal.price / deal.nights) : null;
   const arrival = {
     time: timeLabel(deal.outArrive),
     night: isNightHour(deal.outArrive),
@@ -365,9 +369,11 @@ export function DealCard({
           <div className="text-[11px] text-black/55 dark:text-white/60">
             round trip{adults > 1 ? ` · ${adults} travellers` : ""}
           </div>
-          {days > 0 && (
+          {(perNight != null || days > 0) && (
             <div className="text-xs text-black/55 dark:text-white/60">
-              in {days} days
+              {perNight != null && `≈ ${perNight} ${deal.currency}/night`}
+              {perNight != null && days > 0 && " · "}
+              {days > 0 && `in ${days} days`}
             </div>
           )}
         </div>
