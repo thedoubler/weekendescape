@@ -76,31 +76,37 @@ describe("DealCard", () => {
     expect(screen.getByText(/MAD \(1h 40m\)/)).toBeInTheDocument();
   });
 
-  it("renders the home-holiday pill and marks a destination holiday on its day", () => {
+  it("names home holidays as yours and destination holidays as local", () => {
     const withHols: Deal = {
       ...base,
       ptoDays: 0,
       homeHoliday: { date: "2026-08-07", name: "Assumption" },
+      homeHolidays: [
+        { date: "2026-08-07", name: "Assumption" },
+        { date: "2026-08-10", name: "National Day" },
+      ],
       destHoliday: { date: "2026-08-08", name: "Ferragosto" },
     };
     render(<DealCard deal={withHols} />);
-    // A holiday on a workday of the trip (0 days off) → prominent long-weekend badge.
+    // Home holidays (0 days off) → amber "you're off for …" badge naming all of them.
     expect(screen.getByText(/Long weekend/i)).toBeInTheDocument();
-    expect(screen.getByText(/Assumption · Fri 7 Aug/)).toBeInTheDocument();
     expect(screen.getByText(/no day off/i)).toBeInTheDocument();
-    // Destination holiday is a dot on its day (announced via the cell label),
-    // not a redundant dated line.
     expect(
-      screen.getByLabelText(/Sat 8,.*public holiday: Ferragosto/i)
+      screen.getByText(/You’re off for Assumption & National Day/i)
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Sat 8 Aug/i)).not.toBeInTheDocument();
-    // The named note shows only in the expanded panel.
+    // Destination holiday reads as "local" — teal chip in the collapsed row…
+    expect(screen.getByText(/Local holiday · Ferragosto/i)).toBeInTheDocument();
+    // …and its day is announced as a local holiday.
     expect(
-      screen.queryByText(/Public holiday in Ibiza/i)
+      screen.getByLabelText(/Sat 8,.*local holiday in Ibiza: Ferragosto/i)
+    ).toBeInTheDocument();
+    // The dated "Local holiday in <city>" line shows only in the expanded panel.
+    expect(
+      screen.queryByText(/Local holiday in Ibiza/i)
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /show details/i }));
     expect(
-      screen.getByText(/Public holiday in Ibiza · Ferragosto/i)
+      screen.getByText(/Local holiday in Ibiza · Ferragosto/i)
     ).toBeInTheDocument();
   });
 });

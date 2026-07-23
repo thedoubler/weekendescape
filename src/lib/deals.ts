@@ -35,6 +35,8 @@ export interface Deal {
   // The trip's workdays you'd have to book off (empty when a holiday covers them).
   ptoDates?: string[];
   homeHoliday?: HolidayRef | null;
+  // Every home public holiday landing on a trip workday (usually one).
+  homeHolidays?: HolidayRef[];
   destHoliday?: HolidayRef | null;
   // Straight-line km from the arrival airport to its marketed city centre.
   // Set server-side; flags secondary airports (e.g. Charleroi sold as Brussels).

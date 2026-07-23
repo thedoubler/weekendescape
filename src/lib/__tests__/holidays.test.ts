@@ -48,6 +48,25 @@ describe("annotate", () => {
     expect(info.destHoliday).toBeNull();
   });
 
+  it("captures every home holiday in the span (e.g. two national holidays)", () => {
+    // Sat 28 Nov → Tue 1 Dec 2026: Mon 30 (St Andrew's) + Tue 1 (National Day)
+    // are both home holidays, so 0 days off and both are returned.
+    const out = "2026-11-28T18:00:00.000Z"; // Sat
+    const back = "2026-12-01T16:00:00.000Z"; // Tue
+    const home = [
+      { date: "2026-11-30", name: "St. Andrew's Day" },
+      { date: "2026-12-01", name: "National Day" },
+    ];
+    const info = annotate(out, back, home, []);
+    expect(info.ptoDays).toBe(0);
+    expect(info.homeHolidays).toHaveLength(2);
+    expect(info.homeHolidays.map((h) => h.date)).toEqual([
+      "2026-11-30",
+      "2026-12-01",
+    ]);
+    expect(info.homeHoliday).toEqual({ date: "2026-11-30", name: "St. Andrew's Day" });
+  });
+
   it("detects a destination holiday anywhere in the span (incl weekend)", () => {
     const dest = [{ date: "2026-08-08", name: "Ferragosto" }]; // Saturday
     const info = annotate(outArrive, backDepart, [], dest);
@@ -62,6 +81,7 @@ describe("annotate", () => {
       ptoDays: 2,
       ptoDates: ["2026-08-07", "2026-08-10"],
       homeHoliday: null,
+      homeHolidays: [],
       destHoliday: null,
     });
   });

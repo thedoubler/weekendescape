@@ -7,7 +7,11 @@ export interface DealHolidayInfo {
   ptoDays: number;
   // Workdays in the trip you'd have to book off (the "days off required").
   ptoDates: string[];
+  // Every home public holiday that lands on a trip workday (a trip can span
+  // more than one — e.g. St Andrew's Day + National Day). homeHoliday is the
+  // first, kept for callers that only need one.
   homeHoliday: Holiday | null;
+  homeHolidays: Holiday[];
   destHoliday: Holiday | null;
 }
 
@@ -77,12 +81,20 @@ export function annotate(
   const workdays = tripWorkdays(outArrive, backDepart);
   const homeByDate = new Map(homeHolidays.map((h) => [h.date, h]));
   const ptoDates = workdays.filter((d) => !homeByDate.has(d));
-  const homeHoliday =
-    workdays.map((d) => homeByDate.get(d)).find(Boolean) ?? null;
+  const homeHols = workdays
+    .map((d) => homeByDate.get(d))
+    .filter((h): h is Holiday => Boolean(h));
+  const homeHoliday = homeHols[0] ?? null;
 
   const span = allDates(outArrive, backDepart);
   const destByDate = new Map(destHolidays.map((h) => [h.date, h]));
   const destHoliday = span.map((d) => destByDate.get(d)).find(Boolean) ?? null;
 
-  return { ptoDays: ptoDates.length, ptoDates, homeHoliday, destHoliday };
+  return {
+    ptoDays: ptoDates.length,
+    ptoDates,
+    homeHoliday,
+    homeHolidays: homeHols,
+    destHoliday,
+  };
 }

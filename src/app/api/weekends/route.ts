@@ -219,6 +219,7 @@ export async function GET(request: NextRequest) {
           d.ptoDays = info.ptoDays;
           d.ptoDates = info.ptoDates;
           d.homeHoliday = info.homeHoliday;
+          d.homeHolidays = info.homeHolidays;
         }
         d.destHoliday = info.destHoliday;
         d.airportKmFromCity = airportCityKm(d.flyTo, d.cityTo, d.countryToCode);

@@ -160,6 +160,24 @@ function BedIcon({ className }: { className?: string }) {
   );
 }
 
+function MapPinIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 function ExternalLinkIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -360,7 +378,8 @@ export function DealCard({
           arrival={arrival}
           departure={departure}
           holiday={deal.destHoliday}
-          homeHoliday={deal.homeHoliday}
+          cityTo={deal.cityTo}
+          homeHolidays={deal.homeHolidays}
           daysOff={deal.ptoDates}
         />
       </button>
@@ -376,6 +395,14 @@ export function DealCard({
           >
             {stay} to explore
           </span>
+          {/* Local holiday at the destination — teal + pin, distinct from the
+              amber "your day off" language. Shown in every mode. */}
+          {deal.destHoliday && (
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-teal-800 ring-1 ring-inset ring-teal-500/30 dark:text-teal-200 dark:ring-teal-400/30">
+              <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
+              Local holiday · {deal.destHoliday.name}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <a
@@ -417,7 +444,20 @@ export function DealCard({
               </span>
             </span>
             <span className="font-normal text-amber-900/75 dark:text-amber-100/75">
-              {deal.homeHoliday.name} · {holidayDate(deal.homeHoliday.date)}
+              You’re off for{" "}
+              {(() => {
+                const hols = deal.homeHolidays?.length
+                  ? deal.homeHolidays
+                  : deal.homeHoliday
+                    ? [deal.homeHoliday]
+                    : [];
+                const names = hols.map((h) => h.name);
+                const joined =
+                  names.length <= 1
+                    ? (names[0] ?? "")
+                    : `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}`;
+                return `${joined} · ${holidayDate(hols[0].date)}`;
+              })()}
             </span>
           </span>
         </div>
@@ -450,13 +490,10 @@ export function DealCard({
             layovers={deal.backLayovers}
           />
           {deal.destHoliday && (
-            <div className="inline-flex items-center gap-2 text-black/55 dark:text-white/55">
-              <span
-                aria-hidden
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400"
-              />
+            <div className="inline-flex items-center gap-2 text-teal-800 dark:text-teal-200">
+              <MapPinIcon className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               <span>
-                Public holiday in {deal.cityTo} · {deal.destHoliday.name}
+                Local holiday in {deal.cityTo} · {deal.destHoliday.name}
               </span>
             </div>
           )}

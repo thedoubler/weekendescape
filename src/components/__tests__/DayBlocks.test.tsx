@@ -32,10 +32,11 @@ describe("DayBlocks", () => {
         arrival={{ time: "08:20", night: false, plusOne: false }}
         departure={{ time: "19:05", night: false }}
         holiday={{ date: "2026-08-09", name: "Ferragosto" }}
+        cityTo="Rome"
       />
     );
     expect(
-      screen.getByLabelText(/Sun 9,.*public holiday: Ferragosto/i)
+      screen.getByLabelText(/Sun 9,.*local holiday in Rome: Ferragosto/i)
     ).toBeInTheDocument();
     // Days without the holiday don't get the note.
     expect(

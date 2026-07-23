@@ -38,25 +38,46 @@ function PlaneTakeoffIcon({ className }: { className?: string }) {
   );
 }
 
+// Destination (local) holiday marker — a teal map-pin, deliberately a different
+// colour + shape from the amber "your day off" language so the two never blur.
+function MapPinIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 export function DayBlocks({
   cells,
   arrival,
   departure,
   holiday,
-  homeHoliday,
+  cityTo,
+  homeHolidays,
   daysOff,
 }: {
   cells: DayCell[];
   arrival: { time: string; night: boolean; plusOne: boolean };
   departure: { time: string; night: boolean };
-  // A destination public holiday falling within the trip, marked with a dot on
-  // its day. The name is announced via aria-label and shown in the card's
-  // expanded panel (the strip can't own a tooltip — it's inside the expand
-  // button), so the dot stays a quiet visual cue here.
+  // A destination (local) public holiday within the trip — marked with a teal
+  // map-pin on its day. Name announced via aria-label + shown in the expanded panel.
   holiday?: { date: string; name: string } | null;
-  // Bridge mode: the home public holiday that makes this a long weekend, and the
-  // workdays you'd book off — tagged on their days so the puente reads at a glance.
-  homeHoliday?: { date: string; name: string } | null;
+  cityTo?: string;
+  // Bridge mode: the home public holidays that make this a long weekend (a trip
+  // can span more than one), and the workdays you'd book off — tagged on their
+  // days so the puente reads at a glance.
+  homeHolidays?: { date: string; name: string }[] | null;
   daysOff?: string[] | null;
 }) {
   const months: string[] = [];
@@ -73,16 +94,18 @@ export function DayBlocks({
           const showArrive = c.role === "arrive" || c.role === "solo";
           const showLeave = c.role === "leave" || c.role === "solo";
           const isHoliday = !!holiday && holiday.date === c.date;
-          const isHomeHoliday = !!homeHoliday && homeHoliday.date === c.date;
+          const isHomeHoliday = !!homeHolidays?.some((h) => h.date === c.date);
           const isDayOff = !!daysOff && daysOff.includes(c.date);
           return (
             <div
               key={i}
               role="listitem"
               aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable${
-                isHomeHoliday ? `, public holiday off work: ${homeHoliday!.name}` : ""
-              }${isDayOff ? ", day off needed" : ""}${
-                isHoliday ? `, public holiday: ${holiday!.name}` : ""
+                isHomeHoliday ? ", your public holiday — off work" : ""
+              }${isDayOff ? ", day off to book" : ""}${
+                isHoliday
+                  ? `, local holiday in ${cityTo ?? "the destination"}: ${holiday!.name}`
+                  : ""
               }`}
               className={`min-w-0 flex-1 rounded-lg px-1.5 py-2.5 text-center ${
                 isHomeHoliday
@@ -93,14 +116,10 @@ export function DayBlocks({
               <div className="text-[10px] font-medium uppercase tracking-wider text-black/45 dark:text-white/45">
                 {c.weekday}
               </div>
-              <div className="mt-0.5 text-sm font-semibold leading-none">
+              <div className="mt-0.5 flex items-center justify-center gap-0.5 text-sm font-semibold leading-none">
                 {c.day}
                 {isHoliday && (
-                  <span
-                    aria-hidden
-                    title="Public holiday"
-                    className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-middle dark:bg-amber-400"
-                  />
+                  <MapPinIcon className="h-3 w-3 shrink-0 text-teal-600 dark:text-teal-400" />
                 )}
               </div>
               {(isHomeHoliday || isDayOff) && (
@@ -111,7 +130,7 @@ export function DayBlocks({
                       : "border border-dashed border-black/25 text-black/50 dark:border-white/30 dark:text-white/55"
                   }`}
                 >
-                  {isHomeHoliday ? "holiday" : "day off"}
+                  {isHomeHoliday ? "you’re off" : "book off"}
                 </div>
               )}
               {/* Hours at the destination as a slice of the day (arrival→departure). */}
