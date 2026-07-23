@@ -364,11 +364,13 @@ export function DealCard({
           <div className="text-lg font-semibold">
             {deal.price} {deal.currency}
           </div>
-          {/* Kiwi prices the whole party — say so, so it isn't read as per-person
-              (the CO₂ line in the details is per-person). */}
-          <div className="text-[11px] text-black/55 dark:text-white/60">
-            round trip{adults > 1 ? ` · ${adults} travellers` : ""}
-          </div>
+          {/* Kiwi prices the whole party — flag it for groups so the total
+              isn't read as per-person (the CO₂ line in details is per-person). */}
+          {adults > 1 && (
+            <div className="text-[11px] text-black/55 dark:text-white/60">
+              {adults} travellers
+            </div>
+          )}
           {(perNight != null || days > 0) && (
             <div className="text-xs text-black/55 dark:text-white/60">
               {perNight != null && `≈ ${perNight} ${deal.currency}/night`}
