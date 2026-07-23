@@ -99,7 +99,15 @@ export function CheapestWeekend({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="font-medium">💡 Cheaper weekend</span>
         {pct > 0 && (
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-300/20 dark:text-green-100">
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+              // Reserve the green "good deal" treatment for a meaningful saving;
+              // a couple of percent stays neutral so it doesn't oversell.
+              pct >= 10
+                ? "bg-green-100 text-green-800 dark:bg-green-300/20 dark:text-green-100"
+                : "bg-black/[0.06] text-black/60 dark:bg-white/10 dark:text-white/65"
+            }`}
+          >
             {pct}% cheaper · save {saved} {deal.currency}
           </span>
         )}
