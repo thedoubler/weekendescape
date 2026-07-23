@@ -423,7 +423,7 @@ export default function Home() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-6">
+    <main className="max-w-3xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-6">
       <header className="flex items-start gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
         {/* Mark: a sparkle with a detached "destination dot". The badge inverts
             by theme so the warm accent is always present but never floods. */}
