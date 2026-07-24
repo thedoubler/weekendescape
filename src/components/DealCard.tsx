@@ -423,7 +423,7 @@ export function DealCard({
             aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
             className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 motion-safe:hover:scale-105 dark:text-white"
           >
-            <span className="underline underline-offset-2">Book on Kiwi</span>
+            <span className="underline underline-offset-2">Book</span>
             <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
           </a>
         </div>

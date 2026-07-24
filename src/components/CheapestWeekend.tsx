@@ -124,7 +124,7 @@ export function CheapestWeekend({
           aria-label={`Book cheaper ${cityTo} weekend on Kiwi.com (opens a new tab)`}
           className="underline underline-offset-2"
         >
-          Book on Kiwi
+          Book
         </a>
       </div>
     </div>
