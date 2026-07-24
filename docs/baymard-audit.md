@@ -151,3 +151,53 @@ the real contrast issues are light-mode greys).
 3. Persistent mobile thumbnail (Tier 2).
 4. Price labelling + hotel-adults bug + hand-off labels (Tier 1).
 5. Stop auto-geolocation prompt (Tier 2).
+
+---
+
+## Expanded-card (PDP) audit — follow-up pass (2026-07-24)
+Dedicated UX-agent pass on the `{open && …}` detail panel (`DealCard.tsx:467-602`)
+— the decision surface right before the Kiwi/Booking hand-off. Data status noted
+per item. None built yet — parked for a pick.
+
+**P1 — high impact, data mostly in hand**
+- ⭐ **Show the destination photo IN the expanded panel.** The image is already
+  fetched but only rendered on the *collapsed* card (desktop hover "peel",
+  `DealCard.tsx:277-308`); it vanishes the moment you open the card. For a trip the
+  place *is* the product (Baymard: 56% of users go straight for imagery on a PDP).
+  Un-gate it. *S · data: HAVE (Unsplash url + credit wired).* Biggest, cheapest win.
+- **Per-person vs total** in the panel when `adults > 1` ("€X total · €Y pp") —
+  resolves the clash with the "per person" CO₂ line beside the party-total price
+  (Baymard price-per-unit: 81% don't show it). *S · HAVE.*
+- **Short-layover warning** — flag connections under ~90 min from `layover.minutes`.
+  *S · HAVE.* A true "self-transfer, re-check bags" flag needs a Kiwi field
+  (`virtual_interlining`/`hidden_city`) not parsed in `normalizeDeals` — *M · NEW field.*
+- **All-in cost** — combine flight + checked bag into one "all-in from €X"; label
+  hotel separate. *S for flight+bag (HAVE); hotel price estimate = NEW SOURCE
+  (Booking/RateHawk).* (Baymard: 67% don't show total order cost.)
+
+**P2 — meaningful**
+- **"What to know" chip strip** atop the panel: `🌙 2 nights · Direct · Cabin only ·
+  1 day off · Airport 6 km` — skimmable digest of facts currently scattered
+  (Baymard spec-sheet scannability). *S–M · HAVE. Also pull `airportKmFromCity` into
+  the panel, currently collapsed-only (`:344-357`).*
+- **Save / shortlist** (localStorage, no account — Baymard: 21% rely on Save;
+  requiring login is "a severe mistake"). *M · client-only.*
+- **Trust microcopy at Book** — "Final price & baggage confirmed on Kiwi." *S copy;
+  accurate free-cancellation/flex signal = NEW field from Kiwi.*
+
+**P3 — polish**
+- **Disclosure a11y** — panel (`:467`) has no `id`/`role="region"`; the two toggle
+  buttons (`:310-315`, `:378-393`) lack `aria-controls`. Wire them. *S.*
+- **Weather → packing cue** — reuse the classified temp/condition (`weather.ts:54-66`)
+  for a one-word "pack a layer". *S · HAVE.*
+
+**Needs new data (parked):** hotel price estimate, self-transfer flag, "vs typical
+price" (price-history API — see ideas-and-research.md).
+
+**Recommended first batch (cheap, data-in-hand):** image-in-expanded + per-person +
+short-layover warning + "what to know" chips + Book microcopy + disclosure a11y.
+
+Sources: [Baymard Product Page UX 2026](https://baymard.com/blog/current-state-ecommerce-product-page-ux) ·
+[Product Page Usability benchmark](https://baymard.com/blog/product-page-usability-report-and-benchmark) ·
+[Spec-sheet scannability](https://baymard.com/blog/spec-sheet-scannability) ·
+[Shipping/total cost on PDP](https://baymard.com/blog/show-shipping-costs-on-product-pages).
