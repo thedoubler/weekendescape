@@ -62,6 +62,15 @@ const ADULTS_OPTIONS = [
 ];
 type StopMode = "any" | "direct";
 
+// "just now" / "3 min ago" / "2 h ago" — for the price-freshness stamp.
+function agoLabel(ts: number): string {
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  return `${h} h ago`;
+}
+
 function Field({
   label,
   hint,
@@ -128,6 +137,7 @@ export default function Home() {
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(0);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
+  const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +196,7 @@ export default function Home() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
+      setFetchedAt(body.fetchedAt ?? Date.now());
       setSelectedMonths([]);
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "AbortError";
@@ -418,7 +429,10 @@ export default function Home() {
       if (bridgesRef.current) qs.set("bridges", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
-      if (res.ok) setRawDeals(body.deals ?? []);
+      if (res.ok) {
+        setRawDeals(body.deals ?? []);
+        setFetchedAt(body.fetchedAt ?? Date.now());
+      }
     } catch {
       /* keep the current list on failure */
     } finally {
@@ -688,16 +702,10 @@ export default function Home() {
                         visible.length === 1 ? "" : "s"
                       }`}
               </span>
-              {!loading && !error && hiddenCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowHidden((v) => !v)}
-                  className="self-start text-[11px] text-black/55 underline-offset-2 hover:underline dark:text-white/60"
-                >
-                  {showHidden
-                    ? `Hide ${hiddenCount} short-stay trip${hiddenCount === 1 ? "" : "s"}`
-                    : `${hiddenCount} short-stay trip${hiddenCount === 1 ? "" : "s"} hidden · show`}
-                </button>
+              {!loading && !error && fetchedAt && visible.length > 0 && (
+                <span className="text-[11px] text-black/55 dark:text-white/60">
+                  Checked {agoLabel(fetchedAt)}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-2">
