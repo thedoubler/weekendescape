@@ -65,6 +65,20 @@ export function codeInfo(code: number): { emoji: string; label: string } {
   return { emoji: "☁️", label: "Cloudy" };
 }
 
+// Turn the temp/condition into a one-line packing suggestion. Phrased as advice
+// ("bring a jacket") not a promise, so it reads fine under the "Typical … avg"
+// label when the estimate is climatological rather than a real forecast.
+export function packingCue(w: WeatherResult): string | null {
+  const rainy =
+    (w.precipChance != null && w.precipChance >= 40) ||
+    /rain|drizzle|storm|wet/i.test(w.condition);
+  if (w.highC <= 12) return "bring a warm layer";
+  if (rainy) return "pack an umbrella";
+  if (w.highC >= 27) return "pack light";
+  if (w.lowC <= 10) return "layer for the evenings";
+  return null;
+}
+
 function mean(nums: number[]): number {
   return nums.reduce((s, n) => s + n, 0) / nums.length;
 }

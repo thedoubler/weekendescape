@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { type Deal, isBridge } from "@/lib/deals";
-import type { WeatherResult } from "@/lib/weather";
+import { type WeatherResult, packingCue } from "@/lib/weather";
 
 interface DestinationImage {
   url: string | null;
@@ -529,6 +529,12 @@ export function DealCard({
                   <span className="text-black/40 dark:text-white/40">
                     {" · "}
                     {weather.years}-yr avg
+                  </span>
+                )}
+                {packingCue(weather) && (
+                  <span className="text-black/55 dark:text-white/60">
+                    {" — "}
+                    {packingCue(weather)}
                   </span>
                 )}
               </span>
