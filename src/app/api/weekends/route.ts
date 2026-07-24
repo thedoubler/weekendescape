@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Opt-in "bridge days" mode: run the holiday-anchored searches and return
     // only the long-weekend / puente escapes. Off by default (a plain search).
     const bridgeMode = searchParams.get("bridges") === "1" && !flyTo;
-    const style = (searchParams.get("style") || "frimon") as WeekendStyle;
+    const style = (searchParams.get("style") || "strict") as WeekendStyle;
     const months = parseInt(searchParams.get("months") || "3", 10);
     // Passengers — Tequila prices scale with headcount. Default 1, clamp 1–9.
     const adults = Math.min(

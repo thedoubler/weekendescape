@@ -125,7 +125,7 @@ function FacetButton({
 
 export default function Home() {
   const [home, setHome] = useState("");
-  const [style, setStyle] = useState<WeekendStyle>("frimon");
+  const [style, setStyle] = useState<WeekendStyle>("strict");
   const [months, setMonths] = useState(3);
   const [stopMode, setStopMode] = useState<StopMode>("direct");
   const [adults, setAdults] = useState(1);
@@ -259,7 +259,7 @@ export default function Home() {
         s as WeekendStyle
       )
         ? (s as WeekendStyle)
-        : "frimon";
+        : "strict";
       const months0 = [1, 2, 3, 6].includes(m) ? m : 3;
       // Direct is the default now; an explicit direct=0 opts back into stops.
       const stop0: StopMode = p.get("direct") === "0" ? "any" : "direct";
@@ -294,7 +294,7 @@ export default function Home() {
     if (!searched || !home) return;
     const p = new URLSearchParams();
     p.set("from", home);
-    if (style !== "frimon") p.set("style", style);
+    if (style !== "strict") p.set("style", style);
     if (months !== 3) p.set("months", String(months));
     if (stopMode === "any") p.set("direct", "0");
     if (adults !== 1) p.set("adults", String(adults));

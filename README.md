@@ -17,7 +17,10 @@ future timeline. Built with Next.js + the Kiwi Tequila API.
 ## How it works
 
 - Set your home airport (type an IATA code or use geolocation).
-- Pick a weekend style (Strict / Fri–Mon / Loose) and timeline (1–6 months).
+- Pick a weekend style (**Fri–Sun** by default; also Fri–Mon / Thu–Mon) and
+  timeline (1–6 months). Each preset is a *canonical shape* (the label's exact
+  arrive/leave days); the search casts a wider net for cheaper fares, and results
+  are split into that exact shape first, then a "close matches" section.
 - One Tequila `/v2/search` call returns the cheapest weekend round-trip per
   destination; results are shown cheapest-first.
 
