@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  holidaySearchUrl,
   dayLabel,
   timeLabel,
   durationLabel,
@@ -146,3 +147,26 @@ describe("travelMinutes", () => {
     ).toBe(160);
   });
 });
+
+describe("holidaySearchUrl", () => {
+  it("searches the holiday, the city and the year", () => {
+    const url = holidaySearchUrl("World Children's Day", "Dortmund", "2026-11-20");
+    const q = decodeURIComponent(new URL(url).searchParams.get("q") ?? "");
+    expect(q).toBe("World Children's Day Dortmund 20 November 2026");
+  });
+
+  it("escapes characters that would break the query", () => {
+    // Apostrophes and ampersands are common in holiday names.
+    const url = holidaySearchUrl("St Andrew's Day & Fair", "Glasgow", "2026-11-30");
+    expect(url).not.toContain(" ");
+    expect(url).not.toContain("&q");
+    const q = new URL(url).searchParams.get("q");
+    expect(q).toContain("St Andrew's Day & Fair");
+  });
+
+  it("still builds a usable search when the date is malformed", () => {
+    const q = new URL(holidaySearchUrl("Ferragosto", "Ibiza", "nope")).searchParams.get("q");
+    expect(q).toBe("Ferragosto Ibiza");
+  });
+});
+

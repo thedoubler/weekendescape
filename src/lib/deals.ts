@@ -1,6 +1,9 @@
 export interface HolidayRef {
   date: string;
   name: string;
+  // False for a regional holiday — the copy must not claim it applies to the
+  // destination city. See the note in holidays.ts.
+  national?: boolean;
 }
 
 export interface Layover {
@@ -8,13 +11,34 @@ export interface Layover {
   minutes: number;
 }
 
+export interface FlightSegment {
+  from: string;
+  to: string;
+  /** IATA carrier code — the OPERATING one where Kiwi gives it. */
+  carrier: string;
+  flightNo: number;
+  /** Departure date in the origin's local time, YYYY-MM-DD. */
+  date: string;
+}
+
 export interface Deal {
   cityTo: string;
+  // Departure city in words. Screen readers say IATA codes as nonsense words
+  // ("CLJ" -> "clidge"), and with several home airports the origin needs naming.
+  cityFrom: string;
   countryTo: string;
   flag: string;
   flyFrom: string;
   flyTo: string;
   countryFromCode: string;
+  // Every flown segment, in order, out then back. Only what the Travel Impact
+  // Model needs to identify a scheduled flight: it keys on carrier + number +
+  // date + route, and will not answer without all four.
+  segments: FlightSegment[];
+  // The name, not just the code, so the UI can say WHOSE public holidays the
+  // bridge search is built on — it uses the departure country's, and that was
+  // nowhere on screen.
+  countryFrom: string;
   countryToCode: string;
   outDepart: string;
   outArrive: string;
@@ -38,11 +62,57 @@ export interface Deal {
   // Every home public holiday landing on a trip workday (usually one).
   homeHolidays?: HolidayRef[];
   destHoliday?: HolidayRef | null;
+  // The town the arrival airport is actually in, when that differs from the city
+  // the deal is sold as (BGY is "Milan" but sits in Bergamo). Null when they
+  // match — the card should stay silent rather than say "Girona, 12 km from
+  // Girona". Set server-side.
+  airportCity?: string | null;
   // Straight-line km from the arrival airport to its marketed city centre.
   // Set server-side; flags secondary airports (e.g. Charleroi sold as Brussels).
   airportKmFromCity?: number | null;
   // Rough per-person round-trip CO₂ estimate (kg). Set server-side.
   co2Kg?: number | null;
+  // Gate-to-gate journey time for the direction, in minutes, from upstream's
+  // `duration` field. VERIFIED against a live 1-stop itinerary: it INCLUDES
+  // layovers (CLJ→LIS came back 375m gate-to-gate vs 315m of actual air time),
+  // so do not describe it as air time. It is the right number to show for a
+  // leg — total elapsed is what the traveller lives — but anything wanting
+  // pure flying time must sum the segments' utc_departure/utc_arrival instead.
+  //
+  // Wall-clock subtraction of local departure/arrival is NOT a substitute:
+  // across a time-zone change it is wrong by the offset (BCN 09:35 → LTN 10:55
+  // is 2h20, but reads as 1h20). Null when upstream omits it.
+  outDurationMin?: number | null;
+  backDurationMin?: number | null;
+  // Carriers per direction. `airlines` is trip-level and cannot say which
+  // carrier flies which leg — which is exactly what a two-airline baggage
+  // warning needs the reader to be able to check.
+  outAirlines?: string[];
+  backAirlines?: string[];
+  // Kiwi's own self-transfer flag. We used to infer this from "2 carriers plus
+  // a stop", which over-fired (two carriers on one ticket) and under-fired (one
+  // carrier, two tickets). This is the fact.
+  // Destination's UTC offset in minutes ON THIS TRIP'S DATES — derived from the
+  // gap between the arrival's local and UTC stamps, so it is DST-correct by
+  // construction. Needed to state destination-local sunrise/sunset: the panel is
+  // a client component and the reader may be in another time zone entirely.
+  destUtcOffsetMin?: number | null;
+  selfTransfer?: boolean;
+  // Airports where you must collect the bag and check it in again, per segment.
+  bagRecheckAt?: string[];
+  // Arrival *airport* coordinates as [lat, lon] — note this is the airport, not
+  // the marketed city centre (see `airportKmFromCity`). Attached server-side on
+  // purpose: the lookup table (`airports.json`, ~134 KB / 6k entries) must never
+  // reach the browser, and this module is imported by client components. Keep it
+  // that way — resolve coordinates in the route, never here.
+  toCoords?: [number, number] | null;
+}
+
+// Stable DOM id for a card, so the map can scroll the list to a specific trip.
+// Keyed on destination + outbound date: a destination can appear several times
+// with different weekends, and they must not collide.
+export function dealDomId(deal: Deal): string {
+  return `deal-${deal.flyTo}-${deal.outDepart.slice(0, 10)}`;
 }
 
 // Under a full day at the destination — more travel than time there. Hidden by
@@ -86,10 +156,18 @@ export function flagEmoji(countryCode: string): string {
 }
 
 interface RouteLeg {
+  flyFrom?: string;
+  flight_no?: number | string;
+  operating_flight_no?: number | string;
   local_departure?: string;
   local_arrival?: string;
   flyTo?: string;
   return?: number;
+  airline?: string;
+  operating_carrier?: string;
+  bags_recheck_required?: boolean;
+  utc_arrival?: string;
+  utc_departure?: string;
 }
 
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
@@ -115,6 +193,68 @@ function layoversOf(segs: RouteLeg[]): Layover[] {
     }
   }
   return out;
+}
+
+// The identity of each flown segment, for the emissions lookup. Segments that
+// are missing any part of the key are dropped rather than guessed — a wrong
+// flight number returns someone else's aeroplane, not an error.
+function flightSegments(segs: RouteLeg[]): FlightSegment[] {
+  const out: FlightSegment[] = [];
+  for (const s of segs) {
+    const carrier = (s.operating_carrier || s.airline || "").trim();
+    const noRaw = s.operating_flight_no || s.flight_no;
+    const flightNo = Number(noRaw);
+    const date = (s.local_departure ?? "").slice(0, 10);
+    if (!carrier || !s.flyFrom || !s.flyTo || !Number.isFinite(flightNo)) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    out.push({ from: s.flyFrom, to: s.flyTo, carrier, flightNo, date });
+  }
+  return out;
+}
+
+// Distinct carriers on one direction, in flight order. Prefers the operating
+// carrier: on a codeshare that is the airline you actually fly.
+function carriersOf(segs: RouteLeg[]): string[] {
+  const out: string[] = [];
+  for (const s of segs) {
+    const code = s.operating_carrier || s.airline;
+    if (code && !out.includes(code)) out.push(code);
+  }
+  return out;
+}
+
+// Local-minus-UTC for the same instant, rounded to the quarter hour (some zones
+// are :30 or :45). Null unless both stamps are present and the result is sane.
+function offsetMinutes(
+  localIso: string | undefined,
+  utcIso: string | undefined
+): number | null {
+  if (!localIso || !utcIso) return null;
+  const l = Date.parse(localIso.replace(/Z$/, ""));
+  const u = Date.parse(utcIso.replace(/Z$/, ""));
+  if (!isFinite(l) || !isFinite(u)) return null;
+  const mins = Math.round((l - u) / 60000 / 15) * 15;
+  return Math.abs(mins) <= 14 * 60 ? mins : null;
+}
+
+// Airports where the itinerary requires re-checking the bag. The flag sits on
+// the segment you arrive on, so the airport is that segment's `flyTo`.
+function recheckAirports(segs: RouteLeg[]): string[] {
+  const out: string[] = [];
+  for (const s of segs) {
+    if (s.bags_recheck_required && s.flyTo && !out.includes(s.flyTo)) {
+      out.push(s.flyTo);
+    }
+  }
+  return out;
+}
+
+// Upstream reports leg durations in seconds. Anything non-finite or negative is
+// treated as absent so callers fall back rather than render a nonsense figure.
+function durationMin(seconds: unknown): number | null {
+  return typeof seconds === "number" && isFinite(seconds) && seconds > 0
+    ? Math.round(seconds / 60)
+    : null;
 }
 
 export function normalizeDeals(raw: unknown, currency: string): Deal[] {
@@ -162,10 +302,12 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
 
     deals.push({
       cityTo,
+      cityFrom: item?.cityFrom ?? "",
       countryTo: item?.countryTo?.name ?? "",
       flag: flagEmoji(item?.countryTo?.code ?? ""),
       flyFrom,
       flyTo,
+      countryFrom: item?.countryFrom?.name ?? "",
       countryFromCode: item?.countryFrom?.code ?? "",
       countryToCode: item?.countryTo?.code ?? "",
       outDepart,
@@ -178,6 +320,14 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
       backStops: Math.max(0, inSegs.length - 1),
       outLayovers: layoversOf(outSegs),
       backLayovers: layoversOf(inSegs),
+      segments: flightSegments([...outSegs, ...inSegs]),
+      outAirlines: carriersOf(outSegs),
+      backAirlines: carriersOf(inSegs),
+      destUtcOffsetMin: offsetMinutes(outLast?.local_arrival, outLast?.utc_arrival),
+      selfTransfer: item?.virtual_interlining === true,
+      bagRecheckAt: recheckAirports([...outSegs, ...inSegs]),
+      outDurationMin: durationMin(item?.duration?.departure),
+      backDurationMin: durationMin(item?.duration?.return),
       price,
       currency,
       bagPrice:

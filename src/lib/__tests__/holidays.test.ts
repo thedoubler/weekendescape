@@ -12,7 +12,7 @@ describe("fetchHolidays", () => {
       ],
     } as Response);
     expect(await fetchHolidays("it", 2026)).toEqual([
-      { date: "2026-08-15", name: "Assumption Day" },
+      { date: "2026-08-15", name: "Assumption Day", national: true },
     ]);
   });
 

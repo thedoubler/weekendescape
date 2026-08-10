@@ -1,8 +1,8 @@
-import airports from "@/lib/airports.json";
-
-// IATA airport code -> [lat, lon]. Bundled (OpenFlights-derived) so we can hit
-// Open-Meteo without a separate geocoding round-trip. Server-only import.
-const AIRPORTS = airports as unknown as Record<string, [number, number]>;
+// NOTE: the airport coordinate table deliberately does NOT live here any more.
+// `packingCue` below is imported by a client component, so anything this module
+// imports ships to the browser — and the ~134 KB table was doing exactly that.
+// It now lives in `@/lib/airport-coords` (server-only). Import `airportCoords`
+// from there in server code; do not re-export it here.
 
 export type WeatherMode = "forecast" | "typical";
 
@@ -17,11 +17,6 @@ export interface WeatherResult {
   precipChance?: number;
   // Typical only: how many past years were averaged.
   years?: number;
-}
-
-export function airportCoords(iata: string): [number, number] | null {
-  if (!iata) return null;
-  return AIRPORTS[iata.toUpperCase()] ?? null;
 }
 
 // Open-Meteo's forecast horizon is ~16 days; stay under it with a margin so a

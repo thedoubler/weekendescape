@@ -239,4 +239,125 @@ describe("GET /api/weekends", () => {
     await GET(req("flyFrom=BCN&style=loose&months=2"));
     expect((axios.get as any).mock.calls).toHaveLength(1);
   });
+
+  // Coordinates ship from the server so the client can plot deals without
+  // pulling in the 6k-entry airport table.
+  describe("map coordinates", () => {
+    // Typed handle on the mock, so these cases don't add to the file's `any` debt.
+    const mockGet = vi.mocked(axios.get);
+
+    function dealResponse(flyTo: string, cityTo: string) {
+      return {
+        status: 200,
+        data: {
+          data: [
+            {
+              cityTo,
+              flyFrom: "BCN",
+              flyTo,
+              countryFrom: { code: "ES", name: "Spain" },
+              countryTo: { code: "IT", name: "Italy" },
+              price: 55,
+              deep_link: `https://kiwi.com/deep/${flyTo}`,
+              nightsInDest: 1,
+              route: [
+                {
+                  local_departure: "2026-09-05T07:30:00.000Z",
+                  local_arrival: "2026-09-05T09:00:00.000Z",
+                  return: 0,
+                },
+                {
+                  local_departure: "2026-09-06T21:00:00.000Z",
+                  local_arrival: "2026-09-06T22:30:00.000Z",
+                  return: 1,
+                },
+              ],
+            },
+          ],
+        },
+      };
+    }
+
+    it("attaches [lat, lon] for the arrival airport of each deal", async () => {
+      mockGet.mockResolvedValue(dealResponse("FCO", "Rome"));
+      const res = await GET(req("flyFrom=BCN"));
+      const body = await res.json();
+      const [lat, lon] = body.deals[0].toCoords;
+      // Rome Fiumicino, ~41.8 N 12.25 E.
+      expect(lat).toBeCloseTo(41.8, 0);
+      expect(lon).toBeCloseTo(12.25, 0);
+    });
+
+    it("ships the origin's coordinates once rather than per deal", async () => {
+      mockGet.mockResolvedValue(dealResponse("FCO", "Rome"));
+      const res = await GET(req("flyFrom=BCN"));
+      const body = await res.json();
+      expect(body.origin.code).toBe("BCN");
+      // Barcelona El Prat, ~41.3 N 2.08 E.
+      expect(body.origin.coords[0]).toBeCloseTo(41.3, 0);
+      expect(body.origin.coords[1]).toBeCloseTo(2.08, 0);
+    });
+
+    it("returns null coords for an airport that isn't in the table", async () => {
+      mockGet.mockResolvedValue(dealResponse("QQQ", "Nowhere"));
+      const res = await GET(req("flyFrom=BCN"));
+      const body = await res.json();
+      // Null rather than a missing key or a bogus [0, 0] off West Africa.
+      expect(body.deals[0].toCoords).toBeNull();
+    });
+  });
 });
+
+describe("GET /api/weekends — multiple origins", () => {
+  const mockGet = vi.mocked(axios.get);
+
+  beforeEach(() => {
+    // Own reset: mock.calls accumulate across tests otherwise, and the module
+    // -scope cache would serve a previous case's result.
+    vi.resetAllMocks();
+    clearApiCache();
+    process.env.TEQUILA_API_KEY = "test-key";
+    process.env.WEEKEND_CURRENCY = "EUR";
+  });
+
+  it("passes a comma-separated list straight through to Kiwi", async () => {
+    mockGet.mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN,GRO"));
+    expect(mockGet.mock.calls[0][1]?.params.fly_from).toBe("BCN,GRO");
+  });
+
+  it("caches the same set regardless of the order it was typed in", async () => {
+    mockGet.mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN,GRO"));
+    await GET(req("flyFrom=GRO,BCN"));
+    expect(mockGet.mock.calls).toHaveLength(1);
+  });
+
+  it("caps the list rather than searching an unbounded number of airports", async () => {
+    mockGet.mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN,GRO,REU,MAD,BIO"));
+    expect(mockGet.mock.calls[0][1]?.params.fly_from).toBe("BCN,GRO,REU");
+  });
+
+  it("returns coordinates for every origin", async () => {
+    mockGet.mockResolvedValue({ status: 200, data: { data: [] } });
+    const body = await (await GET(req("flyFrom=BCN,GRO"))).json();
+    expect(body.origins.map((o: { code: string }) => o.code)).toEqual(["BCN", "GRO"]);
+    expect(body.origins[0].coords[0]).toBeCloseTo(41.3, 0);
+    // `origin` stays populated for anything still reading the single form.
+    expect(body.origin.code).toBe("BCN");
+  });
+
+  it("400s on a list with nothing valid in it", async () => {
+    const res = await GET(req("flyFrom=NOPE"));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/BCN,GRO/);
+  });
+
+  it("ignores junk entries when at least one code is usable", async () => {
+    mockGet.mockResolvedValue({ status: 200, data: { data: [] } });
+    await GET(req("flyFrom=BCN,NOTACODE"));
+    expect(mockGet.mock.calls[0][1]?.params.fly_from).toBe("BCN");
+  });
+});
+

@@ -9,10 +9,13 @@ import type { Deal } from "@/lib/deals";
 function d(countryToCode: string): Deal {
   return {
     cityTo: "X",
+    cityFrom: "Barcelona",
     countryTo: "",
     flag: "🏳️",
     flyFrom: "BCN",
     flyTo: "XXX",
+    countryFrom: "Spain",
+    segments: [],
     countryFromCode: "ES",
     countryToCode,
     outDepart: "2026-08-08T21:05:00.000Z",

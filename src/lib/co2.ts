@@ -1,4 +1,4 @@
-import { airportCoords } from "@/lib/weather";
+import { airportCoords } from "@/lib/airport-coords";
 
 // Rough per-person CO₂ estimate for a round-trip flight, from the great-circle
 // distance between the two airports. This is an ESTIMATE for orientation, not a

@@ -1,5 +1,5 @@
 import cities from "@/lib/cities.json";
-import { airportCoords } from "@/lib/weather";
+import { airportCoords } from "@/lib/airport-coords";
 
 // "<country code>:<normalized city name>" -> [lat, lon] of the city centre.
 // Bundled (GeoNames-derived, pop >= 50k) so we can measure how far an airport

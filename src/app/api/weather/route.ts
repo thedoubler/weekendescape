@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  airportCoords,
   pickMode,
   forecastUrl,
   summarizeForecast,
@@ -8,6 +7,7 @@ import {
   archiveUrl,
   summarizeTypical,
 } from "@/lib/weather";
+import { airportCoords } from "@/lib/airport-coords";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
 

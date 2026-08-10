@@ -32,3 +32,26 @@ describe("airlineName", () => {
     expect(airlineName("")).toBe("");
   });
 });
+
+describe("airlineName — recycled IATA codes", () => {
+  it("names the carrier flying today, not the one that folded", () => {
+    // A2 belonged to African Safari Airways, which stopped flying around 2010.
+    // Printing it on a Romanian route is a confident, wrong fact.
+    expect(airlineName("A2")).toBe("Animawings");
+    expect(airlineName("a2")).toBe("Animawings");
+    expect(airlineName("H4")).toBe("HiSky");
+    expect(airlineName("BZ")).toBe("Blue Bird Airways");
+  });
+
+  it("shows the bare code when the table is known-wrong but unverified", () => {
+    // Unhelpful beats misleading: better "LL" than a US charter that shut in 2020.
+    expect(airlineName("LL")).toBe("LL");
+    expect(airlineName("DN")).toBe("DN");
+  });
+
+  it("leaves correct entries alone", () => {
+    expect(airlineName("VY")).toBe("Vueling");
+    expect(airlineName("W6")).toBe("Wizz Air");
+  });
+});
+

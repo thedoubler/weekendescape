@@ -1,6 +1,11 @@
 export interface Holiday {
   date: string;
   name: string;
+  // False when the holiday applies only to some regions. Nager marks these
+  // `global: false` — for Spain that is 22 of 32 entries. Showing one as
+  // "a public holiday in {city}" is simply false for most cities in the
+  // country, so callers must hedge or suppress.
+  national?: boolean;
 }
 
 export interface DealHolidayInfo {
@@ -35,12 +40,19 @@ export async function fetchHolidays(
       // Extremadura) don't apply to every resident, so counting them would claim
       // days off the traveller may not actually have. Destinations keep every
       // official holiday so "there's a public holiday there" stays accurate.
-      // TODO: map the home airport → ISO region to re-include a resident's own
-      // regional holidays.
+      // TODO (blocked on data, checked 2026-07-27): map the home airport → ISO
+      // region to re-include a resident's own regional holidays. Not doable with
+      // what's bundled — `airports.json` is IATA → [lat, lon] only and
+      // `cities.json` is "<CC>:<city>" → [lat, lon]; neither carries a region /
+      // subdivision field. Needs a new airport → ISO-3166-2 dataset before the
+      // filter below can be relaxed. Until then national-only stays: it
+      // undercounts days off for some residents, but never claims a day off the
+      // traveller doesn't actually have.
       .filter((h: { global?: boolean }) => !nationalOnly || h.global !== false)
-      .map((h: { date?: string; localName?: string; name?: string }) => ({
+      .map((h: { date?: string; localName?: string; name?: string; global?: boolean }) => ({
         date: h.date ?? "",
         name: h.name || h.localName || "",
+        national: h.global !== false,
       }))
       .filter((h: Holiday) => /^\d{4}-\d{2}-\d{2}$/.test(h.date));
   } catch {

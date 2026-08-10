@@ -4,6 +4,7 @@ import type { Deal } from "@/lib/deals";
 
 const deal = {
   cityTo: "Barcelona",
+  cityFrom: "Barcelona",
   countryTo: "Spain",
   outArrive: "2026-09-19T22:10:00.000Z",
   backDepart: "2026-09-20T18:00:00.000Z",

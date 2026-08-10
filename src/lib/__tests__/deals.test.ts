@@ -10,10 +10,13 @@ import {
 function dealWith(partial: Partial<Deal>): Deal {
   return {
     cityTo: "X",
+    cityFrom: "Barcelona",
     countryTo: "",
     flag: "🏳️",
     flyFrom: "BCN",
     flyTo: "XXX",
+    countryFrom: "Spain",
+    segments: [],
     countryFromCode: "ES",
     countryToCode: "XX",
     outDepart: "2026-08-08T21:05:00.000Z",
@@ -112,10 +115,13 @@ describe("normalizeDeals", () => {
     expect(deals).toHaveLength(2);
     expect(deals[0]).toEqual({
       cityTo: "Ibiza",
+      cityFrom: "",
       countryTo: "Spain",
       flag: "🇪🇸",
       flyFrom: "BCN",
       flyTo: "IBZ",
+      countryFrom: "Spain",
+      segments: [],
       countryFromCode: "ES",
       countryToCode: "ES",
       outDepart: "2026-08-08T21:05:00.000Z",
@@ -128,6 +134,15 @@ describe("normalizeDeals", () => {
       backStops: 0,
       outLayovers: [],
       backLayovers: [],
+      // Upstream omits `duration` in this fixture, so both are null and callers
+      // fall back to wall-clock timing.
+      outAirlines: [],
+      backAirlines: [],
+      destUtcOffsetMin: null,
+      selfTransfer: false,
+      bagRecheckAt: [],
+      outDurationMin: null,
+      backDurationMin: null,
       price: 37,
       currency: "EUR",
       bagPrice: null,
@@ -196,3 +211,54 @@ describe("normalizeDeals", () => {
     expect(normalizeDeals(bad, "EUR")).toEqual([]);
   });
 });
+
+describe("normalizeDeals — leg durations", () => {
+  function raw(duration: unknown) {
+    return {
+      data: [
+        {
+          cityTo: "London",
+          flyFrom: "BCN",
+          flyTo: "LTN",
+          countryFrom: { code: "ES", name: "Spain" },
+          countryTo: { code: "GB", name: "United Kingdom" },
+          price: 43,
+          deep_link: "https://kiwi.com/x",
+          nightsInDest: 2,
+          duration,
+          route: [
+            {
+              local_departure: "2026-10-02T09:35:00.000Z",
+              local_arrival: "2026-10-02T10:55:00.000Z",
+              return: 0,
+            },
+            {
+              local_departure: "2026-10-04T20:10:00.000Z",
+              local_arrival: "2026-10-04T22:25:00.000Z",
+              return: 1,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("carries true air time through, not wall-clock difference", () => {
+    // BCN (UTC+2) 09:35 → LTN (UTC+1) 10:55 is 2h20 in the air. Subtracting the
+    // local clock times gives 1h20 — an hour short, which is what the UI showed
+    // before this field existed.
+    const [d] = normalizeDeals(raw({ departure: 8400, return: 8100 }), "EUR");
+    expect(d.outDurationMin).toBe(140);
+    expect(d.backDurationMin).toBe(135);
+  });
+
+  it("reports null when upstream omits or garbles the duration", () => {
+    expect(normalizeDeals(raw(undefined), "EUR")[0].outDurationMin).toBeNull();
+    expect(normalizeDeals(raw({ departure: 0 }), "EUR")[0].outDurationMin).toBeNull();
+    expect(normalizeDeals(raw({ departure: -60 }), "EUR")[0].outDurationMin).toBeNull();
+    expect(
+      normalizeDeals(raw({ departure: "8400" }), "EUR")[0].outDurationMin
+    ).toBeNull();
+  });
+});
+

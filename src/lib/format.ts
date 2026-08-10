@@ -130,6 +130,23 @@ export function holidayDate(dateStr: string): string {
   return `${WD[wd]} ${+m[3]} ${MO[+m[2] - 1]}`;
 }
 
+// A Google search for a destination public holiday: what it is, where, and
+// when. We deep-link out rather than trying to explain a local holiday
+// ourselves — we have only its name, and "is anything open?" is exactly the
+// question a search answers better than we could.
+export function holidaySearchUrl(
+  name: string,
+  city: string,
+  dateStr: string
+): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  // Year included: these repeat annually, and a bare "20 Nov" would surface
+  // whichever year the engine feels like.
+  const when = m ? `${+m[3]} ${MO_FULL[+m[2] - 1]} ${m[1]}` : "";
+  const q = [name, city, when].filter(Boolean).join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+}
+
 export function timeLabel(iso: string): string {
   const p = parts(iso);
   if (!p) return "";

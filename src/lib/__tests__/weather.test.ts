@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  airportCoords,
   pickMode,
   codeInfo,
   targetDayKeys,
@@ -8,6 +7,7 @@ import {
   summarizeForecast,
   summarizeTypical,
 } from "@/lib/weather";
+import { airportCoords } from "@/lib/airport-coords";
 
 describe("airportCoords", () => {
   it("resolves a known IATA code (case-insensitive)", () => {
@@ -159,3 +159,25 @@ describe("summarizeTypical", () => {
     expect(summarizeTypical(daily, ["12-25"], 5)).toBeNull();
   });
 });
+
+describe("airportCoords — overrides", () => {
+  it("resolves a renamed airport through its old code", () => {
+    // Kiwi says RMO for Chișinău; the bundled table only knows KIV. Without
+    // this the city silently lost its weather, map pin and CO₂ estimate.
+    expect(airportCoords("RMO")).toEqual(airportCoords("KIV"));
+    expect(airportCoords("RMO")).not.toBeNull();
+  });
+
+  it("resolves an airport that opened after the bundled dump", () => {
+    const ber = airportCoords("BER");
+    expect(ber).not.toBeNull();
+    expect(ber![0]).toBeCloseTo(52.36, 1);
+    expect(ber![1]).toBeCloseTo(13.5, 1);
+  });
+
+  it("still returns null for a genuinely unknown code", () => {
+    // Better a blank than a confident wrong location.
+    expect(airportCoords("ZZZ")).toBeNull();
+  });
+});
+

@@ -6,8 +6,19 @@ import { normalizeDeals, isBridge, type Deal } from "@/lib/deals";
 import { fetchHolidays, annotate } from "@/lib/holidays";
 import { computeBridges } from "@/lib/bridges";
 import { airportCityKm } from "@/lib/cities";
+import { distinctAirportCity } from "@/lib/airport-city";
+import { currencyForOrigin } from "@/lib/currency";
 import { estimateFlightCo2Kg } from "@/lib/co2";
+// Server-only: this pulls in airports.json (~134 KB). Safe here, never in a
+// client component.
+import { airportCoords } from "@/lib/airport-coords";
 import { cached, cacheFetchedAt } from "@/lib/api-cache";
+import {
+  MAX_ORIGINS,
+  parseOrigins,
+  serializeOrigins,
+  originsCacheKey,
+} from "@/lib/origins";
 
 // Identical searches are cheap to repeat and prices don't move by the second;
 // cache the (quota-costing) Tequila response for a while.
@@ -20,7 +31,11 @@ const VALID_MONTHS = [1, 2, 3, 6];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const flyFrom = searchParams.get("flyFrom");
+    // One to three home airports, comma-separated. Kiwi's fly_from takes the
+    // same shape, so the multi-origin search costs us nothing upstream.
+    const flyFromRaw = searchParams.get("flyFrom");
+    const origins = parseOrigins(flyFromRaw);
+    const flyFrom = origins[0] ?? null;
     const flyTo = searchParams.get("flyTo");
     const direct = searchParams.get("direct") === "1";
     // Opt-in "bridge days" mode: run the holiday-anchored searches and return
@@ -37,7 +52,11 @@ export async function GET(request: NextRequest) {
 
     if (!flyFrom) {
       return NextResponse.json(
-        { error: "Missing required parameter: flyFrom" },
+        {
+          error: flyFromRaw
+            ? `Invalid flyFrom. Use up to ${MAX_ORIGINS} comma-separated IATA codes, e.g. BCN,GRO`
+            : "Missing required parameter: flyFrom",
+        },
         { status: 400 }
       );
     }
@@ -66,12 +85,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const currency = process.env.WEEKEND_CURRENCY || "EUR";
+    // Priced from the HOME airport so every fare on a board is comparable:
+    // EUR for a European origin, USD otherwise. The env var still wins when set,
+    // so a deployment can pin one currency.
+    const currency = process.env.WEEKEND_CURRENCY || currencyForOrigin(flyFrom);
     const wp = weekendStyleToParams(style);
     const { dateFrom, dateTo } = timelineRange(months, new Date());
 
     const baseParams = {
-      fly_from: flyFrom,
+      fly_from: serializeOrigins(origins),
       date_from: dateFrom,
       date_to: dateTo,
       flight_type: "round",
@@ -98,7 +120,7 @@ export async function GET(request: NextRequest) {
     // dateFrom is in the key so the cache turns over at day boundaries (the
     // window is relative to "today"). Each search variant (main + each bridge
     // window) gets its own suffix so they cache independently.
-    const cacheKeyBase = `weekends:${flyFrom}:${flyTo ?? ""}:${style}:${months}:${
+    const cacheKeyBase = `weekends:${originsCacheKey(origins)}:${flyTo ?? ""}:${style}:${months}:${
       direct ? 1 : 0
     }:${adults}:${maxPrice ?? ""}:${currency}:${dateFrom}`;
 
@@ -223,6 +245,7 @@ export async function GET(request: NextRequest) {
         }
         d.destHoliday = info.destHoliday;
         d.airportKmFromCity = airportCityKm(d.flyTo, d.cityTo, d.countryToCode);
+        d.airportCity = distinctAirportCity(d.flyTo, d.cityTo);
         d.co2Kg = estimateFlightCo2Kg(d.flyFrom, d.flyTo);
       }
     }
@@ -233,12 +256,32 @@ export async function GET(request: NextRequest) {
       ? deals.filter(isBridge).sort((a, b) => a.price - b.price)
       : deals;
 
+    // Attach arrival coordinates so the client can plot deals without importing
+    // the 6k-entry airport table. Done here rather than in `normalizeDeals`
+    // because `deals.ts` is imported by client components and must stay free of
+    // that dependency. Unconditional — every response carries them.
+    for (const d of responseDeals) {
+      d.toCoords = airportCoords(d.flyTo);
+    }
+    // Origins ship once alongside the deals rather than repeated on each. Each
+    // deal already names its own departure airport in `flyFrom`.
+    const originList = origins.map((code) => ({
+      code,
+      coords: airportCoords(code),
+    }));
+
     // When the underlying prices were actually fetched from Kiwi (for an honest
     // "checked X ago" stamp) — falls back to now for a fresh miss.
     const fetchedAt = cacheFetchedAt(`${cacheKeyBase}:main`) ?? Date.now();
 
     return NextResponse.json(
-      { deals: responseDeals, fetchedAt },
+      {
+        deals: responseDeals,
+        fetchedAt,
+        // `origin` stays for the single-origin case; `origins` is the full list.
+        origin: originList[0],
+        origins: originList,
+      },
       // Let the CDN/browser reuse a result briefly; matches the server cache.
       { headers: { "Cache-Control": "private, max-age=300" } }
     );
