@@ -15,14 +15,44 @@ const TERM_CACHE = new Map<string, Suggestion[]>();
 
 const MAX_SUGGESTIONS = 8;
 
+function TakeoffIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M2 21h20" />
+      <path d="M4.5 15.5 3 11l2-.5 2.2 2.4 4.3-1.2L8 6.2l2.3-.6 5 5 4.2-1.1a1.9 1.9 0 0 1 1 3.7L5.9 16.9a1 1 0 0 1-1.2-.6z" />
+    </svg>
+  );
+}
+
 export function AirportInput({
   value,
   onSearch,
   inputRef,
+  chips = [],
+  onRemoveChip,
+  disabled = false,
+  placeholder = "Airport or city, e.g. Barcelona",
 }: {
   value: string;
   onSearch: (code: string) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
+  // Already-selected airports, rendered inside the field so the whole thing
+  // reads as one control rather than a list plus a separate box.
+  chips?: string[];
+  onRemoveChip?: (code: string) => void;
+  // At the cap: the text input stops accepting new entries, but the chips (and
+  // their remove buttons) stay usable.
+  disabled?: boolean;
+  placeholder?: string;
 }) {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -32,9 +62,18 @@ export function AirportInput({
   const [noResults, setNoResults] = useState(false);
   const lastSearched = useRef(value);
 
-  // Reflect external changes (geolocation, saved home).
-  useEffect(() => {
+  // Reflect external changes (geolocation, saved home). Adopting the new prop
+  // during render keeps the field from painting one frame of the stale code.
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setQuery(value);
+  }
+
+  // The "already searched" marker follows the committed prop. It stays in an
+  // effect because writing a ref during render is unsafe under concurrent
+  // rendering, and this runs before the debounce effect below reads it.
+  useEffect(() => {
     lastSearched.current = value;
   }, [value]);
 
@@ -50,7 +89,12 @@ export function AirportInput({
     }
     const key = q.toLowerCase();
     const memo = TERM_CACHE.get(key);
+    // Deliberately an effect: this is the debounce/cancellation path, and
+    // TERM_CACHE is module state that a previous keystroke's in-flight request
+    // can populate after this render. Deriving the memo during render would
+    // read a cache that is not yet settled.
     if (memo) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions(memo);
       setNoResults(memo.length === 0);
       setActive(-1);
@@ -84,9 +128,13 @@ export function AirportInput({
 
   const shown = suggestions.slice(0, MAX_SUGGESTIONS);
 
+  // Token mode: chips are managed by the parent, so a selection empties the
+  // text input ready for the next entry instead of leaving the code behind.
+  const tokenMode = Boolean(onRemoveChip);
+
   function fire(code: string) {
     const c = code.trim().toUpperCase();
-    setQuery(c);
+    setQuery(tokenMode ? "" : c);
     lastSearched.current = c;
     setOpen(false);
     setSuggestions([]);
@@ -121,8 +169,40 @@ export function AirportInput({
 
   return (
     <div className="relative w-full">
+      {/* One field: the chips sit inside the same bordered shell as the text
+          input, and the shell takes the focus ring. */}
+      <div
+        onClick={() => inputRef?.current?.focus()}
+        // White rather than a grey wash: on the panel's tinted card, a filled
+        // field read as disabled. The accent is spent here, on focus, where it
+        // means something — the board itself is deliberately neutral.
+        className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition focus-within:border-orange-400/70 focus-within:ring-4 focus-within:ring-orange-400/15 dark:border-white/20 dark:bg-white/[0.07] dark:focus-within:border-orange-400/60"
+      >
+        <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-black/35 dark:text-white/50" />
+        {chips.map((code) => (
+          <span
+            key={code}
+            className="inline-flex items-center gap-0.5 rounded-lg border border-black/[0.08] bg-black/[0.05] py-1 pr-1 pl-2.5 text-sm font-medium tracking-wide tabular-nums dark:border-white/20 dark:bg-white/[0.16]"
+          >
+            {code}
+            {onRemoveChip && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveChip(code);
+                }}
+                aria-label={`Remove ${code}`}
+                className="flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-black/35 transition hover:bg-black/10 hover:text-black dark:text-white/40 dark:hover:bg-white/15 dark:hover:text-white"
+              >
+                ×
+              </button>
+            )}
+          </span>
+        ))}
       <input
         ref={inputRef}
+        disabled={disabled}
         value={query}
         role="combobox"
         aria-expanded={showList}
@@ -161,11 +241,21 @@ export function AirportInput({
             }
           } else if (e.key === "Escape") {
             setOpen(false);
+          } else if (
+            e.key === "Backspace" &&
+            query === "" &&
+            chips.length > 0 &&
+            onRemoveChip
+          ) {
+            // Standard token-input behaviour: backspace on an empty field takes
+            // the last chip rather than doing nothing.
+            onRemoveChip(chips[chips.length - 1]);
           }
         }}
-        placeholder="Airport or city, e.g. Barcelona"
-        className="w-full rounded-lg border border-black/10 bg-black/[0.02] px-3.5 py-2.5 text-[15px] outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400/60 focus:border-black/25 focus:bg-transparent dark:border-white/15 dark:bg-white/[0.03] dark:focus:border-white/35"
+        placeholder={placeholder}
+        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-black/40 disabled:cursor-not-allowed dark:placeholder:text-white/40"
       />
+      </div>
       {showList && (
         <ul
           id="airport-suggestions"

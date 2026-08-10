@@ -1,8 +1,15 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { WeekendStyle } from "@/lib/weekend";
-import { type Deal, isShortStay } from "@/lib/deals";
+import { type Deal, isShortStay, dealDomId } from "@/lib/deals";
 import {
   type SortKey,
   sortDeals,
@@ -18,14 +25,24 @@ import {
 } from "@/lib/continents";
 import { monthShort } from "@/lib/format";
 import { priceBuckets } from "@/lib/price";
-import { loadHome, saveHome } from "@/lib/home-storage";
+import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { AirportInput } from "@/components/AirportInput";
+import {
+  MAX_ORIGINS,
+  parseOrigins,
+  serializeOrigins,
+  addOrigin,
+  removeOrigin,
+} from "@/lib/origins";
 import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
 import { FilterChip } from "@/components/FilterChip";
 import { DealList, SkeletonCard } from "@/components/DealList";
+import { DealsMap } from "@/components/DealsMap";
+import { RotatingWord } from "@/components/RotatingWord";
+import OverflowDebug from "@/components/OverflowDebug";
 
 // Fetch that aborts after `ms` so a stalled request (slow upstream, a dropped
 // tunnel connection) fails into a retryable error instead of spinning forever.
@@ -105,6 +122,24 @@ function Field({
 
 // One tappable facet in the collapsed summary — the dotted underline signals it
 // can be edited (Airbnb-style: each part of the query is its own edit target).
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  );
+}
+
 function FacetButton({
   children,
   onClick,
@@ -124,7 +159,10 @@ function FacetButton({
 }
 
 export default function Home() {
-  const [home, setHome] = useState("");
+  // One to three home airports. `home` stays as the primary for the many places
+  // that only need one (map centring, "cheapest weekend" lookups).
+  const [origins, setOrigins] = useState<string[]>([]);
+  const home = origins[0] ?? "";
   const [style, setStyle] = useState<WeekendStyle>("strict");
   const [months, setMonths] = useState(3);
   const [stopMode, setStopMode] = useState<StopMode>("direct");
@@ -138,6 +176,30 @@ export default function Home() {
   const [maxPrice, setMaxPrice] = useState(0);
   const [rawDeals, setRawDeals] = useState<Deal[]>([]);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
+  // Origin coordinates ship once per response (the airport table is server-only,
+  // so the client can't resolve them itself).
+  const [originPoints, setOriginPoints] = useState<
+    { code: string; coords: [number, number] | null }[]
+  >([]);
+  const [showMap, setShowMap] = useState(false);
+  // Destination the pointer is over in the list; the map lifts its arc out of
+  // the fan. Only meaningful while the map is open, and only on pointer/focus
+  // devices — a tap never sets it.
+  const [hoveredTo, setHoveredTo] = useState<string | null>(null);
+  // The parameters the CURRENT results were actually fetched with. The form
+  // state changes the instant a user taps a chip, but the deals on screen are
+  // still the previous search's — so labels, the URL and the cheapest-weekend
+  // lookup must all read from here, never from the live form. Otherwise tapping
+  // "2 adults" relabels every card and prints a per-person price for a fare
+  // that was quoted for one.
+  const [applied, setApplied] = useState<{
+    origins: string[];
+    style: WeekendStyle;
+    months: number;
+    direct: boolean;
+    adults: number;
+    bridges: boolean;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,24 +230,33 @@ export default function Home() {
     bridgesRef.current = bridges;
   });
 
-  async function runSearch(code: string) {
-    const c = code.trim().toUpperCase();
-    if (!c) return;
-    setHome(c);
-    saveHome(c);
+  async function runSearch(codes: string | string[]) {
+    const list = parseOrigins(
+      Array.isArray(codes) ? codes.join(",") : codes
+    );
+    if (list.length === 0) return;
+    setOrigins(list);
+    saveHomes(list);
     setLoading(true);
     setError(null);
     setSearched(true);
     setBooting(false);
-    // Collapse the panel as the first search begins (not after it resolves) so
-    // results fill in place rather than the panel snapping shut beneath them.
+    // Collapse to the summary once we have an origin — but ONLY then.
+    //
+    // Two failure modes to thread between. Always collapsing hid every setting
+    // behind an "Edit" button a newcomer had no reason to press. Never
+    // collapsing left a ~500px panel between the header and the board, so the
+    // first result sat below the fold for someone who already knows what this
+    // is. Reaching this line means a search is running, which means we HAVE an
+    // airport — so the summary is enough, and the form stays open for the
+    // visitor who has no origin yet and needs to type one.
     if (!didAutoCollapse.current) {
       didAutoCollapse.current = true;
       setCollapsed(true);
     }
     try {
       const qs = new URLSearchParams({
-        flyFrom: c,
+        flyFrom: serializeOrigins(list),
         style: styleRef.current,
         months: String(monthsRef.current),
         adults: String(adultsRef.current),
@@ -197,6 +268,15 @@ export default function Home() {
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
       setFetchedAt(body.fetchedAt ?? Date.now());
+      setOriginPoints(body.origins ?? []);
+      setApplied({
+        origins: list,
+        style: styleRef.current,
+        months: monthsRef.current,
+        direct: stopModeRef.current === "direct",
+        adults: adultsRef.current,
+        bridges: bridgesRef.current,
+      });
       setSelectedMonths([]);
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "AbortError";
@@ -215,8 +295,8 @@ export default function Home() {
 
   function detectLocation() {
     const fallback = () => {
-      const saved = loadHome();
-      if (saved) runSearch(saved);
+      const saved = loadHomes();
+      if (saved.length) runSearch(saved);
       else {
         // No location and nothing saved — reveal the form for manual entry.
         // Focus after the form has actually rendered (it isn't mounted while
@@ -251,7 +331,7 @@ export default function Home() {
     // A shared/bookmarked link (?from=BCN&style=..&months=..&direct=1) wins over
     // geolocation so the board reproduces exactly.
     const p = new URLSearchParams(window.location.search);
-    const from = (p.get("from") || "").trim().toUpperCase();
+    const from = serializeOrigins(parseOrigins(p.get("from")));
     if (from) {
       const s = p.get("style");
       const m = Number(p.get("months"));
@@ -274,6 +354,12 @@ export default function Home() {
       stopModeRef.current = stop0;
       adultsRef.current = adults0;
       bridgesRef.current = bridges0;
+      // Deliberately an effect. `/` is prerendered as static content, so this
+      // component renders on the server at build time — reading
+      // window.location from a render-phase state initialiser would throw
+      // there. Seeding from the URL can only happen after mount. Runs once,
+      // guarded by `bootstrapped`.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStyle(style0);
       setMonths(months0);
       setStopMode(stop0);
@@ -289,34 +375,52 @@ export default function Home() {
   // Changing the trip options no longer auto-searches — the Search button in the
   // panel is the single trigger, so a network round-trip is always intentional.
 
+  // A stable dependency for the URL sync: `origins` is a fresh array on every
+  // render, but its serialised form only changes when the airports do.
+  const originsParam = serializeOrigins(applied?.origins ?? []);
+
   // Keep the URL in sync with the active search so it's shareable/bookmarkable.
   useEffect(() => {
-    if (!searched || !home) return;
+    if (!searched || !originsParam) return;
     const p = new URLSearchParams();
-    p.set("from", home);
-    if (style !== "strict") p.set("style", style);
-    if (months !== 3) p.set("months", String(months));
-    if (stopMode === "any") p.set("direct", "0");
-    if (adults !== 1) p.set("adults", String(adults));
-    if (bridges) p.set("bridges", "1");
+    if (!applied) return;
+    p.set("from", originsParam);
+    if (applied.style !== "strict") p.set("style", applied.style);
+    if (applied.months !== 3) p.set("months", String(applied.months));
+    if (!applied.direct) p.set("direct", "0");
+    if (applied.adults !== 1) p.set("adults", String(applied.adults));
+    if (applied.bridges) p.set("bridges", "1");
     const qs = p.toString();
+    // Preserve history.state rather than passing null: Next keeps router
+    // internals in there, and wiping them on every filter change breaks
+    // back/forward (and would destroy any state marker a future modal adds).
     window.history.replaceState(
-      null,
+      window.history.state,
       "",
       qs ? `?${qs}` : window.location.pathname
     );
-  }, [home, style, months, stopMode, adults, bridges, searched]);
+  }, [originsParam, applied, searched]);
 
   // Show a "back to controls" pill once the user scrolls deep into the list, so
   // sort/refine stay reachable without scrolling to the top (our month dividers
   // are already sticky, so we avoid a second sticky bar that would overlap them).
   useEffect(() => {
-    const onScroll = () => {
+    // Coalesced into one rAF per frame. Reading scrollHeight forces a layout,
+    // and doing that on every scroll event means laying out a 60-card list
+    // dozens of times a second — on the one interaction this product is made of.
+    let queued = false;
+    const measure = () => {
+      queued = false;
       // Hide near the bottom so it never overlaps the end-of-list CTA.
       const nearBottom =
         window.innerHeight + window.scrollY >=
         document.documentElement.scrollHeight - 220;
       setShowJump(window.scrollY > 700 && !nearBottom);
+    };
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(measure);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -328,10 +432,15 @@ export default function Home() {
     [rawDeals]
   );
   const bounds = useMemo(() => priceRange(rawDeals), [rawDeals]);
-  // Reset the price cap to "show everything" whenever a new search lands.
-  useEffect(() => {
+  // Reset the price cap to "show everything" whenever a new search lands. Done
+  // during render rather than in an effect so the new cap applies in this same
+  // pass — an effect commits (and paints) one frame carrying the previous
+  // search's cap before correcting itself.
+  const [capBounds, setCapBounds] = useState(bounds.max);
+  if (capBounds !== bounds.max) {
+    setCapBounds(bounds.max);
     setMaxPrice(bounds.max);
-  }, [bounds.max]);
+  }
   const cap = maxPrice > 0 ? maxPrice : bounds.max;
   const filtered = useMemo(() => {
     let out = filterByMonths(rawDeals, selectedMonths);
@@ -344,9 +453,44 @@ export default function Home() {
     () => filtered.filter(isShortStay).length,
     [filtered]
   );
-  const visible = showHidden
-    ? filtered
-    : filtered.filter((d) => !isShortStay(d));
+  // Memoised: this array is a dependency of the map's marker/framing effects, so
+  // a new identity on every render made opening Refine (or crossing the scroll
+  // threshold) re-frame the map.
+  const visible = useMemo(
+    () => (showHidden ? filtered : filtered.filter((d) => !isShortStay(d))),
+    [showHidden, filtered]
+  );
+
+  // Tapping a pin jumps the list to that destination's cheapest weekend and
+  // opens it. The seq counter makes repeat taps on the same pin re-trigger.
+  const [focusDeal, setFocusDeal] = useState<{ id: string; seq: number } | null>(
+    null
+  );
+  const focusDestination = useCallback(
+    (flyTo: string) => {
+      const target = visible
+        .filter((d) => d.flyTo === flyTo)
+        .reduce<Deal | null>(
+          (best, d) => (!best || d.price < best.price ? d : best),
+          null
+        );
+      if (!target) return;
+      const id = dealDomId(target);
+      setFocusDeal((prev) => ({ id, seq: (prev?.seq ?? 0) + 1 }));
+      // The card is already rendered, so this can run immediately; rAF just lets
+      // the expand commit first so we centre on the final height.
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({
+          block: "center",
+          behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "auto"
+            : "smooth",
+        });
+      });
+    },
+    [visible]
+  );
 
   // Per-option counts for the Refine pills, over the base universe the user can
   // actually see (respecting the short-stay toggle) but ignoring month/region/
@@ -406,13 +550,20 @@ export default function Home() {
     (cap < bounds.max ? 1 : 0);
   const styleLabel =
     STYLE_OPTIONS.find((o) => o.value === style)?.label ?? style;
+  // The summary describes the results on screen, so it reads the snapshot the
+  // fetch was made with — not whatever the form is currently set to.
+  // The departure country, from the results themselves — every deal carries it.
+  const homeCountry = rawDeals[0]?.countryFrom || "";
+  const appliedStyleLabel = applied
+    ? (STYLE_OPTIONS.find((o) => o.value === applied.style)?.label ?? applied.style)
+    : styleLabel;
   // The next-larger search window, for the end-of-list "look further ahead" CTA.
   const nextWindow = MONTH_OPTIONS.find((o) => o.value > months)?.value;
 
   // Widen the search window a tier and fold the wider results into the list in
   // place — no skeleton takeover, no scroll jump — so it reads as "load more".
   async function widenWindow() {
-    if (!nextWindow || !home || loadingMore) return;
+    if (!nextWindow || origins.length === 0 || loadingMore) return;
     const next = nextWindow;
     monthsRef.current = next;
     setMonths(next);
@@ -420,7 +571,9 @@ export default function Home() {
     setError(null);
     try {
       const qs = new URLSearchParams({
-        flyFrom: home,
+        // All origins, not just the primary — widening the window must not
+        // silently narrow the airports.
+        flyFrom: serializeOrigins(origins),
         style: styleRef.current,
         months: String(next),
         adults: String(adultsRef.current),
@@ -432,9 +585,19 @@ export default function Home() {
       if (res.ok) {
         setRawDeals(body.deals ?? []);
         setFetchedAt(body.fetchedAt ?? Date.now());
+        setOriginPoints(body.origins ?? []);
+        setApplied((a) => (a ? { ...a, months: next } : a));
+      } else {
+        // Widening failed — put the window back, or the summary would claim a
+        // 6-month search over 3 months of results.
+        monthsRef.current = months;
+        setMonths(months);
+        setError("Couldn’t widen the search — showing the previous results.");
       }
     } catch {
-      /* keep the current list on failure */
+      monthsRef.current = months;
+      setMonths(months);
+      setError("Couldn’t widen the search — showing the previous results.");
     } finally {
       setLoadingMore(false);
     }
@@ -442,49 +605,81 @@ export default function Home() {
 
   return (
     <main className="max-w-3xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-6">
-      <header className="flex items-start gap-2.5 border-b border-black/[0.07] pb-4 dark:border-white/10">
-        {/* Mark: a sparkle with a detached "destination dot". The badge inverts
-            by theme so the warm accent is always present but never floods. */}
-        <span
-          aria-hidden
-          className="mt-[3px] grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-900 text-[#f97316] dark:bg-[#f97316] dark:text-[#14161c]"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
-            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-            <circle cx="19.6" cy="4.4" r="1.7" />
-          </svg>
-        </span>
-        <div className="leading-tight">
-          {/* "Weekend" native sans, "Escape" serif-italic for lift. */}
-          <h1 className="text-2xl leading-[0.95] tracking-[-0.01em] sm:text-[28px]">
-            <span className="font-semibold">Weekend</span>{" "}
-            <span className="relative inline-block font-serif italic">
-              Escape
-              {/* Signature motif: a dotted flight-path arc rising under the word. */}
-              <svg
-                aria-hidden
-                viewBox="0 0 100 8"
-                preserveAspectRatio="none"
-                fill="none"
-                className="pointer-events-none absolute inset-x-0 -bottom-[3px] h-[7px] w-full overflow-visible"
-              >
-                <path
-                  d="M2 6.5 Q 50 0.5 98 3"
-                  stroke="#f97316"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeDasharray="0.1 13"
-                  vectorEffect="non-scaling-stroke"
-                  opacity="0.7"
-                />
-              </svg>
+      <header className="border-b border-black/[0.07] pb-4 dark:border-white/10">
+        {/* One line: wordmark and descriptor share a baseline, so the header is
+            a single object rather than a stacked block. Wraps only if there is
+            genuinely no room. */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 leading-tight">
+          <h1 className="text-[26px] leading-[0.95] tracking-[-0.02em] sm:text-[32px]">
+            {/* The wordmark IS the trip: a dotted flight path runs the whole
+                width of the name and lands on a solid dot — the motif draws the
+                product's own meaning instead of decorating around it. */}
+            <span className="relative inline-block font-semibold">
+              {/* The name is a portmanteau — s[ho]rt[liday] — where the
+                  coloured letters spell "holiday" and "ho" is shared by both
+                  words. Deliberately orange-600, not the brand #f97316: that
+                  hue is 2.8:1 on white and fails even the 3:1 large-text bar,
+                  whereas orange-600 clears it while still reading as the accent.
+                  Dark mode flips to orange-400, which needs the lighter value
+                  against a near-black ground. */}
+              {/* The reveal: both orange runs start at the body colour and
+                  warm into the accent a beat apart, so "ho…liday" surfaces out
+                  of "short" rather than being coloured from the first frame.
+                  Colour only — no movement, no reflow, so the CLS budget stays
+                  zero and reduced-motion simply gets the finished state. */}
+              <span aria-hidden>
+                s
+                <span className="wordmark-hi">ho</span>
+                rt
+                <span className="wordmark-hi wordmark-hi-2">liday</span>
+              </span>
+              {/* The word intact for assistive tech and for copy-paste. */}
+              <span className="sr-only">shortliday</span>
             </span>
           </h1>
-          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-black/50 dark:text-white/55">
-            Est. cheapest weekends
+          {/* A hairline rule instead of a bullet: it sets on the baseline and
+              reads as a lockup, not as punctuation. */}
+          <p className="flex items-baseline gap-3 text-sm whitespace-nowrap text-black/65 dark:text-white/60">
+            <span
+              aria-hidden
+              className="hidden h-3 w-px translate-y-[2px] bg-black/15 sm:block dark:bg-white/20"
+            />
+            <span className="italic">for the{" "}
+            <RotatingWord
+              words={[
+                "spontaneous",
+                "weekenders",
+                "restless",
+                "last-minute",
+                "curious",
+                "escape artists",
+              ]}
+              className="font-medium text-black/85 not-italic dark:text-white/90"
+            />
+            </span>
           </p>
         </div>
       </header>
+
+      {/* Outside the panel on purpose. Inside it, this disappeared the moment
+          the panel began collapsing by default — and it is the only sentence
+          on the page that says what the product is. One line is the whole cost
+          to a returning visitor. */}
+      {!booting && (
+        <p className="-mt-2 max-w-[58ch] text-[15px] leading-relaxed text-black/55 dark:text-white/55">
+          {/* Two sentences, not one em-dashed run-on: the first is the claim,
+              the second is what to do about it. The claim carries the weight —
+              it is the only line on the page that says what this is, and it was
+              set in the same muted grey as the instruction after it. */}
+          <span className="font-medium text-black dark:text-white">
+            The cheapest weekend you can fly to
+          </span>{" "}
+          — round-trips from your home airport, ranked by price.{" "}
+          <span className="whitespace-nowrap">
+            Tap a deal for the full cost.
+          </span>
+        </p>
+      )}
 
       {booting ? (
         /* First load: explain the tool + what's happening (we're detecting the
@@ -499,7 +694,8 @@ export default function Home() {
             </p>
             <p className="mt-1.5 text-black/55 dark:text-white/60">
               📍 Finding your nearest airport… we only use your location for
-              this — or type it in below.
+              this. Prefer not to share it? Decline and you can type it in
+              instead.
             </p>
           </div>
           <div
@@ -518,24 +714,31 @@ export default function Home() {
         /* Compact summary once searched — each facet is individually tappable */
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.07] bg-black/[0.015] px-4 py-3 dark:border-white/10 dark:bg-white/[0.02]">
           <div className="min-w-0">
-            <div className="text-xs text-black/45 dark:text-white/45">
-              Weekend getaways from
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 font-medium">
-              <FacetButton onClick={editFrom}>{home}</FacetButton>
+            {/* No caption. The line above already says what the board is, the
+                Edit button marks this row as settings, and "Weekend getaways"
+                was the last place still using a noun the rest of the app had
+                dropped in favour of "flights". */}
+            <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 font-medium">
+              <FacetButton onClick={editFrom}>
+                {(applied?.origins ?? origins).join(" · ")}
+              </FacetButton>
               <span className="text-black/25 dark:text-white/25">·</span>
-              <FacetButton onClick={editSearch}>{styleLabel}</FacetButton>
+              <FacetButton onClick={editSearch}>{appliedStyleLabel}</FacetButton>
               <span className="text-black/25 dark:text-white/25">·</span>
               <FacetButton onClick={editSearch}>
-                next {months} month{months === 1 ? "" : "s"}
+                next {applied?.months ?? months} month
+                {(applied?.months ?? months) === 1 ? "" : "s"}
               </FacetButton>
               <span className="text-black/25 dark:text-white/25">·</span>
               <FacetButton onClick={editSearch}>
-                {stopMode === "direct" ? "Direct" : "Any stops"}
+                {(applied ? applied.direct : stopMode === "direct")
+                  ? "Direct"
+                  : "Any stops"}
               </FacetButton>
               <span className="text-black/25 dark:text-white/25">·</span>
               <FacetButton onClick={editSearch}>
-                {adults} adult{adults === 1 ? "" : "s"}
+                {applied?.adults ?? adults} adult
+                {(applied?.adults ?? adults) === 1 ? "" : "s"}
               </FacetButton>
               {bridges && (
                 <>
@@ -548,42 +751,63 @@ export default function Home() {
           <button
             type="button"
             onClick={editSearch}
-            className="shrink-0 rounded-lg border border-black/15 px-3 py-1.5 text-sm text-black/70 transition duration-200 hover:bg-black/[0.04] motion-safe:hover:scale-105 dark:border-white/20 dark:text-white/70 dark:hover:bg-white/[0.06]"
+            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-black/20 bg-white px-4 text-sm font-medium text-black shadow-sm transition duration-200 hover:border-black/35 hover:bg-black/[0.03] dark:border-white/25 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.12]"
           >
+            <PencilIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
             Edit
           </button>
         </div>
       ) : (
         /* Full search — set the trip, then hit Search (the only trigger) */
         <section className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
-          {!searched && (
-            <p className="text-sm text-black/60 dark:text-white/65">
-              Cheapest round-trip weekend flights from your home airport — tap a
-              deal to book on Kiwi.
-            </p>
-          )}
-          {/* Origin — the primary input, given room to breathe */}
-          <div>
-            <div className="mb-1.5 flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-black/60 dark:text-white/60">
-                Flying from
-              </span>
+          {/* Origin — the primary input. Full width on a phone, where it needs
+              every pixel; capped on desktop, where stretching a 770px field
+              across the panel for at most three 3-letter codes made the most
+              important control look like an afterthought. */}
+          <div className="sm:max-w-xl">
+            <span className="mb-1.5 block text-xs font-medium text-black/60 dark:text-white/60">
+              Flying from
+            </span>
+            {/* "Find my airport" sits BESIDE the field, not opposite it across
+                the panel: it fills the same box the field does, so putting it
+                an inch away made it read as unrelated. Stacks under on a phone
+                rather than stealing width from the input. */}
+            {/* items-stretch, not items-center: the button then takes the
+                field's height whatever the field grows to (one chip or three,
+                wrapped or not), instead of being pinned at its own 30px beside
+                a 53px input. */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+              <div className="min-w-0 sm:flex-1">
+            {/* One field holding up to three airports as chips. */}
+            <AirportInput
+              value=""
+              chips={origins}
+              onRemoveChip={(code) => setOrigins(removeOrigin(origins, code))}
+              onSearch={(code) => setOrigins((cur) => addOrigin(cur, code))}
+              disabled={origins.length >= MAX_ORIGINS}
+              placeholder={
+                origins.length === 0
+                  ? "Airport or city, e.g. Barcelona"
+                  : origins.length >= MAX_ORIGINS
+                    ? `Up to ${MAX_ORIGINS} airports`
+                    : "Add another…"
+              }
+              inputRef={inputRef}
+            />
+              </div>
               <button
                 type="button"
                 onClick={detectLocation}
-                className="group text-xs text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
+                // A real control rather than muted text: it sits beside a
+                // proper field now, and a 11px grey link beside it looked like
+                // a caption. Uses the existing hairline-pill treatment instead
+                // of inventing a seventh button variant (see task #9).
+                className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-xl border border-black/10 px-4 text-xs font-medium text-black/70 transition hover:bg-black/[0.04] hover:text-black dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
               >
-                <span aria-hidden>📍</span>{" "}
-                <span className="underline-offset-2 group-hover:underline">
-                  Find my airport
-                </span>
+                <span aria-hidden>📍</span>
+                Find my airport
               </button>
             </div>
-            <AirportInput
-              value={home}
-              onSearch={(code) => setHome(code.trim().toUpperCase())}
-              inputRef={inputRef}
-            />
           </div>
 
           <div className="h-px bg-black/[0.06] dark:bg-white/[0.08]" />
@@ -606,6 +830,12 @@ export default function Home() {
                 ariaLabel="Timeline"
               />
             </Field>
+            {/* A segmented control, like the other parameters. It was tried as
+                a switch: that groups the two booleans neatly, but it also hides
+                the alternative — "Any" stops being visible as a choice — and it
+                broke the rhythm of a row where every other control shows its
+                options. Only bridge days, which is genuinely opt-in extra
+                behaviour rather than a parameter, keeps the switch. */}
             <Field label="Stops" hint="Direct = nonstop only">
               <SegmentedControl
                 options={STOP_OPTIONS}
@@ -644,8 +874,13 @@ export default function Home() {
                 Hunt for bridge days
               </span>
               <span className="block text-xs text-black/50 dark:text-white/50">
-                Only long weekends — where a public holiday means one day off (or
-                none) buys you three or four.
+                {/* Names the country. The search uses NATIONAL holidays in the
+                    country you fly FROM — not the destination's — and nothing
+                    on screen said so, which made the results look arbitrary
+                    when a destination holiday didn't line up. */}
+                Long weekends built on
+                {homeCountry ? ` ${homeCountry}’s` : " your country’s"} national
+                holidays — one day off (or none) buys you three or four.
               </span>
             </span>
             <span
@@ -677,7 +912,7 @@ export default function Home() {
               type="button"
               disabled={!home.trim()}
               onClick={() => {
-                runSearch(home);
+                runSearch(origins);
                 setCollapsed(true);
               }}
               className="rounded-full bg-neutral-900 px-6 py-2 text-sm font-medium text-white transition duration-200 hover:opacity-90 disabled:opacity-40 motion-safe:enabled:hover:scale-105 dark:bg-white dark:text-black"
@@ -698,9 +933,27 @@ export default function Home() {
                   ? "Searching…"
                   : error
                     ? "Couldn’t load results"
-                    : `${visible.length} ${bridges ? "bridge" : "weekend"} escape${
-                        visible.length === 1 ? "" : "s"
-                      }`}
+                    : (() => {
+                        // Everything here reads `applied`, never live form
+                        // state: the deals on screen were fetched with the
+                        // PREVIOUS settings, and reading the live values once
+                        // relabelled 57 weekend results as "bridge escapes"
+                        // before any search had run.
+                        const isBridges = applied ? applied.bridges : bridges;
+                        // The SHAPE of the trip, not the search window: the
+                        // months are already stated in the summary line right
+                        // above, and "Fri–Sun" is what distinguishes these
+                        // results from any other flight search. Bridge mode has
+                        // no fixed shape, so it names the thing itself.
+                        if (isBridges) {
+                          return `${visible.length} long weekend${
+                            visible.length === 1 ? "" : "s"
+                          }`;
+                        }
+                        return `${visible.length} ${appliedStyleLabel} flight${
+                          visible.length === 1 ? "" : "s"
+                        }`;
+                      })()}
               </span>
               {!loading && !error && fetchedAt && visible.length > 0 && (
                 <span className="text-[11px] text-black/55 dark:text-white/60">
@@ -708,8 +961,16 @@ export default function Home() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-black/45 dark:text-white/45">
+            {/* One line from `sm` up. Below that, Sort + two segments + Map +
+                Refine is ~390px against a 288px content box, so it wraps rather
+                than scrolling the whole page sideways. */}
+            {/* ml-auto, not just justify-end: the parent is justify-between, so
+                once this cluster wraps onto its own line it would otherwise sit
+                hard left. This keeps Sort/Map/Refine right-aligned either way. */}
+            <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
+              {/* The segmented control is self-explanatory on a phone; the word
+                  only earns its width once there's room. */}
+              <span className="hidden text-xs text-black/45 sm:inline dark:text-white/45">
                 Sort
               </span>
               <SegmentedControl
@@ -721,12 +982,27 @@ export default function Home() {
                 onChange={setSort}
                 ariaLabel="Sort"
               />
+              {/* Sits after Refine so opening the map never inserts anything
+                  above the control you just tapped. */}
+              {!loading && !error && visible.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMap((v) => !v)}
+                  aria-expanded={showMap}
+                  aria-controls="results-map"
+                  className="relative ml-1 inline-flex items-center gap-1.5 h-9 rounded-full border border-black/15 px-3.5 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                >
+                  Map
+                  <span aria-hidden>{showMap ? "▴" : "▾"}</span>
+                </button>
+              )}
               {!loading && !error && hasRefinements && (
                 <button
                   type="button"
                   onClick={() => setShowRefine((v) => !v)}
                   aria-expanded={showRefine}
-                  className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-black/15 px-3 py-1 text-sm text-black/70 transition duration-200 hover:bg-black/5 motion-safe:hover:scale-105 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                  aria-controls="refine-panel"
+                  className="relative ml-1 inline-flex items-center gap-1.5 h-9 rounded-full border border-black/15 px-3.5 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
                 >
                   Refine
                   {activeFilters > 0 && (
@@ -778,7 +1054,7 @@ export default function Home() {
       {/* Refine — instant client-side filters; same visual language as the
           trip panel, but these narrow the loaded results without re-searching. */}
       {searched && showRefine && hasRefinements && (
-        <div className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
+        <div id="refine-panel" className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
           <p className="text-xs text-black/45 dark:text-white/45">
             Narrows the results below instantly — no new search.
           </p>
@@ -833,15 +1109,64 @@ export default function Home() {
         </div>
       )}
 
+      {/* Renders `visible` — the same array DealList gets — so every filter
+          chip and price cap repaints the pins. The map deliberately does not
+          filter anything itself: that would create filter state with no chip
+          representing it. */}
+      {searched && showMap && (
+        <div id="results-map" className="flex flex-col gap-1.5">
+          <DealsMap
+            deals={visible}
+            origins={originPoints}
+            onSelect={focusDestination}
+            highlight={hoveredTo}
+            // Fullscreen hides the Refine panel behind the dialog, so the one
+            // filter people actually reach for on a map goes onto the map.
+            controls={
+              available.length > 1 ? (
+                <MonthFilter
+                  months={available}
+                  selected={selectedMonths}
+                  onToggle={toggleMonth}
+                  onClear={() => setSelectedMonths([])}
+                />
+              ) : undefined
+            }
+          />
+          <p className="text-[11px] text-black/55 dark:text-white/55">
+            Pins mark the arrival airport, which isn’t always the city centre.
+          </p>
+        </div>
+      )}
+
       {searched && (
         <DealList
           deals={visible}
+          focusId={focusDeal?.id}
+          focusSeq={focusDeal?.seq}
+          showOrigin={origins.length > 1}
           loading={loading}
           error={error}
           groupByMonth={sort === "soonest"}
-          cheapest={{ style, months, direct: stopMode === "direct", adults }}
-          splitShape={bridges ? undefined : style}
+          cheapest={
+            applied
+              ? {
+                  style: applied.style,
+                  months: applied.months,
+                  direct: applied.direct,
+                  adults: applied.adults,
+                }
+              : undefined
+          }
+          splitShape={
+            (applied ? applied.bridges : bridges)
+              ? undefined
+              : (applied?.style ?? style)
+          }
           onClearFilters={activeFilters > 0 ? clearAll : undefined}
+          // Only while the map is on screen: otherwise every card in a 60-row
+          // list would set state on mouse-move for nothing to look at.
+          onHover={showMap ? setHoveredTo : undefined}
           emptyMessage={
             selectedMonths.length > 0 ||
             selectedContinents.length > 0 ||
@@ -876,11 +1201,12 @@ export default function Home() {
             onClick={widenWindow}
             className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-sm font-medium text-black/75 transition duration-200 hover:bg-black/[0.04] motion-safe:hover:scale-[1.03] dark:border-white/15 dark:text-white/75 dark:hover:bg-white/[0.06]"
           >
-            Search the next {nextWindow} months
+            Extend to {nextWindow} months
             <span aria-hidden>→</span>
           </button>
           <span className="text-xs text-black/55 dark:text-white/60">
-            Look further ahead for more escapes
+            Currently showing the next {applied?.months ?? months} month
+            {months === 1 ? "" : "s"}
           </span>
         </div>
       )}
@@ -888,7 +1214,7 @@ export default function Home() {
       {searched && !loading && !error && !loadingMore && !nextWindow &&
         visible.length > 0 && (
           <p className="pt-1 pb-2 text-center text-xs text-black/55 dark:text-white/60">
-            That’s every weekend in the next {months} months.
+            That’s every weekend in the next {applied?.months ?? months} months.
           </p>
         )}
       </div>
@@ -903,6 +1229,29 @@ export default function Home() {
           ↑ Sort &amp; filter
         </button>
       )}
+
+      {/* One disclosure for the whole site rather than a line under each widget.
+          Every outbound booking link here is affiliate — Kiwi, Booking.com and
+          GetYourGuide — so stating it once, where it can't be mistaken for part
+          of a card, is both more honest and less noisy. */}
+      <footer className="mt-2 flex flex-col gap-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
+        <p>
+          Flights, stays and activities are booked on Kiwi.com, Booking.com and
+          GetYourGuide. We may earn a commission from those bookings, at no extra
+          cost to you. Prices and availability are set by them, not by us.
+        </p>
+        {/* Its own row: inline at the end of a four-line paragraph, the one
+            navigable thing in the footer was the hardest part of it to find. */}
+        <a
+          href="/about"
+          className="w-fit underline underline-offset-2 transition hover:text-black/70 dark:hover:text-white/70"
+        >
+          About, privacy &amp; contact
+        </a>
+      </footer>
+
+      {/* Inert unless ?debug=overflow is in the URL. */}
+      <OverflowDebug />
     </main>
   );
 }

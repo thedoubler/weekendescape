@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 :root {
+  /* Tells the UA which palettes this page supports. Without it, anything the
+     browser paints itself — <dialog> defaults, scrollbars, native form
+     controls — stays in light colours on a dark page, which is why the city
+     name in the fullscreen map panel rendered black on a dark card. */
+  color-scheme: light dark;
+
   --background: #ffffff;
   --foreground: #171717;
   /* Warm brand glow behind the header — subtle, theme-aware. */
@@ -11,7 +17,6 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-space-grotesk);
-  --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-instrument-serif);
 }
 
@@ -27,13 +32,29 @@
   }
 }
 
+/* The base colour lives on <html> so the fixed glow layer below can sit above
+   it but behind the content. */
+html {
+  background: var(--background);
+}
+
 body {
-  background:
-    radial-gradient(115% 360px at 50% 0, var(--glow), transparent 68%),
-    var(--background);
-  background-repeat: no-repeat;
   color: var(--foreground);
   font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+/* The glow stays anchored to the viewport instead of scrolling away with the
+   header. Deliberately a fixed pseudo-element rather than
+   `background-attachment: fixed`, which iOS Safari handles badly — it either
+   ignores it or repaints the whole layer on every scroll frame. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(115% 360px at 50% 0, var(--glow), transparent 68%);
+  background-repeat: no-repeat;
 }
 
 /* Gentle reveal for content that replaces the first-load spinner. */
@@ -55,3 +76,83 @@ body {
     animation: none;
   }
 }
+
+/* The map's attribution is legally required, but on a phone the expanded form
+   eats the bottom edge of a 260px canvas. Collapse it to the (i) toggle; tapping
+   still reveals the full credit. */
+/* Collapsed to the (i) at every width, not just on phones. Attribution is
+   required and stays one tap away; it just doesn't need to sit open across the
+   bottom of the map by default. */
+.maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show)
+  .maplibregl-ctrl-attrib-inner {
+  display: none;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) {
+  background-color: transparent;
+  padding: 0;
+  margin: 0 8px 8px 0;
+}
+
+/* Header word roll. Only transform/opacity animate — nothing that affects
+   layout — and the band that holds them has a fixed height, so the header's
+   CLS budget is zero. Declared here rather than inline so reduced-motion users
+   never have an animation property at all (the component simply never sets
+   the phase that uses them). */
+@keyframes wordOut {
+  to {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+@keyframes wordIn {
+  from {
+    transform: translateY(7px);
+    opacity: 0;
+  }
+}
+
+/* The wordmark is a portmanteau — s[ho]rt[liday] — and the orange letters
+   spell "holiday" hidden inside "short". They used to be coloured from the
+   first frame, which shows the result but not the trick. */
+@keyframes wordmarkReveal {
+  from {
+    color: inherit;
+  }
+  to {
+    color: var(--wordmark-accent);
+  }
+}
+
+.wordmark-hi {
+  --wordmark-accent: #ea580c; /* orange-600 — 4.5:1 on white; #f97316 fails */
+  color: var(--wordmark-accent);
+  animation: wordmarkReveal 520ms cubic-bezier(0.2, 0.6, 0.2, 1) 260ms both;
+}
+
+/* The second run lands after the first, so it reads left to right as one word
+   surfacing rather than both halves lighting at once. */
+.wordmark-hi-2 {
+  animation-delay: 560ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  .wordmark-hi {
+    --wordmark-accent: #fb923c; /* orange-400 — the lighter value a dark ground needs */
+  }
+}
+
+:root[data-theme="dark"] .wordmark-hi {
+  --wordmark-accent: #fb923c; /* orange-400 — the lighter value a dark ground needs */
+}
+
+:root[data-theme="light"] .wordmark-hi {
+  --wordmark-accent: #ea580c; /* orange-600 — 4.5:1 on white; #f97316 fails */
+}
+
+/* Reduced motion gets the finished state from first paint. */
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-hi {
+    animation: none;
+  }
+}
+

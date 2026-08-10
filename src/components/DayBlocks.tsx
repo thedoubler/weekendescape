@@ -84,7 +84,7 @@ export function DayBlocks({
   for (const c of cells) if (!months.includes(c.month)) months.push(c.month);
 
   // When any day carries a "you're off" / "book off" tag, reserve that row on
-  // every cell (invisible on the untagged ones) so the orange hours-bar stays on
+  // every cell (invisible on the untagged ones) so the hours-bar stays on
   // one straight line across the strip instead of dropping under the tagged days.
   const hasTags =
     (homeHolidays?.length ?? 0) > 0 || (daysOff?.length ?? 0) > 0;
@@ -113,11 +113,12 @@ export function DayBlocks({
                   ? `, local holiday in ${cityTo ?? "the destination"}: ${holiday!.name}`
                   : ""
               }`}
-              className={`min-w-0 flex-1 rounded-lg px-1.5 py-2.5 text-center ${
-                isHomeHoliday
-                  ? "bg-amber-100/70 dark:bg-amber-300/15"
-                  : "bg-black/[0.04] dark:bg-white/[0.06]"
-              }`}
+              // Neutral cell, always. It used to fill amber for every day you
+              // are off work — which on a bridge-days board is 54% of the
+              // cells, so the tint marked nothing and simply became the
+              // background. Those cells already carry a "you're off" chip; the
+              // fill was a second device for the same fact.
+              className="min-w-0 flex-1 rounded-lg bg-black/[0.04] px-1.5 py-2.5 text-center dark:bg-white/[0.06]"
             >
               <div className="text-[10px] font-medium uppercase tracking-wider text-black/45 dark:text-white/45">
                 {c.weekday}
@@ -142,9 +143,19 @@ export function DayBlocks({
                 </div>
               )}
               {/* Hours at the destination as a slice of the day (arrival→departure). */}
-              <div className="relative my-2.5 h-2 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.12]">
+              {/* 4px. Sized when it was a pale orange gradient; as a solid
+                  neutral the same height read far heavier than the proportion
+                  it encodes. Margins absorb the difference so the card height —
+                  and the skeleton calibrated to it — is unchanged at 238px. */}
+              <div className="relative my-3 h-1 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.12]">
                 <div
-                  className="absolute inset-y-0 rounded-full bg-gradient-to-r from-orange-300 to-orange-400 dark:from-orange-400/80 dark:to-orange-500/70"
+                  // Neutral, not accent. Three of these per card x ~13 cards
+                  // put ~40 high-chroma marks on a screen whose whole premise
+                  // is PRICE — the eye landed on hours-at-destination first.
+                  // A bar reads as a proportion from its LENGTH; neither colour
+                  // nor weight adds anything, and at 8px a full-day bar read as
+                  // a horizontal rule cutting the cell in half. 4px.
+                  className="absolute inset-y-0 rounded-full bg-black/35 dark:bg-white/45"
                   style={{
                     left: `${c.fillStart * 100}%`,
                     width: `${(c.fillEnd - c.fillStart) * 100}%`,

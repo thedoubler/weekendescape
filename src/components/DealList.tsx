@@ -1,4 +1,4 @@
-import type { Deal } from "@/lib/deals";
+import { type Deal, dealDomId } from "@/lib/deals";
 import {
   type WeekendStyle,
   WEEKEND_SHAPE,
@@ -15,6 +15,12 @@ interface MonthSection {
 
 // Placeholder that mirrors a collapsed DealCard's shape, so results swap in
 // without the layout jumping. Pulses (unless the user prefers reduced motion).
+//
+// The comment above used to be aspirational: the skeleton was 190px against a
+// real card's 238, so five of them shifted the page ~240px the moment results
+// landed. Heights below are derived from a measured card, not chosen to look
+// right: 2 border + 32 padding + 44 header + (12 + 116) day block +
+// (12 + 20) footer = 238. Re-measure if the card's structure changes.
 export function SkeletonCard() {
   const bar = "rounded bg-black/[0.06] dark:bg-white/[0.08]";
   return (
@@ -25,23 +31,24 @@ export function SkeletonCard() {
             <div className={`h-5 w-6 ${bar}`} />
             <div className={`h-5 w-32 ${bar}`} />
           </div>
-          <div className={`mt-2 h-3 w-44 ${bar}`} />
+          <div className={`mt-2 h-4 w-44 ${bar}`} />
         </div>
         <div className="flex flex-col items-end gap-1.5">
           <div className={`h-5 w-16 ${bar}`} />
           <div className={`h-3 w-12 ${bar}`} />
         </div>
       </div>
-      <div className="mt-3 flex gap-1">
-        <div className={`h-16 flex-1 ${bar}`} />
-        <div className={`h-16 flex-1 ${bar}`} />
-        <div className={`h-16 flex-1 ${bar}`} />
+      <div className={`mt-3 mb-1 h-3 w-8 ${bar}`} />
+      <div className="flex gap-1">
+        <div className={`h-[100px] flex-1 ${bar}`} />
+        <div className={`h-[100px] flex-1 ${bar}`} />
+        <div className={`h-[100px] flex-1 ${bar}`} />
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <div className={`h-7 w-28 rounded-full ${bar}`} />
+        <div className={`h-5 w-24 ${bar}`} />
         <div className="flex gap-3">
-          <div className={`h-4 w-10 ${bar}`} />
-          <div className={`h-4 w-12 ${bar}`} />
+          <div className={`h-5 w-10 ${bar}`} />
+          <div className={`h-5 w-12 ${bar}`} />
         </div>
       </div>
     </div>
@@ -62,6 +69,9 @@ function toSections(deals: Deal[]): MonthSection[] {
 
 export function DealList({
   deals,
+  focusId,
+  focusSeq,
+  showOrigin,
   loading,
   error,
   emptyMessage,
@@ -69,8 +79,14 @@ export function DealList({
   groupByMonth = false,
   splitShape,
   onClearFilters,
+  onHover,
 }: {
   deals: Deal[];
+  // When the map asks for a specific card, that card opens.
+  focusId?: string;
+  focusSeq?: number;
+  // Multiple home airports in play — cards must name their departure airport.
+  showOrigin?: boolean;
   loading: boolean;
   error: string | null;
   emptyMessage?: string;
@@ -82,6 +98,7 @@ export function DealList({
   // bridge-days mode, where off-shape puentes are the whole point.
   splitShape?: WeekendStyle;
   onClearFilters?: () => void;
+  onHover?: (flyTo: string | null) => void;
 }) {
   if (loading)
     return (
@@ -120,6 +137,10 @@ export function DealList({
       key={`${deal.cityTo}-${deal.outDepart}-${i}`}
       deal={deal}
       cheapest={cheapest}
+      showOrigin={showOrigin}
+      // Only the targeted card gets a seq, so only it reacts.
+      focusSeq={dealDomId(deal) === focusId ? focusSeq : undefined}
+      onHover={onHover}
     />
   );
 
@@ -132,8 +153,12 @@ export function DealList({
               <span className="text-sm font-semibold tracking-tight">
                 {section.title}
               </span>
-              <span className="text-xs text-black/40 dark:text-white/40">
-                {section.deals.length}
+              {/* "August" beside a bare "6" reads as August 6th — a date, in a
+                  product whose every other number IS a date or a price. The
+                  noun is what disambiguates it. */}
+              <span className="text-xs tabular-nums text-black/45 dark:text-white/45">
+                {section.deals.length} flight
+                {section.deals.length === 1 ? "" : "s"}
               </span>
             </div>
             {section.deals.map(card)}
@@ -160,16 +185,20 @@ export function DealList({
       {exact.length > 0 && renderDeals(exact)}
       {close.length > 0 && (
         <>
-          <div className="flex items-center gap-3 pt-2">
-            <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
-            <span className="text-xs font-medium text-black/50 dark:text-white/50">
+          {/* A section break, not a caption. At 12px/50% between two hairlines
+              it read as a divider that happened to have words on it, and it is
+              actually the most important label on the board — everything below
+              it is NOT the weekend shape you asked for. */}
+          <div className="flex items-center gap-3 pt-6 pb-2">
+            <div className="h-px flex-1 bg-black/15 dark:bg-white/15" />
+            <span className="rounded-full bg-black/[0.05] px-3.5 py-1.5 text-base font-semibold text-black/70 dark:bg-white/[0.08] dark:text-white/70">
               {exact.length === 0
                 ? `No exact ${label} — closest matches`
                 : `Not exactly ${label} · ${close.length} close ${
                     close.length === 1 ? "match" : "matches"
                   }`}
             </span>
-            <div className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+            <div className="h-px flex-1 bg-black/15 dark:bg-white/15" />
           </div>
           {renderDeals(close)}
         </>

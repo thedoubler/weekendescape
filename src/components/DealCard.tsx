@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { type Deal, isBridge } from "@/lib/deals";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type Deal, isBridge, dealDomId } from "@/lib/deals";
 import { type WeatherResult, packingCue } from "@/lib/weather";
 
 interface DestinationImage {
@@ -11,154 +11,120 @@ interface DestinationImage {
 }
 import type { WeekendStyle } from "@/lib/weekend";
 import { CheapestWeekend } from "@/components/CheapestWeekend";
+import ThingsToDo from "@/components/ThingsToDo";
+import PlaceLinks from "@/components/PlaceLinks";
 import {
-  dateWithMonth,
   timeLabel,
   durationLabel,
   daysUntil,
   dayBlocks,
   crossesMidnight,
   isNightHour,
-  legMinutes,
   holidayDate,
+  holidaySearchUrl,
   stopsSummary,
   weekendRange,
 } from "@/lib/format";
-import type { Layover } from "@/lib/deals";
 import { hotelUrl } from "@/lib/hotels";
 import { airlineName } from "@/lib/airlines";
+import { baggageInfo } from "@/lib/baggage";
+import { legAirMinutes, layoverFlags, costRows } from "@/lib/trip-facts";
+import { legSummary, type LegInput } from "@/lib/leg-summary";
+import { daylightNote } from "@/lib/daylight";
 import { DayBlocks } from "@/components/DayBlocks";
 
 // Below this the airport is "in town" enough not to warrant a caveat; above it
 // (Charleroi/Brussels, Beauvais/Paris…) the transfer is worth surfacing.
 const FAR_AIRPORT_KM = 30;
-// A round-trip weekend flight under this earns a subtle "greener" treatment.
-const LOW_CO2_KG = 200;
-
-function Leg({
-  label,
-  date,
-  depTime,
-  depCode,
-  arrTime,
-  arrCode,
-  plusOne,
-  minutes,
-  stops,
-  layovers,
-}: {
-  label: string;
-  date: string;
-  depTime: string;
-  depCode: string;
-  arrTime: string;
-  arrCode: string;
-  plusOne: boolean;
-  minutes: number;
-  stops: number;
-  layovers: Layover[];
-}) {
-  const via = layovers
-    .map((l) => `${l.at} (${durationLabel(l.minutes)})`)
-    .join(", ");
-  const stopLabel =
-    stops === 0 ? "Direct" : `${stops} stop${stops > 1 ? "s" : ""}`;
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div>
-      <div className="flex items-baseline justify-between text-[11px] uppercase tracking-wide text-black/40 dark:text-white/40">
-        <span className="font-semibold">{label}</span>
-        <span>{date}</span>
-      </div>
-      <div className="mt-1.5 flex items-center gap-2">
-        <div className="w-14 shrink-0">
-          <div className="text-[15px] font-semibold leading-none tabular-nums">
-            {depTime}
-          </div>
-          <div className="mt-1 text-xs text-black/50 dark:text-white/50">
-            {depCode}
-          </div>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col items-center">
-          <span className="text-[11px] text-black/45 dark:text-white/45">
-            {durationLabel(minutes)}
-          </span>
-          <div className="my-1 flex w-full items-center gap-1">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/30 dark:border-white/30" />
-            <span className="h-px flex-1 bg-black/15 dark:bg-white/15" />
-            <span aria-hidden className="shrink-0 text-black/35 dark:text-white/35">
-              ✈
-            </span>
-            <span className="h-px flex-1 bg-black/15 dark:bg-white/15" />
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black/30 dark:bg-white/30" />
-          </div>
-          <span
-            className={`truncate text-[11px] ${
-              stops === 0
-                ? "text-black/45 dark:text-white/45"
-                : "font-medium text-black/60 dark:text-white/60"
-            }`}
+    <h4 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-black/60 dark:text-white/60">
+      {children}
+    </h4>
+  );
+}
+
+function Leg(props: LegInput) {
+  const { depTime, arrTime, meta, spoken } = legSummary(props);
+  return (
+    <li className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      {/* One sentence for assistive tech, in decision order. The visual row is
+          hidden from it: read literally it is a pile of orphan fragments with
+          the duration wedged between the two times. */}
+      <span className="sr-only">{spoken}</span>
+      <span aria-hidden className="contents">
+        <span className="w-9 shrink-0 text-[10px] font-semibold tracking-[0.08em] text-black/55 uppercase dark:text-white/55">
+          {props.label}
+        </span>
+        <span className="flex items-baseline gap-1.5">
+          <time
+            dateTime={props.depIso}
+            className="text-[15px] font-semibold tabular-nums"
           >
-            {stopLabel}
-            {via ? ` · via ${via}` : ""}
+            {depTime}
+          </time>
+          {/* The home airport carries the information now that the board can
+              search three of them; the destination code is already the card's
+              headline, so it stays muted. */}
+          <span className="text-xs font-medium text-black/70 dark:text-white/70">
+            {props.depCode}
           </span>
-        </div>
-        <div className="w-14 shrink-0 text-right">
-          <div className="text-[15px] font-semibold leading-none tabular-nums">
+          <span className="text-black/30 dark:text-white/30">→</span>
+          <time
+            dateTime={props.arrIso}
+            className="text-[15px] font-semibold tabular-nums"
+          >
             {arrTime}
-            {plusOne && (
-              <span className="align-super text-[9px] font-normal text-black/45 dark:text-white/45">
+            {props.plusOne && (
+              <span className="align-super text-[9px] font-normal text-black/50 dark:text-white/50">
                 +1
               </span>
             )}
-          </div>
-          <div className="mt-1 text-xs text-black/50 dark:text-white/50">
-            {arrCode}
-          </div>
-        </div>
-      </div>
-    </div>
+          </time>
+          <span className="text-xs text-black/50 dark:text-white/50">
+            {props.arrCode}
+          </span>
+        </span>
+        {/* Never truncated: on a multi-stop trip this run is the only text that
+            says the journey is complicated. It wraps instead. */}
+        <span className="text-[11px] text-black/60 dark:text-white/60">
+          {meta}
+        </span>
+        {/* Logos live here, not on the collapsed card: a couple of requests per
+            opened card rather than ~78 across a whole board, and at 16px beside
+            15px times they finally sit at a size worth rendering. */}
+        {props.carriers.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-black/60 dark:text-white/60">
+            <span aria-hidden className="text-black/30 dark:text-white/30">
+              ·
+            </span>
+            {props.carriers.map((c) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={c.code}
+                src={`https://images.kiwi.com/airlines/64/${c.code}.png`}
+                // Decorative — the name follows as text, so alt would make a
+                // screen reader announce every carrier twice.
+                alt=""
+                width={16}
+                height={16}
+                loading="lazy"
+                className="h-4 w-4 rounded-[3px] object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ))}
+            <span>{props.carriers.map((c) => c.name).join(", ")}</span>
+          </span>
+        )}
+      </span>
+    </li>
   );
 }
 
 // Inline icons (Lucide, currentColor) so the Stay/Book actions render
 // consistently across platforms and adapt to light/dark — unlike emoji.
-function LeafIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
-      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
-    </svg>
-  );
-}
-
-function BedIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8" />
-      <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
-      <path d="M2 18h20" />
-      <path d="M12 4v6" />
-    </svg>
-  );
-}
 
 function MapPinIcon({ className }: { className?: string }) {
   return (
@@ -174,6 +140,41 @@ function MapPinIcon({ className }: { className?: string }) {
     >
       <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
       <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
+function SunIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
@@ -200,11 +201,34 @@ function ExternalLinkIcon({ className }: { className?: string }) {
 export function DealCard({
   deal,
   cheapest,
+  focusSeq,
+  showOrigin = false,
+  onHover,
 }: {
   deal: Deal;
   cheapest?: { style: WeekendStyle; months: number; direct: boolean; adults: number };
+  // Bumped by the map when this card's destination pin is tapped.
+  focusSeq?: number;
+  // Reports this deal's destination while the pointer is over the card, so the
+  // map can lift its arc out of the fan. Pointer/focus only — never on tap,
+  // where there is no hover and the highlight would be a lie.
+  onHover?: (flyTo: string | null) => void;
+  // True when the board is searching more than one home airport.
+  showOrigin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Real per-flight emissions, fetched on first expand. Null until it lands, or
+  // for good if the model has no data for these flights.
+  const [timGrams, setTimGrams] = useState<number | null>(null);
+
+  // Open on request from the map. Adjusting during render rather than in an
+  // effect so the card is already expanded when the caller scrolls it into
+  // view — an effect would centre on the collapsed height, then grow.
+  const [seenSeq, setSeenSeq] = useState(focusSeq);
+  if (focusSeq !== seenSeq) {
+    setSeenSeq(focusSeq);
+    if (focusSeq !== undefined) setOpen(true);
+  }
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [image, setImage] = useState<DestinationImage | null>(null);
@@ -212,6 +236,31 @@ export function DealCard({
   // Weather is fetched lazily the first time a card is expanded, so the list
   // view stays free of per-destination network calls.
   const weatherTried = useRef(false);
+  const emissionsTried = useRef(false);
+
+  // Same shape as the weather fetch above: once, on first expand, so the board
+  // never makes a per-destination call for cards nobody opened.
+  useEffect(() => {
+    if (!open || emissionsTried.current) return;
+    if (!deal.segments || deal.segments.length === 0) return;
+    emissionsTried.current = true;
+    let alive = true;
+    fetch("/api/emissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ segments: deal.segments }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && typeof d?.grams === "number") setTimGrams(d.grams);
+      })
+      // Silent: the estimate below is a perfectly good fallback, and a failed
+      // CO2 lookup is not worth an error state on a booking panel.
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [open, deal.segments]);
 
   useEffect(() => {
     if (!open || weatherTried.current) return;
@@ -252,6 +301,16 @@ export function DealCard({
   const goodStay = deal.stayMinutes >= 36 * 60;
   const days = daysUntil(deal.outDepart, new Date());
   const adults = cheapest?.adults ?? 1;
+  const bags = baggageInfo(deal, adults);
+  // Astronomy, so it needs no caveat — but it only earns a row when daylight
+  // actually constrains the trip. Silence is the signal the rest of the time.
+  const daylight =
+    deal.destUtcOffsetMin != null
+      ? daylightNote(deal.toCoords, deal.outArrive, deal.destUtcOffsetMin)
+      : null;
+  const panelId = `deal-panel-${deal.flyTo}-${deal.outDepart.slice(0, 10)}`;
+  const flags = layoverFlags(deal);
+  const cost = costRows(deal, adults);
   const arrival = {
     time: timeLabel(deal.outArrive),
     night: isNightHour(deal.outArrive),
@@ -264,12 +323,38 @@ export function DealCard({
   const returnPlusOne = crossesMidnight(deal.backDepart, deal.backArrive);
   const direct = deal.outStops === 0 && deal.backStops === 0;
   const stops = stopsSummary(deal.outStops, deal.backStops);
-  const airlines = deal.airlines ?? [];
 
   return (
     <div
-      onMouseEnter={loadImage}
-      className="group relative overflow-hidden rounded-xl border border-black/10 p-4 transition duration-200 hover:border-black/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:hover:border-white/20"
+      id={dealDomId(deal)}
+      style={
+        open
+          ? { boxShadow: "0 12px 28px -12px rgba(0,0,0,0.28)" }
+          : undefined
+      }
+      // One handler: the card already prefetched its image on hover, and the
+      // map highlight rides along rather than adding a second listener.
+      onMouseEnter={() => {
+        loadImage();
+        onHover?.(deal.flyTo);
+      }}
+      onMouseLeave={() => onHover?.(null)}
+      // Keyboard parity: tabbing through the board drives the same highlight.
+      onFocus={() => onHover?.(deal.flyTo)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) onHover?.(null);
+      }}
+      // scroll-margin so the map's scroll-into-view doesn't tuck the card under
+      // the sticky month divider.
+      // Open cards lift off the page. Without it a ~900px panel shares a flat
+      // background with its neighbours and reads as more list, not as a layer.
+      // Deliberately restrained: too much and the 60 collapsed cards around it
+      // look sunken by comparison.
+      className={`group relative scroll-mt-16 overflow-hidden rounded-xl border p-4 transition duration-200 motion-safe:hover:-translate-y-0.5 ${
+        open
+          ? "border-black/15 bg-white dark:border-white/20 dark:bg-white/[0.04]"
+          : "border-black/[0.14] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-black/25 hover:shadow-md dark:border-white/[0.14] dark:shadow-none dark:hover:border-white/25"
+      }`}
     >
       {/* Peel the destination photo in from the top-right corner — but ONLY when
           that corner is hovered (a `peer`), so reading the rest of the card
@@ -310,6 +395,7 @@ export function DealCard({
         <button
           type="button"
           aria-expanded={open}
+          aria-controls={panelId}
           onClick={() => setOpen((o) => !o)}
           className="min-w-0 flex-1 text-left"
         >
@@ -340,24 +426,44 @@ export function DealCard({
             >
               {stops}
             </span>
+            {/* With several home airports a bare price is ambiguous — which one
+                does this leave from? Only shown when it's actually in question. */}
+            {showOrigin && (
+              <>
+                <span className="text-black/35 dark:text-white/35"> · </span>
+                <span className="font-medium text-black/70 dark:text-white/70">
+                  from {deal.flyFrom}
+                </span>
+              </>
+            )}
           </div>
-          {deal.airportKmFromCity != null && (
-            <div
-              className={`mt-1 inline-flex items-center gap-1 text-xs ${
-                deal.airportKmFromCity >= FAR_AIRPORT_KM
-                  ? "text-amber-700 dark:text-amber-400/90"
-                  : "text-black/45 dark:text-white/45"
-              }`}
-            >
-              <span aria-hidden>✈</span>
-              <span>
-                Airport {deal.airportKmFromCity} km from {deal.cityTo}
-              </span>
-            </div>
-          )}
+          {/* Only when the airport is genuinely far. It used to render on
+              nearly every card, which made it wallpaper in the most valuable
+              slot; and at 5 km nobody cares that Nuremberg's airport calls
+              itself Nürnberg. Names the PLACE, not just the distance — "you
+              land in Charleroi" is actionable where "44 km from Brussels" is
+              only a complaint. */}
+          {deal.airportKmFromCity != null &&
+            deal.airportKmFromCity >= FAR_AIRPORT_KM && (
+              // Neutral, not amber. Amber is spent on the bridge-day rows,
+              // where it means GOOD news ("you're off"), so the same ink on a
+              // warning made one card say two opposite things. The sentence is
+              // specific enough to land on its own — it names the town.
+              <div className="mt-1 inline-flex items-start gap-1 text-xs text-black/60 dark:text-white/60">
+                <span aria-hidden>✈</span>
+                <span>
+                  {deal.airportCity
+                    ? `You land in ${deal.airportCity} — ${deal.airportKmFromCity} km from ${deal.cityTo}`
+                    : `Airport ${deal.airportKmFromCity} km from ${deal.cityTo}`}
+                </span>
+              </div>
+            )}
         </button>
         <div className="shrink-0 text-right">
-          <div className="text-lg font-semibold">
+          {/* tabular-nums: Space Grotesk's proportional digits make a 60-row
+              price column jitter by ~6px, on the one figure the whole board is
+              sorted by. */}
+          <div className="text-lg font-semibold tabular-nums">
             {deal.price} {deal.currency}
           </div>
           {/* Kiwi prices the whole party — flag it for groups so the total
@@ -368,16 +474,34 @@ export function DealCard({
             </div>
           )}
           {days > 0 && (
-            <div className="text-xs text-black/55 dark:text-white/60">
+            <div className="text-xs tabular-nums text-black/55 dark:text-white/60">
               in {days} days
             </div>
           )}
         </div>
+        {/* The disclosure lives at the trailing edge of the header, where an
+            accordion's control is expected — the card previously had two
+            silently-clickable regions and a control down in the footer, which
+            is not where anyone looks to find out if a row opens. */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={open ? `Hide details for ${deal.cityTo}` : `Show details for ${deal.cityTo}`}
+          className="-mr-1 flex h-11 w-8 shrink-0 items-center justify-center self-start rounded-lg text-black/45 transition hover:bg-black/[0.05] hover:text-black dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+        >
+          <ChevronIcon
+            className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          />
+        </button>
       </div>
 
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
         aria-label={open ? "Hide details" : "Show details"}
         className="mt-3 block w-full text-left"
       >
@@ -395,13 +519,13 @@ export function DealCard({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`rounded-full px-2.5 py-1 text-sm font-medium ${
+            className={`text-sm ${
               goodStay
-                ? "bg-green-100 text-green-900 dark:bg-green-300/20 dark:text-green-100"
-                : "bg-black/[0.06] text-black/70 dark:bg-white/10 dark:text-white/70"
+                ? "text-green-800 dark:text-green-200"
+                : "text-black/60 dark:text-white/60"
             }`}
           >
-            {stay} to explore
+            <span className="font-medium">{stay}</span> to explore
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -410,42 +534,53 @@ export function DealCard({
             target="_blank"
             rel="noopener noreferrer sponsored"
             aria-label={`Find a hotel in ${deal.cityTo} on Booking.com (opens a new tab)`}
-            className="inline-flex items-center gap-1.5 text-sm text-black/55 transition duration-200 hover:text-black motion-safe:hover:scale-105 dark:text-white/55 dark:hover:text-white"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-black transition duration-200 dark:text-white"
           >
-            <BedIcon className="h-4 w-4 shrink-0" />
-            <span className="underline underline-offset-2">Stay</span>
-            <ExternalLinkIcon className="h-3 w-3 shrink-0 opacity-60" />
+            <span className="underline underline-offset-2">Hotels</span>
+            <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
           </a>
           <a
             href={deal.deepLink}
             target="_blank"
             rel="noopener noreferrer sponsored"
             aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
-            className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 motion-safe:hover:scale-105 dark:text-white"
+            className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 dark:text-white"
           >
-            <span className="underline underline-offset-2">Book</span>
+            <span className="underline underline-offset-2">Book flight</span>
             <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
           </a>
         </div>
       </div>
 
       {isBridge(deal) && deal.homeHoliday && (
-        <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug text-amber-900 ring-1 ring-inset ring-amber-200/70 dark:bg-amber-300/[0.08] dark:text-amber-100 dark:ring-amber-300/20">
-          <span aria-hidden className="mt-px shrink-0">
+        // Two lines, not one sentence. This used to run "Long weekend · no day
+        // off needed — you're off for St. Andrew's Day & National Day/Great
+        // Union · Mon 30 Nov" across a single line: three facts of different
+        // importance, separated by identical dots, so nothing led. Now the
+        // claim and its cost sit on top, the evidence underneath.
+        //
+        // No left rule: the 🌉 already marks the block, and a second vertical
+        // marker beside it was two devices doing one job.
+        <div className="mt-2.5 flex items-start gap-2.5 py-0.5 text-sm leading-snug text-amber-900 dark:text-amber-100/90">
+          <span aria-hidden className="mt-[3px] shrink-0 text-[13px] leading-none">
             🌉
           </span>
-          <span>
-            <span className="font-semibold">
-              {(deal.ptoDays ?? 0) <= 1 ? "Long weekend" : "Bridge trip"}
-            </span>
-            <span className="text-amber-900/70 dark:text-amber-100/70">
-              {" · "}
-              {deal.ptoDays === 0
-                ? "no day off needed"
-                : deal.ptoDays === 1
-                  ? "1 day off"
-                  : `${deal.ptoDays} days off required`}
-              {" — you’re off for "}
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-semibold">
+                {(deal.ptoDays ?? 0) <= 1 ? "Long weekend" : "Bridge trip"}
+              </span>
+              {/* The cost in leave is the whole point, so it gets the badge —
+                  same vocabulary the planned bridge strip uses. */}
+              <span className="rounded-full bg-amber-400/20 px-2 py-[1px] text-[11px] font-semibold tracking-wide text-amber-900 dark:bg-amber-300/20 dark:text-amber-100">
+                {deal.ptoDays === 0
+                  ? "no day off"
+                  : deal.ptoDays === 1
+                    ? "1 day off"
+                    : `${deal.ptoDays} days off`}
+              </span>
+            </div>
+            <div className="text-amber-900/70 dark:text-amber-100/70">
               {(() => {
                 const hols = deal.homeHolidays?.length
                   ? deal.homeHolidays
@@ -457,62 +592,128 @@ export function DealCard({
                   names.length <= 1
                     ? (names[0] ?? "")
                     : `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}`;
-                return `${joined} · ${holidayDate(hols[0].date)}`;
+                // Date first: it is the actionable half. The holiday's name
+                // explains WHY, and can be very long in some countries.
+                return `${holidayDate(hols[0].date)} is a holiday — ${joined}`;
               })()}
-            </span>
-          </span>
+            </div>
+          </div>
         </div>
       )}
 
       {open && (
-        <div className="mt-3 flex flex-col gap-3 border-t border-black/10 pt-3 text-sm dark:border-white/10">
-          <Leg
-            label="Outbound"
-            date={dateWithMonth(deal.outDepart)}
-            depTime={timeLabel(deal.outDepart)}
-            depCode={deal.flyFrom}
-            arrTime={timeLabel(deal.outArrive)}
-            arrCode={deal.flyTo}
-            plusOne={arrival.plusOne}
-            minutes={legMinutes(deal.outDepart, deal.outArrive)}
-            stops={deal.outStops}
-            layovers={deal.outLayovers}
-          />
-          <Leg
-            label="Return"
-            date={dateWithMonth(deal.backDepart)}
-            depTime={timeLabel(deal.backDepart)}
-            depCode={deal.flyTo}
-            arrTime={timeLabel(deal.backArrive)}
-            arrCode={deal.flyFrom}
-            plusOne={returnPlusOne}
-            minutes={legMinutes(deal.backDepart, deal.backArrive)}
-            stops={deal.backStops}
-            layovers={deal.backLayovers}
-          />
-          {deal.destHoliday && (
-            <div className="inline-flex items-center gap-2 text-teal-800 dark:text-teal-200">
-              <MapPinIcon className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-              <span>
-                Local holiday in {deal.cityTo} · {deal.destHoliday.name}
-              </span>
+        <div
+          id={panelId}
+          className="mt-3 flex flex-col gap-4 border-t border-black/10 pt-3 text-sm dark:border-white/10"
+        >
+          {/* The panel answers three unrelated questions — how do I get there,
+              what is it like there, what does it cost. They used to be one
+              undifferentiated column of same-weight sentences, which reads as
+              texture rather than information. Three labelled zones instead. */}
+          <section className="flex flex-col gap-2.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <SectionLabel>The flights</SectionLabel>
+              {showOrigin && deal.cityFrom && (
+                <span className="text-[10px] font-semibold tracking-[0.08em] text-black/55 uppercase dark:text-white/55">
+                  From {deal.cityFrom} ({deal.flyFrom})
+                </span>
+              )}
             </div>
-          )}
+            <ul className="flex flex-col gap-2">
+            <Leg
+              label="Out"
+              depIso={deal.outDepart}
+              arrIso={deal.outArrive}
+              depCode={deal.flyFrom}
+              arrCode={deal.flyTo}
+              depCity={deal.cityFrom}
+              arrCity={deal.cityTo}
+              plusOne={arrival.plusOne}
+              minutes={legAirMinutes(
+                deal.outDurationMin,
+                deal.outDepart,
+                deal.outArrive
+              )}
+              stops={deal.outStops}
+              layovers={deal.outLayovers}
+              carriers={(deal.outAirlines ?? []).map((code) => ({
+                code,
+                name: airlineName(code),
+              }))}
+            />
+            <Leg
+              label="Back"
+              depIso={deal.backDepart}
+              arrIso={deal.backArrive}
+              depCode={deal.flyTo}
+              arrCode={deal.flyFrom}
+              depCity={deal.cityTo}
+              arrCity={deal.cityFrom}
+              plusOne={returnPlusOne}
+              minutes={legAirMinutes(
+                deal.backDurationMin,
+                deal.backDepart,
+                deal.backArrive
+              )}
+              stops={deal.backStops}
+              layovers={deal.backLayovers}
+              carriers={(deal.backAirlines ?? []).map((code) => ({
+                code,
+                name: airlineName(code),
+              }))}
+            />
+            </ul>
+
+
+            {/* Conditional warnings only. Most trips show none, which is what
+                makes their absence meaningful and their presence worth reading. */}
+            {flags.map((f) => (
+              <p
+                key={`${f.at}-${f.minutes}-${f.kind}`}
+                className="flex items-start gap-1.5 text-[13px] text-amber-700 dark:text-amber-400"
+              >
+                <span aria-hidden className="mt-[1px] shrink-0">
+                  ⚑
+                </span>
+                <span>
+                  {f.kind === "tight"
+                    ? `Tight connection — ${durationLabel(f.minutes)} in ${f.at}, little room if anything slips.`
+                    : `Long stop — ${durationLabel(f.minutes)} in ${f.at}.`}
+                </span>
+              </p>
+            ))}
+
+          </section>
+
+          <section className="flex flex-col gap-2 border-t border-black/10 pt-3 dark:border-white/10">
+            {/* The heading row carries the see-the-place links: the section is
+                already "what is it like there", and the icons sit in the dead
+                space at its trailing edge rather than costing a row. */}
+            <div className="-my-1 flex items-center justify-between gap-2">
+              <SectionLabel>In {deal.cityTo}</SectionLabel>
+              <PlaceLinks city={deal.cityTo} country={deal.countryTo} />
+            </div>
           {weatherLoading && !weather && (
-            <div className="text-xs text-black/40 dark:text-white/40">
-              Checking the weather…
+            // Two bars: the resolved row is always two lines, so a one-line
+            // skeleton would still reflow the panel when it lands.
+            <div className="flex flex-col gap-1">
+              <div className="h-4 w-2/3 animate-pulse rounded bg-black/[0.06] dark:bg-white/[0.08]" />
+              <div className="h-3 w-1/3 animate-pulse rounded bg-black/[0.06] dark:bg-white/[0.08]" />
             </div>
           )}
           {weather && (
             <div className="flex items-center gap-2 text-black/60 dark:text-white/60">
-              <span aria-hidden className="text-base leading-none">
+              {/* Reset the inherited colour: the row's `text-black/60` sets a
+                  60%-alpha -webkit-text-fill-color, which browsers apply to the
+                  colour glyph itself and wash the emoji out. */}
+              <span
+                aria-hidden
+                className="text-base leading-none text-black dark:text-white"
+              >
                 {weather.emoji}
               </span>
               <span>
-                <span className="font-medium text-black/75 dark:text-white/75">
-                  {weather.mode === "forecast" ? "Expected" : "Typical"}
-                </span>{" "}
-                <span className="tabular-nums">
+                <span className="font-semibold tabular-nums text-black dark:text-white">
                   {weather.highC}° / {weather.lowC}°C
                 </span>
                 <span className="text-black/35 dark:text-white/35"> · </span>
@@ -525,85 +726,181 @@ export function DealCard({
                       {weather.precipChance}% rain
                     </span>
                   )}
-                {weather.mode === "typical" && weather.years != null && (
-                  <span className="text-black/40 dark:text-white/40">
-                    {" · "}
-                    {weather.years}-yr avg
-                  </span>
-                )}
                 {packingCue(weather) && (
-                  <span className="text-black/55 dark:text-white/60">
+                  <span className="text-black/60 dark:text-white/60">
                     {" — "}
                     {packingCue(weather)}
                   </span>
                 )}
+                {/* The methodology caveat is demoted to its own quiet line
+                    rather than interrupting the primary statement mid-sentence. */}
+                <span className="mt-0.5 block text-[11px] text-black/60 dark:text-white/60">
+                  {weather.mode === "forecast"
+                    ? "Forecast for these dates"
+                    : `Typical for these dates · ${weather.years ?? 5}-year average`}
+                </span>
               </span>
             </div>
           )}
-          {deal.co2Kg != null && (
-            <div
-              className={`inline-flex items-start gap-1.5 ${
-                deal.co2Kg <= LOW_CO2_KG
-                  ? "text-green-700 dark:text-green-400"
-                  : "text-black/55 dark:text-white/55"
-              }`}
-            >
-              <LeafIcon className="mt-[2px] h-3.5 w-3.5 shrink-0" />
+          {daylight && (
+            <div className="inline-flex items-start gap-2 text-black/70 dark:text-white/70">
+              <SunIcon className="mt-[2px] h-4 w-4 shrink-0 text-amber-500" />
+              <span>{daylight}</span>
+            </div>
+          )}
+          {deal.destHoliday && (
+            // Reframed: a public holiday at the destination usually means the
+            // shops are shut. The old copy styled it as a perk, which sold a
+            // downside as an upside.
+            <div className="inline-flex items-start gap-2 text-black/70 dark:text-white/70">
+              {/* Only the pin carries the accent. Colouring the whole sentence
+                  made a caveat read as a highlight, and spent an accent colour
+                  on a row that isn't the most important thing in the panel. */}
+              <MapPinIcon className="mt-[2px] h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400" />
               <span>
-                Est. ~{deal.co2Kg} kg CO₂ round trip, per person —
-                great-circle estimate, economy.
+                <a
+                  href={holidaySearchUrl(
+                    deal.destHoliday.name,
+                    deal.cityTo,
+                    deal.destHoliday.date
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Search the web for ${deal.destHoliday.name} in ${deal.cityTo} (opens a new tab)`}
+                  className="font-medium underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                >
+                  {deal.destHoliday.name}
+                  <ExternalLinkIcon className="ml-1 inline h-3 w-3 align-[-0.1em]" />
+                </a>{" "}
+                {" — "}
+                {deal.destHoliday.national === false
+                  ? `a public holiday in parts of ${deal.countryTo || "the country"}`
+                  : `a public holiday in ${deal.cityTo}`}
+                ; opening hours may differ.
               </span>
             </div>
           )}
-          {(airlines.length > 0 || deal.bagPrice != null) && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-black/60 dark:text-white/60">
-              {airlines.length > 0 && (
-                <span className="inline-flex items-center gap-1.5">
-                  {airlines.slice(0, 3).map((code) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={code}
-                      src={`https://images.kiwi.com/airlines/64/${code}.png`}
-                      alt={airlineName(code)}
-                      title={airlineName(code)}
-                      width={18}
-                      height={18}
-                      loading="lazy"
-                      className="h-[18px] w-[18px] rounded-[3px] object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  ))}
-                  <span className="text-black/70 dark:text-white/70">
-                    {airlines.slice(0, 3).map(airlineName).join(", ")}
-                    {airlines.length > 3 ? ` +${airlines.length - 3}` : ""}
-                  </span>
-                </span>
-              )}
-              {deal.bagPrice != null && (
-                <span>
-                  {deal.bagPrice === 0
-                    ? "Checked bag included"
-                    : `Cabin bag only · checked bag +${Math.round(deal.bagPrice)} ${deal.currency}`}
-                </span>
-              )}
-            </div>
-          )}
-          {cheapest && (
-            <div className="mt-1 border-t border-black/10 pt-2 dark:border-white/10">
+          </section>
+          <section className="flex flex-col gap-2 border-t border-black/10 pt-3 dark:border-white/10">
+            <SectionLabel>What it costs</SectionLabel>
+            {/* A table, not a sentence. The bag fee runs ~85% of the fare at the
+                median on this board, so the headline price is roughly half the
+                real number — that comparison has to be legible at a glance. */}
+            <dl className="flex flex-col gap-1">
+              {cost.map((row) => (
+                <div
+                  key={row.label}
+                  className={`flex items-baseline justify-between gap-3 ${
+                    row.total
+                      ? "mt-1 border-t border-black/10 pt-1.5 dark:border-white/10"
+                      : ""
+                  }`}
+                >
+                  <dt
+                    className={
+                      row.total
+                        ? "text-[15px] font-semibold"
+                        : "text-black/65 dark:text-white/65"
+                    }
+                  >
+                    {row.label}
+                  </dt>
+                  <dd
+                    className={`tabular-nums ${
+                      row.total
+                        ? "text-[15px] font-semibold"
+                        : bags.severe && row.value.startsWith("+")
+                          ? "text-amber-700 dark:text-amber-400"
+                          : "text-black/65 dark:text-white/65"
+                    }`}
+                  >
+                    {row.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {/* Only when the table couldn't state a total — then this carries
+                real information (unknown price, two airlines, a party). When
+                there IS a total row it just repeats the number above it. */}
+            {!cost.some((r) => r.total) && (
+              <p className="text-[11px] text-black/60 dark:text-white/60">
+                {bags.full}
+              </p>
+            )}
+
+            {/* Full-width CTA at the foot of the panel. The header Book link
+                scrolls off-screen on a phone once the card is open, so the user
+                read all of this and then had to scroll back up to act. */}
+            <a
+              href={deal.deepLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
+              // Full-bleed on a phone, where it's the thumb target at the foot
+              // of a long panel; on wider screens it sizes to its label instead
+              // of stretching a 700px bar across the card.
+              className="mt-1 inline-flex min-h-11 w-full items-center justify-center gap-1.5 self-start rounded-full bg-neutral-900 px-5 text-sm font-medium text-white transition hover:bg-neutral-800 sm:w-auto dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            >
+              Book on Kiwi
+              <ExternalLinkIcon className="h-3.5 w-3.5" />
+            </a>
+
+            {/* One footnote instead of three trailing caveats, each of which
+                diluted its own row. Absorbs the CO₂ figure, which was a
+                colour-coded row for a number nobody books on. */}
+            {/* Two unrelated facts, so two lines. They were joined by a "·",
+                which read as one run-on sentence and buried the CO₂ figure at
+                the tail of a caveat about pricing. */}
+            {/* BELOW the CTA. It resolves after the panel opens, so anywhere
+                above the button meant the button moved under a thumb already
+                reaching for it — reserving a slot instead just moved the jump
+                to when the slot collapsed. Nothing that arrives late may sit
+                above the primary action. */}
+            {/* Separated from the CTA above it. Sitting flush under the Book
+                button, a second date and a second price read as part of the
+                same block — they are a different offer for a different weekend. */}
+            {cheapest && (
               <CheapestWeekend
                 flyFrom={deal.flyFrom}
                 flyTo={deal.flyTo}
                 cityTo={deal.cityTo}
-                currentPrice={deal.price}
+                current={deal}
                 style={cheapest.style}
                 months={cheapest.months}
                 direct={cheapest.direct}
                 adults={cheapest.adults}
               />
+            )}
+            <div className="flex flex-col gap-0.5 text-[11px] text-black/55 dark:text-white/55">
+              <p>Final price, bags and cabin rules are set on Kiwi.</p>
+              {/* Google's Travel Impact Model when it knows the aircraft, our
+                  own distance estimate otherwise. The two are not close: on a
+                  Cluj-Bergamo return TIM says ~181 kg against our ~335 kg, so
+                  labelling matters — "measured" and "estimate" are different
+                  claims and the line says which one you are reading. */}
+              {timGrams != null ? (
+                <p>
+                  {Math.round(timGrams / 1000)} kg CO₂ per person ·{" "}
+                  <a
+                    href="https://github.com/google/travel-impact-model"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    Google Travel Impact Model
+                  </a>
+                </p>
+              ) : (
+                deal.co2Kg != null && (
+                  <p>~{deal.co2Kg} kg CO₂ per person (estimate)</p>
+                )
+              )}
             </div>
-          )}
+          </section>
+          {/* Last thing in the panel, and behind one more click: it is an
+              upsell, not a reason the card exists, and it must not interrupt
+              the cost read. Renders nothing when GYG has no inventory. */}
+          <ThingsToDo city={deal.cityTo} />
         </div>
       )}
     </div>

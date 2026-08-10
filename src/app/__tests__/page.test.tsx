@@ -4,10 +4,13 @@ import Home from "@/app/page";
 
 const ibiza = {
   cityTo: "Ibiza",
+  cityFrom: "Barcelona",
   countryTo: "Spain",
   flag: "🇪🇸",
   flyFrom: "BCN",
   flyTo: "IBZ",
+  countryFrom: "Spain",
+  segments: [],
   countryFromCode: "ES",
   countryToCode: "ES",
   outDepart: "2026-08-08T21:05:00.000Z",
@@ -193,18 +196,71 @@ describe("Home page", () => {
     expect(screen.getByText("Doha")).toBeInTheDocument();
   });
 
-  it("collapses the search after searching and reopens it on Edit", async () => {
+  // Second occurrence of this bug class: form state changing the LABELS on
+  // results that were fetched with different parameters. The first was months /
+  // stops / adults; this one relabelled 57 weekend results as "bridge escapes"
+  // the instant the toggle was tapped, with no search run. Everything the
+  // results header says must come from the `applied` snapshot.
+  it("does not relabel results when the bridge toggle is tapped", async () => {
+    grantGeolocation();
+    vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+    // The panel auto-collapses now that an airport is known.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+    const heading = () =>
+      screen.getByText(/^\d+ (.+ flights?|long weekends?)$/i);
+    const before = heading().textContent;
+    expect(before).toMatch(/flights?$/i);
+
+    fireEvent.click(screen.getByRole("switch", { name: /bridge days/i }));
+
+    expect(screen.getByRole("switch", { name: /bridge days/i })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    // The toggle is on, but no search has run — the heading must still describe
+    // the results actually on screen.
+    expect(heading().textContent).toBe(before);
+    expect(screen.queryByText(/long weekends? in the next/i)).not.toBeInTheDocument();
+  });
+
+  // The panel's default is conditional, and both halves matter. Collapsing
+  // unconditionally hid every setting behind an "Edit" a newcomer had no reason
+  // to press; never collapsing left ~500px between the header and the first
+  // result for someone who already has an airport.
+  it("collapses to the summary once an airport is known, and reopens on Edit", async () => {
     grantGeolocation();
     vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    // collapsed: the search controls are gone, a summary is shown
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByText(/^weekend getaways from$/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    );
+    // The caption is gone; the collapsed state is identified by its Edit
+    // affordance and the tappable facets, not by a label.
+    expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /edit/i }));
     expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("keeps the form open when there is no airport to collapse to", async () => {
+    // Nothing geolocated and nothing saved: collapsing here would hide the one
+    // control the visitor actually needs.
+    denyGeolocation();
+    vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
+    expect(
+      screen.queryByRole("button", { name: /^edit$/i })
+    ).not.toBeInTheDocument();
   });
 });
