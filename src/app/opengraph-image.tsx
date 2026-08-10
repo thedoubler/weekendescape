@@ -4,18 +4,17 @@ import { join } from "node:path";
 
 // Site-wide Open Graph / Twitter card, generated in code so it matches the app's
 // header and dark palette. Next auto-adds the og:image / twitter tags.
-export const alt = "Weekend Escape — cheapest weekend getaways from home";
+export const alt = "shortliday — cheapest weekend getaways from home";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OpengraphImage() {
-  // Passing `fonts` replaces Satori's default, so we bundle both faces used in
-  // the header: Space Grotesk (sans) as the base, and Instrument Serif italic
-  // for the "Escape" wordmark.
-  const [sans, sansBold, serifItalic] = await Promise.all([
+  // Passing `fonts` replaces Satori's default, so we bundle the one face the
+  // card renders. Space Grotesk is the header's face; the wordmark is a
+  // weight/colour treatment of it, not a second family.
+  const [sans, sansBold] = await Promise.all([
     readFile(join(process.cwd(), "assets/SpaceGrotesk-400.ttf")),
     readFile(join(process.cwd(), "assets/SpaceGrotesk-700.ttf")),
-    readFile(join(process.cwd(), "assets/InstrumentSerif-Italic.ttf")),
   ]);
 
   return new ImageResponse(
@@ -63,7 +62,9 @@ export default async function OpengraphImage() {
           </div>
         </div>
 
-        {/* Hero wordmark — Weekend (sans) + Escape (serif italic) */}
+        {/* Hero wordmark — "shortliday", with the same s[ho]rt[liday] colour
+            split the header uses, so the share card and the page read as one
+            brand rather than two. */}
         <div
           style={{
             display: "flex",
@@ -75,16 +76,10 @@ export default async function OpengraphImage() {
             color: "#f5f6f8",
           }}
         >
-          <span style={{ fontWeight: 700 }}>Weekend</span>
-          <span
-            style={{
-              fontFamily: "Instrument Serif",
-              fontStyle: "italic",
-              marginLeft: "26px",
-            }}
-          >
-            Escape
-          </span>
+          <span style={{ fontWeight: 700 }}>s</span>
+          <span style={{ fontWeight: 700, color: "#f97316" }}>ho</span>
+          <span style={{ fontWeight: 700 }}>rt</span>
+          <span style={{ fontWeight: 700, color: "#f97316" }}>liday</span>
         </div>
 
         {/* Value prop */}
@@ -97,7 +92,7 @@ export default async function OpengraphImage() {
             lineHeight: 1.35,
           }}
         >
-          Fly out Friday, back Monday — round-trips ranked by price, weather and
+          Out Friday, back Sunday — round-trips ranked by price, weather and
           real airport distance.
         </div>
       </div>
@@ -107,12 +102,6 @@ export default async function OpengraphImage() {
       fonts: [
         { name: "Space Grotesk", data: sans, style: "normal", weight: 400 },
         { name: "Space Grotesk", data: sansBold, style: "normal", weight: 700 },
-        {
-          name: "Instrument Serif",
-          data: serifItalic,
-          style: "italic",
-          weight: 400,
-        },
       ],
     }
   );

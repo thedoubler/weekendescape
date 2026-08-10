@@ -1,4 +1,4 @@
-# Weekend Escape
+# shortliday
 
 Finds the cheapest weekend round-trip flights from your home airport across a
 future timeline. Built with Next.js + the Kiwi Tequila API.
@@ -8,11 +8,21 @@ future timeline. Built with Next.js + the Kiwi Tequila API.
 1. `npm install`
 2. Create `.env.local`:
    ```
-   TEQUILA_API_KEY=your_key
-   WEEKEND_CURRENCY=EUR
+   TEQUILA_API_KEY=your_key          # required — https://partners.kiwi.com/
    ```
-   Get a key at https://partners.kiwi.com/
 3. `npm run dev` and open http://localhost:3000
+
+### Optional environment
+
+| Variable | Effect if unset |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Canonical URLs, OG images, `robots.txt` and the sitemap fall back to the Vercel production domain, then `localhost`. Set it on the real deploy. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | `/about` shows a developer note where the address should be. |
+| `NEXT_PUBLIC_COFFEE_URL` | The "buy me a coffee" paragraph on `/about` does not render at all. |
+| `NEXT_PUBLIC_GYG_PARTNER_ID` | Falls back to the built-in GetYourGuide partner ID. Set to disable or re-point the activities panel. |
+| `NEXT_PUBLIC_BOOKING_AID` | Booking.com links go out without an affiliate ID. |
+| `UNSPLASH_ACCESS_KEY` / `DESTINATION_IMAGES` | Destination images are skipped. |
+| `WEEKEND_CURRENCY` | **Leave it unset.** Currency is chosen from the origin — EUR for a European home airport, USD otherwise (`src/lib/currency.ts`). Setting this pins every board to one currency and overrides that. |
 
 ## How it works
 
@@ -27,3 +37,36 @@ future timeline. Built with Next.js + the Kiwi Tequila API.
 ## Testing
 
 `npm test` runs the Vitest suite.
+
+## What's next
+
+Tracked work, roughly in the order it is worth doing. Detail and file:line
+references live in the task list; the strategy behind the first two is in
+`docs/`.
+
+**Product**
+- Surface bridge days on the board — a strip naming the long weekends ahead
+  ("Independence Day · Wed 11 Nov · 2 days off → 5 · from 52 EUR"). The bridge
+  search already exists in `src/lib/bridges.ts` but is a toggle that is off by
+  default, so the one feature no competitor has is hidden. Mockup and reasoning:
+  the three treatments compared before choosing B.
+- Server-rendered origin pages (`/from/[iata]`) — see
+  `docs/seo-origin-pages.md`. A crawler currently sees 503 characters of the
+  board; `/about` is the only page it can read in full. Blocked on extracting
+  the search out of the route handler.
+
+**Correctness**
+- Don't write a home airport to `localStorage` before the search succeeds.
+- Verify the map renders in a production build (reported, not reproduced).
+
+**Interface**
+- Light-mode muted text fails WCAG AA in ~100 places; the same alphas pass in
+  dark, so the ramp was tuned there and reused. Needs per-theme tokens.
+- The error state has no retry.
+- A 72px reserved slot sits empty above "Book on Kiwi" on most deals.
+- Map labels clip at narrow widths; two separator/wrap bugs.
+- Design-system consolidation: six outline-pill variants, fourteen type sizes,
+  four disclosure glyphs, and amber used for both warnings and good news.
+
+**Config** — see the optional environment table above; `WEEKEND_CURRENCY`
+should be removed from any existing `.env.local`.

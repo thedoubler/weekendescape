@@ -303,6 +303,17 @@ If it ever needs slimming with **no coverage loss**:
 
 ## Flight data sources — fallbacks & complements
 
+> ⚠️ **Premise contested (2026-07-30).** Competitive research reports that
+> Ryanair signed a distribution agreement with Skyscanner in September 2025,
+> and that its approved-OTA roster now includes Kiwi, Expedia, Booking and TUI;
+> Wizz has long been listed on Skyscanner. If that holds, "we aggregate the LCCs
+> metasearch won't" stopped being true in late 2025, and Travelpayouts' value
+> below is redundancy rather than coverage.
+>
+> NOT VERIFIED FIRST-HAND — the session that surfaced it had exhausted its web
+> search budget and relied on trade-press summaries. **Check before relying on
+> either version of this paragraph.**
+
 The app's magic = **aggregating low-cost carriers + flexible "cheapest weekend"
 search**. That combo is rare, which is what makes replacing Tequila hard.
 
@@ -415,3 +426,166 @@ Sources: Baymard (flight-booking UX 2026), RALabs (booking UX), Smashing
   bridge days (e.g. Romanian "punți"). Only market statutory days with confidence.
 - **Airport/city coords** (`airports.json` / `cities.json`) are OpenFlights /
   GeoNames snapshots — fine for distance math, not guaranteed current.
+
+---
+
+## Kiwi (Tequila) fields we don't parse yet — verified against a live response (2026-07-28)
+
+Pulled a real `/v2/search` response (BCN, round trip, `nights_in_dst_from/to`) and dumped the
+segment keys. Full `route[]` segment shape:
+
+```
+airline, bags_recheck_required, cityCodeFrom, cityCodeTo, cityFrom, cityTo,
+combination_id, equipment, fare_basis, fare_category, fare_classes, flight_no,
+flyFrom, flyTo, guarantee, id, local_arrival, local_departure,
+operating_carrier, operating_flight_no, return, utc_arrival, utc_departure,
+vehicle_type, vi_connection
+```
+
+Sample values: `airline: "VY"`, `flight_no: 3902`, `operating_carrier: "VY"`,
+`operating_flight_no: "3902"`, `vehicle_type: "aircraft"`.
+
+Itinerary level: `duration: {departure, return, total}` (seconds — this is what
+`outDurationMin`/`backDurationMin` now read), `virtual_interlining: false`,
+`availability: {seats: null}`.
+
+### Worth harvesting
+
+| Field | Why | Note |
+|---|---|---|
+| `operating_carrier` + `operating_flight_no` | **Unlocks the Travel Impact Model** (below) | Prefer *operating* over marketing carrier — on a codeshare TIM models the aircraft actually flying |
+| `virtual_interlining` | The real self-transfer flag | `lib/baggage.ts` currently *infers* this from "2 carriers + a stop". Replace the guess with the fact |
+| `bags_recheck_required` (per segment) | Answers "must I re-claim and re-check my bag?" | Concrete and actionable at a connection |
+| `utc_departure` / `utc_arrival` | True elapsed time without timezone maths | We use `duration.*` for this now; these are the cross-check |
+
+### Not usable
+
+- `equipment` — `null` in the sample. Don't build aircraft-type UI on it without checking coverage.
+- `availability.seats` — `null` here, and scarcity messaging would corrode the honesty positioning
+  the rest of the product is built on. Deliberately skip.
+
+## Travel Impact Model (TIM) — better CO₂ than our great-circle estimate
+
+<https://travelimpactmodel.org> · Google's model, the emerging industry standard (used by Google
+Flights, Skyscanner and others). Free API, key required.
+
+**What it replaces:** `lib/co2.ts` is a great-circle distance estimate with a fixed economy factor.
+TIM uses actual aircraft type and seat configuration per flight, so it distinguishes a full A320
+from a half-empty regional jet on the same route.
+
+**Keys off:** carrier + flight number + departure date — all confirmed present above, once we parse
+them. This is the only blocker.
+
+**Shape of the work:**
+1. Parse `operating_carrier` / `operating_flight_no` / segment dates in `normalizeDeals`.
+2. Server-side lookup, cached hard (emissions for a given flight+date barely move) — reuse
+   `lib/api-cache.ts`.
+3. **Per-segment**: a 1-stop trip needs both legs summed. Returns per-cabin figures; we want economy.
+4. Fall back to the existing great-circle estimate when TIM has no data for a flight, and keep
+   labelling estimates as estimates.
+
+**Honest caveat:** coverage is not total. Some flights return nothing, so the great-circle path has
+to stay as the fallback rather than being ripped out.
+
+---
+
+## Destination facts for short trips — research verdict (2026-07-29)
+
+Researched the candidate list (car-free centres, tourist tax, ride-share, city
+passes, "for foodies"/"cultures", train networks, hilliness/footwear, cash-vs-card,
+guest registration, power outlets). Three independent consults, each measuring
+against **live boards** (BCN 76 deals / CLJ 63 / LTN 75 — 214 deals, 42 destination
+countries, 8 of them outside Europe).
+
+### The rule that decides most of it
+
+> **Silence must be a property of the trip, never of the dataset.**
+
+The card's grammar depends on absence meaning something: no layover flag = the
+connection is fine; no daylight line = daylight doesn't constrain this trip. A
+hand-curated city fact breaks that — present on Rome, absent on Bergamo — and the
+damage isn't local: readers learn a blank might just mean "we didn't get to it",
+which retroactively devalues every honest silence already shipped. Worse, curated
+coverage tracks city size, which tracks fare, so the *thinnest* cards would be
+exactly the long tail this product exists to surface.
+
+Three gates, all required: **derived not curated · fires on ≤25–30% of a real
+board · changes which card you tap** (not what you pack).
+
+### Worth adding
+
+| Rank | Thing | Why | Effort |
+|---|---|---|---|
+| 1 | **Rebuild `cities.json`** from GeoNames `cities1000` + fix `norm()` | Fixes a *live* bug, no new feature needed. Current table misses 15 of 147 board cities — Dubrovnik, Valletta, Memmingen, Tromsø, Ibiza, Corfu — i.e. the leisure tail, so `airportKmFromCity` is silently null there. Also `norm()` mangles non-decomposable letters: `Tromsø → "troms"`, `Wrocław → "wroc aw"` | 0.5–1 d |
+| 2 | **Airport → centre transfer time** | Distance isn't a travel time, and on a 48h trip a 90-min transfer is 6.3% of the trip (0.45% of a fortnight). FlixBus publishes a first-party pan-EU GTFS feed (33 MB, **ODbL**, refreshed within days) — airport→centre is usually one direct vehicle, so a `stop_times` self-join gives real numbers with no routing engine. Verified: Bergamo→Milan 55 min, Girona→Barcelona 75 min, Hahn→Frankfurt 150 min. ~40–50% of cards yield a defensible time; show the km line otherwise | 6–9 d |
+| 3 | **Power outlet — Type G crossing only** | The only candidate with `daylight.ts`-grade certainty. Pure function of `(countryFromCode, countryToCode)`, both already on the Deal, so **no city anchor and no long-tail problem**. Wikidata P2853 (CC0) covered 42/42 board countries | 0.5 d |
+
+**Copy the plug line as a difference, never a spec:** *"UK sockets — your charger
+won't fit without an adapter."* Suppress it when the home airport is itself Type G
+(fires on 91% of an LTN board — a constant).
+
+### Not worth it, and why the reasons differ
+
+- **Hilliness** — tested against EU-DEM and ASTER. Computable, and *wrong*: Lisbon ranks 23rd of 124 cities, below Oslo and Alicante; Edinburgh below Kaunas. A GeoNames centroid isn't the tourist core (Lisbon reads 5.74% at Baixa vs 3.18% at the table's coordinate). Honest version needs sampling along the walk network — 6–8 days plus curating "where is the core" for 300 cities.
+- **Car-free centres** — OSM measures tagging convention, not pedestrianisation. Bruges (9.7%) ranks below Charleroi (12.1%); Trapani reads 0.0% despite a pedestrianised corso. Hand-curate ~40 cities or skip.
+- **Tourist tax** — highest decision impact, worst data. Per-municipality for ~60% of every board (Italy alone: ~1,410 comuni). Changes are gazetted the *same day* they take effect (Turkey, 1 May 2026) and compilations disagree on live figures. 80–135 h/yr maintenance. The most expensive way to acquire our first confidently-wrong number.
+- **Cash-vs-card / currency / 112 / tipping** — all *constants*, not conditionals (cash-heavy fires on 72–76% of every board; euro-vs-not is 97% from Cluj). Tipping additionally has **no authoritative source** — GastroSuisse states outright that no tipping statistics exist, while Switzerland Tourism publishes "~10%".
+- **Schengen/borders** — fails the "identical for every passenger" test (nationality decides visa/EES/ETIAS/UK ETA), and the route-level claim is currently false: NL, FR and SE have notified intra-Schengen *air* border controls into late 2026.
+- **Ride-share** — Bolt's city list is scrapeable (`robots.txt: Allow: /`, 723 EU cities, 70% board coverage) but **Uber's city pages are an SEO gazetteer, not a service map** — ~1,200 Italian "cities" listed, ~7 served. Never scrape Uber.
+- **City passes** — no machine-readable dataset exists, and for 48–72h the honest answer is usually *don't buy one*: Roma Pass 48h is −€5 against a realistic two-sight basket; Paris Museum Pass 2-day −€19.
+- **"For foodies" / "cultures"** — preferences, not facts. This codebase prints a bare IATA code rather than an unverified airline name; it can't then assert on nobody's authority that one city is "for foodies". If it ever ships, it's a **filter the user sets**, never a card row.
+
+### Also flagged
+- **Nager.Date** (in production, `holidays.ts`) states commercial use requires sponsorship. This product carries affiliate revenue — worth checking the terms.
+- **Boards are not Europe-only.** 8 of 42 destination countries are outside Europe; any country table inherits the `airport-overrides.ts` duty to blank rather than guess.
+- **Venice's access fee** is enforced Fri–Sun 08:30–16:00 — exactly this product's window. Deserves a hand-written note regardless.
+
+---
+
+## Outstanding work (as of 2026-07-30)
+
+The authoritative list lives in the task tracker; this is the durable copy, with
+the reasoning that does not fit in a task title. Numbers are task IDs.
+
+### Product
+- **#1 Surface bridge days on the board.** The bridge search already exists
+  (`src/lib/bridges.ts`) but sits behind a toggle that is OFF by default, so the
+  one thing competitors do not do is invisible. Three treatments were mocked and
+  compared; **B** (a strip above the first card, naming each occasion with a
+  "2 days off → 5" pill) was chosen because A and C both assume the reader
+  already knows what a bridge day is. Must render nothing at all when an origin
+  has no occasions — Warsaw's three are a favourable example, not typical.
+  Do NOT simply default the toggle on: the route does `deals.filter(isBridge)`,
+  which would cut a 57-deal board to a handful.
+- **#5 → origin pages.** `docs/seo-origin-pages.md`. Blocked on extracting the
+  search out of the route handler.
+
+### Correctness
+- **#6** `saveHomes()` runs before the fetch, so a failing origin is persisted
+  and reloaded on the next visit.
+- **#7** Map reported blank in a production build. Unreproduced — this
+  environment cannot paint WebGL reliably, so a blank map here proves nothing.
+
+### Interface — from the UI review (2026-07-30)
+- **#2** Light-mode muted text fails WCAG AA in ~100 places (worst 1.83:1). The
+  same alphas pass on the dark ground, which is the tell: the ramp was tuned in
+  dark and reused. Needs per-theme tokens, not a find-and-replace.
+- **#3** Error state is a bare red `<p>` with no retry.
+- **#4** A 72px reserved slot renders empty above "Book on Kiwi" on most deals.
+- **#10** Map labels clip at narrow widths; separator orphaning on wrap; weather
+  emoji misaligns on multi-line.
+- **#9** Design-system consolidation. True but low-impact — schedule it, don't
+  absorb it into a bug-fix pass.
+
+### Config
+- **#8** Remove `WEEKEND_CURRENCY` from `.env.local` (it defeats
+  `currencyForOrigin`), and set the contact / coffee / site-URL vars. See the
+  table in `README.md`.
+
+### Method note, worth keeping
+Three separate mistakes this session came from the same habit: **measuring the
+DOM and concluding something about how a thing LOOKS, without looking at it.**
+A 150px-tall element was read as "laid out compactly" when it was rendering
+blank; a `{"height": 0}` postMessage was read as "no inventory" when GYG sends
+it for every city. If a claim is about appearance, it needs a screenshot behind
+it, not a `getBoundingClientRect`.
