@@ -15,7 +15,16 @@ export function MonthFilter({
   if (months.length === 0) return null;
   const sel = new Set(selected);
   return (
-    <div role="group" aria-label="Month filter" className="flex flex-wrap gap-1">
+    // Scrolls rather than wraps. A filter row that grows a second line pushes
+    // the board down every time it does — and merging all the rows into ONE
+    // scroller was measured at 1007px of chips in a 358px box, which would hide
+    // two thirds of the controls. Per-row, at 390px, this fits (275px), so the
+    // scroller is insurance rather than the normal case.
+    <div
+      role="group"
+      aria-label="Month filter"
+      className="-mx-1 flex snap-x gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       <button
         type="button"
         aria-pressed={selected.length === 0}

@@ -153,16 +153,20 @@ describe("Home page", () => {
     expect(weekendsCalls.length).toBe(0);
   });
 
-  it("hides the refine filters until the Refine button is clicked", async () => {
+  it("shows the filters without anything having to be opened", async () => {
+    // The Refine disclosure is gone. Filters are instant and free, and hiding
+    // them behind a toggle cost 268px to open and pushed the first card off a
+    // phone screen entirely.
     grantGeolocation();
     vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    expect(screen.queryByRole("button", { name: "Aug" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /refine/i }));
     expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /refine/i })
+    ).not.toBeInTheDocument();
   });
 
   it("hides short-layover trips by default and reveals them on demand", async () => {
@@ -188,8 +192,7 @@ describe("Home page", () => {
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
     expect(screen.queryByText("Doha")).not.toBeInTheDocument();
 
-    // The short-stay filter now lives under Refine, as a labeled toggle.
-    fireEvent.click(screen.getByRole("button", { name: /refine/i }));
+    // No Refine to open — the toggle is simply on the page.
     fireEvent.click(
       screen.getByRole("checkbox", { name: /under a day at the destination/i })
     );
@@ -201,59 +204,107 @@ describe("Home page", () => {
   // stops / adults; this one relabelled 57 weekend results as "bridge escapes"
   // the instant the toggle was tapped, with no search run. Everything the
   // results header says must come from the `applied` snapshot.
-  it("does not relabel results when the bridge toggle is tapped", async () => {
+  //
+  // The toggle now commits on the spot, so the window in which the bug could
+  // appear is the in-flight search. This holds the second fetch open and checks
+  // the header never describes results that have not arrived.
+  it("does not relabel results while the bridge search is still in flight", async () => {
     grantGeolocation();
-    vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
+    // Typed loosely on purpose: TS's control-flow analysis cannot see that
+    // the fetch closure assigns this, and narrows it to `never` at the call.
+    const releaseSecond: { fn?: () => void } = {};
+    let weekendCalls = 0;
+    vi.spyOn(global, "fetch").mockImplementation((async (url: string) => {
+      if (String(url).includes("/api/airports")) {
+        return { ok: true, json: async () => ({ airports: [{ code: "BCN" }] }) } as Response;
+      }
+      weekendCalls += 1;
+      if (weekendCalls > 1) {
+        await new Promise<void>((r) => {
+          releaseSecond.fn = r;
+        });
+      }
+      return { ok: true, json: async () => ({ deals: [ibiza, rome] }) } as Response;
+    }) as any);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
-    // The panel auto-collapses now that an airport is known.
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument()
-    );
-    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
-    const heading = () =>
-      screen.getByText(/^\d+ (.+ flights?|long weekends?)$/i);
-    const before = heading().textContent;
-    expect(before).toMatch(/flights?$/i);
+    expect(screen.getByText(/^\d+ flights?$/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("switch", { name: /bridge days/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /long weekends/i }));
 
-    expect(screen.getByRole("switch", { name: /bridge days/i })).toHaveAttribute(
+    expect(screen.getByRole("switch", { name: /long weekends/i })).toHaveAttribute(
       "aria-checked",
       "true"
     );
-    // The toggle is on, but no search has run — the heading must still describe
-    // the results actually on screen.
-    expect(heading().textContent).toBe(before);
-    expect(screen.queryByText(/long weekends? in the next/i)).not.toBeInTheDocument();
+    // The switch is on and a search is running, but nothing on screen may claim
+    // to be a long weekend until the results that are actually long weekends
+    // have replaced the ones that aren't.
+    await waitFor(() => expect(screen.getByText("Searching…")).toBeInTheDocument());
+    // Scoped to the results heading — the switch itself says "Long weekends"
+    // and is legitimately on.
+    expect(
+      screen.queryByText(/^\d+ long weekends?$/i)
+    ).not.toBeInTheDocument();
+    releaseSecond.fn?.();
+    await waitFor(() =>
+      expect(screen.getByText(/^\d+ long weekends?$/i)).toBeInTheDocument()
+    );
   });
 
-  // The panel's default is conditional, and both halves matter. Collapsing
-  // unconditionally hid every setting behind an "Edit" a newcomer had no reason
-  // to press; never collapsing left ~500px between the header and the first
-  // result for someone who already has an airport.
-  it("collapses to the summary once an airport is known, and reopens on Edit", async () => {
+  // The search is a line of prose now, not a panel: "Searching BCN · Fri–Sun ·
+  // direct · 1 adult", every value editable in place. Nothing about it is
+  // hidden behind a disclosure, but the airport field — which needs
+  // autocomplete, chips and a location prompt — is a form, so it lives in a
+  // sheet that only exists while you are editing it.
+  it("states the whole search as an editable line, with no panel", async () => {
     grantGeolocation();
     vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    await waitFor(() =>
-      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-    );
-    // The caption is gone; the collapsed state is identified by its Edit
-    // affordance and the tappable facets, not by a label.
-    expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^BCN/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Fri–Sun/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^1 adult/ })).toBeInTheDocument();
+    // No inline field, and no Edit button to reveal one.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^edit$/i })
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^BCN/ }));
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("keeps the form open when there is no airport to collapse to", async () => {
-    // Nothing geolocated and nothing saved: collapsing here would hide the one
-    // control the visitor actually needs.
+  it("runs one search per edit, not one per tap", async () => {
+    // The commit bar is gone: a facet applies when its popover closes. That is
+    // the whole reason the popover exists — tapping through 1→2→3→4 adults
+    // must cost one upstream call, not three, and the call must carry the value
+    // it was closed on rather than the one the refs held a tick earlier.
+    grantGeolocation();
+    const fetchMock = mockFetch();
+    vi.spyOn(global, "fetch").mockImplementation(fetchMock as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+    const weekends = () =>
+      fetchMock.mock.calls.filter((c) => String(c[0]).includes("/api/weekends"));
+    const before = weekends().length;
+
+    fireEvent.click(screen.getByRole("button", { name: /^1 adult/ }));
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+    // Still nothing: the popover is open, so the edit is not finished.
+    expect(weekends().length).toBe(before);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(weekends().length).toBe(before + 1));
+    expect(String(weekends()[before][0])).toContain("adults=4");
+  });
+
+  it("shows the form when there is no airport yet", async () => {
     denyGeolocation();
     vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
 

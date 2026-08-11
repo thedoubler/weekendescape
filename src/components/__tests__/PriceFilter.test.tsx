@@ -49,7 +49,7 @@ describe("PriceFilter", () => {
       "aria-pressed",
       "true"
     );
-    fireEvent.click(screen.getByRole("button", { name: /≤\s*100/ }));
+    fireEvent.click(screen.getByRole("button", { name: /up to 100 EUR/i }));
     expect(onChange).toHaveBeenCalledWith(100);
   });
 });
