@@ -149,7 +149,10 @@ export function DealList({
     groupByMonth
       ? toSections(list).map((section) => (
           <section key={section.key} className="flex flex-col gap-3">
-            <div className="sticky top-0 z-10 flex items-baseline gap-2 bg-background/85 pb-1 pt-1 backdrop-blur-sm">
+            {/* Pins below the active-filter bar when there is one, and at the
+                viewport top when there isn't. The page owns the variable, since
+                only it knows whether that bar exists. */}
+            <div className="sticky top-[var(--list-sticky-top,0px)] z-10 flex items-baseline gap-2 bg-background/85 pb-1 pt-1 backdrop-blur-sm">
               <span className="text-sm font-semibold tracking-tight">
                 {section.title}
               </span>

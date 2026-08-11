@@ -23,6 +23,7 @@ import {
   continentsOf,
   filterByContinents,
 } from "@/lib/continents";
+import { monthShort } from "@/lib/format";
 import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -73,6 +74,31 @@ function FilterRow({
       </span>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
+  );
+}
+
+// Denser than the chips in the filter rows on purpose: this one lives in a
+// 41px bar that every card scrolls under, so it is read at a glance and tapped
+// to undo, not browsed.
+function StickyChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      aria-label={`Remove ${label} filter`}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/[0.06] py-0.5 pr-1.5 pl-2.5 text-[12px] whitespace-nowrap text-black/75 transition hover:bg-black/10 dark:bg-white/10 dark:text-white/75 dark:hover:bg-white/[0.18]"
+    >
+      {label}
+      <span aria-hidden className="text-[11px] opacity-55">
+        ✕
+      </span>
+    </button>
   );
 }
 
@@ -129,6 +155,27 @@ export default function Home() {
   const [searched, setSearched] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [showJump, setShowJump] = useState(false);
+  // Whether the filter block has scrolled off the top. Only ever acted on when
+  // a filter is actually applied — see the sticky bar in the render.
+  const [pastFilters, setPastFilters] = useState(false);
+  const refineRef = useRef<HTMLDivElement>(null);
+  // The bar's real height, not a guessed one. The month dividers pin directly
+  // beneath it, and the chips inside it wrap to a second line on a narrow
+  // phone with three filters on — a hard-coded offset is wrong by 2px at best
+  // and by a whole line at worst.
+  const [barH, setBarH] = useState(0);
+  const barRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) {
+      setBarH(0);
+      return;
+    }
+    setBarH(node.getBoundingClientRect().height);
+    const ro = new ResizeObserver(([entry]) =>
+      setBarH(entry.contentRect.height + 1)
+    );
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
   // First-load only: while we detect location + run the initial search, show a
   // quiet spinner instead of the empty form, so the UI doesn't flash the
   // expanded panel and then snap it shut when results arrive.
@@ -326,9 +373,9 @@ export default function Home() {
     );
   }, [originsParam, applied, searched]);
 
-  // Show a "back to controls" pill once the user scrolls deep into the list, so
-  // sort/refine stay reachable without scrolling to the top (our month dividers
-  // are already sticky, so we avoid a second sticky bar that would overlap them).
+  // Two scroll-depth signals, measured together: the "back to controls" pill,
+  // and whether the filter rows have left the screen (which is when a filtered
+  // board has no visible evidence that it is filtered).
   useEffect(() => {
     // Coalesced into one rAF per frame. Reading scrollHeight forces a layout,
     // and doing that on every scroll event means laying out a 60-card list
@@ -341,6 +388,10 @@ export default function Home() {
         window.innerHeight + window.scrollY >=
         document.documentElement.scrollHeight - 220;
       setShowJump(window.scrollY > 700 && !nearBottom);
+      // Same frame, same forced layout — a second scroll listener for this
+      // would double the cost of the one interaction this product is made of.
+      const rp = refineRef.current;
+      setPastFilters(!!rp && rp.getBoundingClientRect().bottom < 0);
     };
     const onScroll = () => {
       if (queued) return;
@@ -525,7 +576,17 @@ export default function Home() {
 
 
   return (
-    <main className="max-w-3xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-4">
+    <main
+      className="max-w-3xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-4"
+      // The list's month dividers are sticky at the top as well. This is what
+      // keeps the two from stacking on the same line: they pin below the bar
+      // while it exists, and at the viewport top when it doesn't.
+      style={
+        {
+          "--list-sticky-top": `${Math.round(barH)}px`,
+        } as React.CSSProperties
+      }
+    >
       <header className="border-b border-black/[0.07] pb-4 dark:border-white/10">
         {/* One line: wordmark and descriptor share a baseline, so the header is
             a single object rather than a stacked block. Wraps only if there is
@@ -762,6 +823,7 @@ export default function Home() {
       {searched && hasRefinements && (
         <div
           id="refine-panel"
+          ref={refineRef}
           className="flex flex-col gap-3.5 border-b border-black/[0.07] pb-4 dark:border-white/10"
         >
           {available.length > 0 && (
@@ -816,6 +878,62 @@ export default function Home() {
               </span>
             </label>
           )}
+        </div>
+      )}
+
+      {/* The one piece of persistent chrome, and it charges rent only while it
+          is telling you something you cannot otherwise see: a filter is on AND
+          the rows that show it have scrolled off the top. Unfiltered — which is
+          how the board arrives and how it spends most of a session — this does
+          not exist, and the page is byte-identical without it.
+
+          The all-in-one sticky header (receipt + sort + filters, pinned) was
+          considered and rejected: sorting reorders 52 rows the same on a 27"
+          monitor as on a phone, so those controls gain nothing from
+          persistence and would tax every board forever to help a filtered one.
+
+          `fixed`, not `sticky`: a sticky element occupies flow at its natural
+          position, so applying a filter would push the whole board down —
+          the 34px shift the removable-chip row was just deleted for. */}
+      {searched && !loading && !error && activeFilters > 0 && pastFilters && (
+        <div
+          ref={barRef}
+          className="animate-fade-in fixed inset-x-0 top-0 z-40 border-b border-black/10 bg-background/90 backdrop-blur-sm dark:border-white/10"
+        >
+          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:px-6">
+            <span className="text-[13px] font-semibold tabular-nums">
+              {visible.length} of {total}
+            </span>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+              {selectedMonths.map((m) => (
+                <StickyChip
+                  key={m}
+                  label={monthShort(m)}
+                  onRemove={() => toggleMonth(m)}
+                />
+              ))}
+              {selectedContinents.map((c) => (
+                <StickyChip
+                  key={c}
+                  label={c}
+                  onRemove={() => toggleContinent(c)}
+                />
+              ))}
+              {cap < bounds.max && (
+                <StickyChip
+                  label={`≤ ${cap} ${currency}`}
+                  onRemove={() => setMaxPrice(bounds.max)}
+                />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={clearAll}
+              className="shrink-0 text-[12px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+            >
+              Clear all
+            </button>
+          </div>
         </div>
       )}
 
