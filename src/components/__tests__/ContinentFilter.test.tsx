@@ -9,26 +9,23 @@ describe("ContinentFilter", () => {
         continents={["Europe"]}
         selected={[]}
         onToggle={() => {}}
-        onClear={() => {}}
       />
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("marks All continents pressed when nothing is selected", () => {
+  // See MonthFilter: no "All" chip, and nothing pressed when nothing is chosen.
+  it("renders one chip per continent and no All chip", () => {
     render(
       <ContinentFilter
         continents={["Europe", "Asia"]}
         selected={[]}
         onToggle={() => {}}
-        onClear={() => {}}
       />
     );
     expect(screen.getByRole("button", { name: "Europe" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(2);
   });
 
   it("toggles a continent on click", () => {
@@ -38,7 +35,6 @@ describe("ContinentFilter", () => {
         continents={["Europe", "Asia"]}
         selected={["Europe"]}
         onToggle={onToggle}
-        onClear={() => {}}
       />
     );
     expect(screen.getByRole("button", { name: "Europe" })).toHaveAttribute(

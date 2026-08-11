@@ -5,26 +5,30 @@ import { MonthFilter } from "@/components/MonthFilter";
 describe("MonthFilter", () => {
   it("renders nothing when there are no months", () => {
     const { container } = render(
-      <MonthFilter months={[]} selected={[]} onToggle={() => {}} onClear={() => {}} />
+      <MonthFilter months={[]} selected={[]} onToggle={() => {}} />
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("labels months and marks All pressed when nothing is selected", () => {
+  // An unfiltered row IS all months, so there is nothing for an "All" chip to
+  // say — and as the only lit chip on a board with no filters applied, it put
+  // the page's heaviest ink on the absence of a choice.
+  it("renders one chip per month and no All chip", () => {
     render(
       <MonthFilter
         months={["2026-08", "2026-09"]}
         selected={[]}
         onToggle={() => {}}
-        onClear={() => {}}
       />
     );
     expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sep" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    // Nothing selected means nothing pressed.
+    for (const b of screen.getAllByRole("button")) {
+      expect(b).toHaveAttribute("aria-pressed", "false");
+    }
   });
 
   it("toggles a month on click", () => {
@@ -34,7 +38,6 @@ describe("MonthFilter", () => {
         months={["2026-08", "2026-09"]}
         selected={["2026-08"]}
         onToggle={onToggle}
-        onClear={() => {}}
       />
     );
     expect(screen.getByRole("button", { name: "Aug" })).toHaveAttribute(

@@ -39,14 +39,20 @@ export function PriceFilter({
           ≤ {b}
         </button>
       ))}
-      <button
-        type="button"
-        aria-pressed={!capped}
-        onClick={() => onChange(max)}
-        className={pillClass(!capped)}
-      >
-        Any
-      </button>
+      {/* Price is single-select, so unlike Month and Region a lit chip cannot
+          be tapped off — this row genuinely needs a reset. It just doesn't need
+          one while there is nothing to reset: shown always, "Any" sat filled
+          and black on an unfiltered board, which put the page's heaviest ink on
+          the absence of a choice. */}
+      {capped && (
+        <button
+          type="button"
+          onClick={() => onChange(max)}
+          className="shrink-0 rounded-full px-3 py-1 text-sm whitespace-nowrap text-black/50 underline underline-offset-4 transition hover:text-black dark:text-white/50 dark:hover:text-white"
+        >
+          Any
+        </button>
+      )}
     </div>
   );
 }

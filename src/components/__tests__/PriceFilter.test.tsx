@@ -34,9 +34,12 @@ describe("PriceFilter", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("marks Any pressed at the max and reports a cap on bucket click", () => {
+  // At the max there is no cap, so there is nothing to reset — and "Any",
+  // rendered always, was a filled black chip advertising the absence of a
+  // filter. It appears only once a cap is actually set.
+  it("offers no reset until a cap is set, and reports a cap on bucket click", () => {
     const onChange = vi.fn();
-    render(
+    const { rerender } = render(
       <PriceFilter
         buckets={[60, 100, 150]}
         max={200}
@@ -45,11 +48,23 @@ describe("PriceFilter", () => {
         onChange={onChange}
       />
     );
-    expect(screen.getByRole("button", { name: /Any/i })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(screen.queryByRole("button", { name: /Any/i })).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: /up to 100 EUR/i }));
     expect(onChange).toHaveBeenCalledWith(100);
+
+    rerender(
+      <PriceFilter
+        buckets={[60, 100, 150]}
+        max={200}
+        value={100}
+        currency="EUR"
+        onChange={onChange}
+      />
+    );
+    // Now the reset exists, and clearing goes back to the max rather than to a
+    // bucket — a cap of `max` is what "no cap" means everywhere else.
+    fireEvent.click(screen.getByRole("button", { name: /Any/i }));
+    expect(onChange).toHaveBeenLastCalledWith(200);
   });
 });

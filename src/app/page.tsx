@@ -23,7 +23,6 @@ import {
   continentsOf,
   filterByContinents,
 } from "@/lib/continents";
-import { monthShort } from "@/lib/format";
 import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -33,7 +32,6 @@ import { parseOrigins, serializeOrigins } from "@/lib/origins";
 import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
-import { FilterChip } from "@/components/FilterChip";
 import { DealList, SkeletonCard } from "@/components/DealList";
 import { DealsMap } from "@/components/DealsMap";
 import { RotatingWord } from "@/components/RotatingWord";
@@ -77,40 +75,6 @@ function FilterRow({
     </div>
   );
 }
-
-function Field({
-  label,
-  hint,
-  align = "start",
-  children,
-}: {
-  label: string;
-  hint?: string;
-  align?: "start" | "end" | "stretch";
-  children: ReactNode;
-}) {
-  const alignClass =
-    align === "end"
-      ? "items-end"
-      : align === "stretch"
-        ? "items-stretch"
-        : "items-start";
-  return (
-    <div className={`flex min-w-0 flex-col ${alignClass}`}>
-      <span className="mb-1 text-xs font-medium text-black/60 dark:text-white/60">
-        {label}
-      </span>
-      {children}
-      {hint && (
-        <span className="mt-1 text-xs text-black/40 dark:text-white/40">
-          {hint}
-        </span>
-      )}
-    </div>
-  );
-}
-
-
 
 export default function Home() {
   // One to three home airports. `home` stays as the primary for the many places
@@ -718,11 +682,26 @@ export default function Home() {
                           : `${visible.length} ${noun}`;
                       })()}
               </span>
-              {!loading && !error && fetchedAt && visible.length > 0 && (
-                <span className="text-[11px] text-black/55 dark:text-white/60">
-                  Checked {agoLabel(fetchedAt)}
-                </span>
-              )}
+              <div className="flex items-baseline gap-2.5">
+                {!loading && !error && fetchedAt && visible.length > 0 && (
+                  <span className="text-[11px] text-black/55 dark:text-white/60">
+                    Checked {agoLabel(fetchedAt)}
+                  </span>
+                )}
+                {/* Sits with the number it restores. It used to head a row of
+                    removable chips; those are gone (see below), but a way back
+                    to the whole board in one tap is worth keeping — clearing
+                    three filters by tapping three chips is three taps. */}
+                {!loading && !error && activeFilters > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
             {/* One line from `sm` up. Below that, Sort + two segments + Map +
                 Refine is ~390px against a 288px content box, so it wraps rather
@@ -761,56 +740,36 @@ export default function Home() {
               )}
             </div>
           </div>
-          {/* Secondary: active filters as removable chips, so filter state
-              stays visible while the Refine panel is closed. */}
-          {!loading && !error && hasRefinements && activeFilters > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {selectedMonths.map((m) => (
-                <FilterChip
-                  key={m}
-                  label={monthShort(m)}
-                  onRemove={() => toggleMonth(m)}
-                />
-              ))}
-              {selectedContinents.map((c) => (
-                <FilterChip
-                  key={c}
-                  label={c}
-                  onRemove={() => toggleContinent(c)}
-                />
-              ))}
-              {cap < bounds.max && (
-                <FilterChip
-                  label={`≤ ${cap} ${currency}`}
-                  onRemove={() => setMaxPrice(bounds.max)}
-                />
-              )}
-              <button
-                type="button"
-                onClick={clearAll}
-                className="ml-0.5 text-sm text-black/50 underline underline-offset-2 hover:text-black/80 dark:text-white/50 dark:hover:text-white/80"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
+          {/* The row of removable chips that used to sit here is gone. It
+              existed to keep filter state visible while Refine was collapsed
+              behind a disclosure — and Refine no longer collapses. Every chip
+              it mirrored is lit, in colour, two rows below it: the same facts
+              twice, 34px apart. Tapping a lit chip removes that filter, which
+              is what the ✕ did. */}
         </div>
       )}
 
-      {/* Refine — instant client-side filters; same visual language as the
-          trip panel, but these narrow the loaded results without re-searching. */}
+      {/* No card. The receipt above unpacked itself out of one, and leaving
+          this in a bordered, filled box made the free controls the single
+          heaviest object between the header and the first result — the exact
+          inversion of what they cost. A hairline underneath is enough.
+
+          The caption that used to sit here ("Narrows the results below
+          instantly — no new search") is gone too. The receipt's amber rules
+          say which controls reload; the absence of a rule down here says the
+          rest are free. A sentence explaining a distinction the design already
+          draws is a sentence admitting it doesn't. */}
       {searched && hasRefinements && (
-        <div id="refine-panel" className="flex flex-col gap-5 rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 sm:p-5 dark:border-white/10 dark:bg-white/[0.02]">
-          <p className="text-xs text-black/45 dark:text-white/45">
-            Narrows the results below instantly — no new search.
-          </p>
+        <div
+          id="refine-panel"
+          className="flex flex-col gap-3.5 border-b border-black/[0.07] pb-4 dark:border-white/10"
+        >
           {available.length > 0 && (
             <FilterRow label="Month">
               <MonthFilter
                 months={available}
                 selected={selectedMonths}
                 onToggle={toggleMonth}
-                onClear={() => setSelectedMonths([])}
               />
             </FilterRow>
           )}
@@ -821,12 +780,16 @@ export default function Home() {
                 selected={selectedContinents}
                 counts={continentCounts}
                 onToggle={toggleContinent}
-                onClear={() => setSelectedContinents([])}
               />
             </FilterRow>
           )}
           {priceBucketList.length > 0 && (
-            <FilterRow label={`Price (${currency})`}>
+            /* Label is "Price", not "Price (EUR)": three words wrapped the
+               label column onto two lines and knocked that row out of
+               alignment with the two above it. The unit is not in doubt — every
+               card below prints its own currency — and each chip still carries
+               "Up to 90 EUR" as its accessible name. */
+            <FilterRow label="Price">
               <PriceFilter
                 buckets={priceBucketList}
                 max={bounds.max}
@@ -837,20 +800,21 @@ export default function Home() {
             </FilterRow>
           )}
           {hiddenCount > 0 && (
-            <Field label="Short-stay trips" align="stretch">
-              <label className="flex cursor-pointer items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={!showHidden}
-                  onChange={() => setShowHidden((v) => !v)}
-                  className="mt-0.5 accent-black dark:accent-white"
-                />
-                <span className="text-black/70 dark:text-white/70">
-                  Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with
-                  under a day at the destination — more travel than time there.
-                </span>
-              </label>
-            </Field>
+            /* Not a filter row — a rule about what counts as a trip. It reads
+               as a sentence you agree with rather than a value you pick, so it
+               keeps the checkbox and sits under the chip rows. */
+            <label className="flex cursor-pointer items-start gap-2 text-[13px]">
+              <input
+                type="checkbox"
+                checked={!showHidden}
+                onChange={() => setShowHidden((v) => !v)}
+                className="mt-0.5 accent-black dark:accent-white"
+              />
+              <span className="text-black/55 dark:text-white/55">
+                Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with under
+                a day at the destination — more travel than time there.
+              </span>
+            </label>
           )}
         </div>
       )}
@@ -874,7 +838,6 @@ export default function Home() {
                   months={available}
                   selected={selectedMonths}
                   onToggle={toggleMonth}
-                  onClear={() => setSelectedMonths([])}
                 />
               ) : undefined
             }

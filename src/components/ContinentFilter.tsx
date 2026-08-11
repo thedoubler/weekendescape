@@ -5,30 +5,21 @@ export function ContinentFilter({
   selected,
   counts,
   onToggle,
-  onClear,
 }: {
   continents: string[];
   selected: string[];
   counts?: Record<string, number>;
   onToggle: (c: string) => void;
-  onClear: () => void;
 }) {
   if (continents.length < 2) return null;
   const sel = new Set(selected);
   return (
+    // No "All" chip — see MonthFilter.
     <div
       role="group"
       aria-label="Continent filter"
       className="-mx-1 flex snap-x gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <button
-        type="button"
-        aria-pressed={selected.length === 0}
-        onClick={onClear}
-        className={pillClass(selected.length === 0)}
-      >
-        All
-      </button>
       {continents.map((c) => (
         <button
           key={c}
