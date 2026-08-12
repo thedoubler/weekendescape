@@ -60,31 +60,6 @@ function agoLabel(ts: number): string {
   return `${h} h ago`;
 }
 
-// Denser than the chips behind the facet triggers on purpose: this one lives
-// in a 39px bar that every card scrolls under, so it is read at a glance and
-// tapped to undo, not browsed.
-function StickyChip({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onRemove}
-      aria-label={`Remove ${label} filter`}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/[0.06] py-0.5 pr-1.5 pl-2.5 text-[12px] whitespace-nowrap text-black/75 transition hover:bg-black/10 dark:bg-white/10 dark:text-white/75 dark:hover:bg-white/[0.18]"
-    >
-      {label}
-      <span aria-hidden className="text-[11px] opacity-55">
-        ✕
-      </span>
-    </button>
-  );
-}
-
 export default function Home() {
   // One to three home airports. `home` stays as the primary for the many places
   // that only need one (map centring, "cheapest weekend" lookups).
@@ -137,41 +112,41 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  const [showJump, setShowJump] = useState(false);
-  // Whether the filter block has scrolled off the top. Only ever acted on when
-  // a filter is actually applied — see the sticky bar in the render.
-  const [pastFilters, setPastFilters] = useState(false);
+  // First load only: while we detect location + run the initial search, show a
+  // quiet spinner instead of the empty form.
+  const [booting, setBooting] = useState(true);
   // Which facet's chips are showing. One at a time: two open rows is most of
   // the height the trigger row was introduced to reclaim.
   const [openFacet, setOpenFacet] = useState<"month" | "region" | "price" | null>(
     null
   );
-  const refineRef = useRef<HTMLDivElement>(null);
-  // The bar's real height, not a guessed one. The month dividers pin directly
-  // beneath it, and the chips inside it wrap to a second line on a narrow
-  // phone with three filters on — a hard-coded offset is wrong by 2px at best
-  // and by a whole line at worst.
-  const [barH, setBarH] = useState(0);
-  const barRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) {
-      setBarH(0);
-      return;
-    }
-    setBarH(node.getBoundingClientRect().height);
-    const ro = new ResizeObserver(([entry]) =>
-      setBarH(entry.contentRect.height + 1)
-    );
-    ro.observe(node);
-    return () => ro.disconnect();
-  }, []);
-  // First-load only: while we detect location + run the initial search, show a
-  // quiet spinner instead of the empty form, so the UI doesn't flash the
-  // expanded panel and then snap it shut when results arrive.
-  const [booting, setBooting] = useState(true);
   // The origin sheet, and the airports it held when it opened — dismissal is
   // the commit, so it needs a before-image to compare against.
   const [sheetOpen, setSheetOpen] = useState(false);
   const originsAtOpen = useRef<string[] | null>(null);
+  // The control bar's real height. The list's month dividers pin directly
+  // beneath it, and the bar changes height for several reasons: it wraps to
+  // two lines on a phone, it grows when a facet is opened, and the trigger set
+  // itself changes with the board.
+  //
+  // Measured in an effect after every render rather than with a
+  // ResizeObserver. Every one of those height changes is caused by a React
+  // render, so an effect catches them all — and it removes a dependency that
+  // could not be verified in this environment at all (an RO attached to this
+  // node did not fire once while its height went 53 -> 91). A resize listener
+  // covers the one case with no render behind it.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barH, setBarH] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const h = barRef.current?.getBoundingClientRect().height ?? 0;
+      // Only ever writes on a real change, so this cannot loop.
+      setBarH((prev) => (Math.abs(prev - h) < 0.5 ? prev : h));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  });
   const bootstrapped = useRef(false);
   // Mirror the current filter values into refs so runSearch (called from effects
   // and callbacks) always reads the latest, without being a dependency.
@@ -360,35 +335,6 @@ export default function Home() {
       qs ? `?${qs}` : window.location.pathname
     );
   }, [originsParam, applied, searched]);
-
-  // Two scroll-depth signals, measured together: the "back to controls" pill,
-  // and whether the filter rows have left the screen (which is when a filtered
-  // board has no visible evidence that it is filtered).
-  useEffect(() => {
-    // Coalesced into one rAF per frame. Reading scrollHeight forces a layout,
-    // and doing that on every scroll event means laying out a 60-card list
-    // dozens of times a second — on the one interaction this product is made of.
-    let queued = false;
-    const measure = () => {
-      queued = false;
-      // Hide near the bottom so it never overlaps the end-of-list CTA.
-      const nearBottom =
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 220;
-      setShowJump(window.scrollY > 700 && !nearBottom);
-      // Same frame, same forced layout — a second scroll listener for this
-      // would double the cost of the one interaction this product is made of.
-      const rp = refineRef.current;
-      setPastFilters(!!rp && rp.getBoundingClientRect().bottom < 0);
-    };
-    const onScroll = () => {
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(measure);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const available = useMemo(() => monthsOf(rawDeals), [rawDeals]);
   const availableContinents = useMemo(
@@ -709,62 +655,83 @@ export default function Home() {
           content fits comfortably on one. Measured: triggers 306px + Sort/Map
           267px = 573px in a 720px box. */}
       {searched && (
-        <div className="flex flex-col gap-3 border-b border-black/[0.07] pb-3 dark:border-white/10">
-          {/* What you are looking at. Description, not controls. */}
-          <div className="flex flex-col">
-            <span className="text-lg font-semibold tracking-tight">
-              {loading
-                  ? "Searching…"
-                  : error
-                    ? "Couldn’t load results"
-                    : (() => {
-                        // Reads `applied`, never live form state: the deals on
-                        // screen were fetched with the PREVIOUS settings, and
-                        // reading the live values once relabelled 57 weekend
-                        // results as "bridge escapes" before any search ran.
-                        const isBridges = applied ? applied.bridges : bridges;
-                        const noun = isBridges
-                          ? `long weekend${visible.length === 1 ? "" : "s"}`
-                          : `flight${visible.length === 1 ? "" : "s"}`;
-                        // The weekend shape used to be printed here ("24 Fri–Sun
-                        // flights"). The receipt now says Fri–Sun a few lines
-                        // up, so this is the count and nothing else — and the
-                        // room that buys goes to "of N", which is the number a
-                        // filtered board actually withholds.
-                        return activeFilters > 0
-                          ? `${visible.length} of ${total} ${noun}`
-                          : `${visible.length} ${noun}`;
-                      })()}
-            </span>
+        /* A Fragment, not a wrapper div. `position: sticky` pins only within
+           its own PARENT's box, so while the bar sat inside a short wrapper it
+           scrolled away the moment that wrapper did — pinned for about 40px,
+           which looks exactly like not working. As a direct child of <main>,
+           which spans the whole page, it pins for the whole page. */
+        <>
+          {/* Only the freshness stamp is left up here. The count moved into
+              the bar below, because the bar is pinned and a count you cannot
+              see while scrolling a filtered board is a count that is not
+              doing its job. */}
+          {!loading && !error && fetchedAt && visible.length > 0 && (
             <div className="flex items-baseline gap-2.5">
-              {!loading && !error && fetchedAt && visible.length > 0 && (
-                <span className="text-[11px] text-black/55 dark:text-white/60">
-                  Checked {agoLabel(fetchedAt)}
-                </span>
-              )}
-              {/* Sits with the number it restores — clearing three filters by
-                  tapping three triggers is three taps. */}
-              {!loading && !error && activeFilters > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
-                >
-                  Clear all
-                </button>
-              )}
+              <span className="text-[11px] text-black/55 dark:text-white/60">
+                Checked {agoLabel(fetchedAt)}
+              </span>
             </div>
-          </div>
+          )}
 
-          {/* THE CONTROL BAR. Everything that changes what you see, on one
-              line: what narrows the board on the left, how it is ordered and
-              where it is drawn on the right. Wraps to two lines on a phone,
-              which is the only width where it has to. */}
+          {/* THE CONTROL BAR, and the only persistent chrome on the page.
+              What you are looking at and everything that changes it, on one
+              pinned line: the count and the filters on the left, the ordering
+              and the map on the right.
+
+              It replaced two workarounds. A conditional bar used to appear on
+              a filtered board once the filters scrolled away, printing the
+              count and the active filters as removable chips — but the
+              triggers show their own state now ("✓ Europe"), so that was the
+              same facts twice. And a floating "↑ Sort & filter" pill existed
+              purely to scroll you back to controls you could not reach; there
+              is nothing to scroll back to when the controls never leave.
+
+              The cost is honest and permanent: this is chrome on an
+              unfiltered board too, where the old conditional bar was free. It
+              buys one-tap filtering and re-sorting at any depth on a board
+              that runs to ~3,700px, and it reclaims most of its own height
+              from the two things it deletes.
+
+              Full-bleed via negative margins so the blur spans the gutter
+              rather than stopping at the text column. */}
           <div
             id="refine-panel"
-            ref={refineRef}
-            className="flex flex-wrap items-center gap-y-2"
+            ref={barRef}
+            className="sticky top-0 z-30 -mx-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-black/[0.07] bg-background/90 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 dark:border-white/10"
           >
+            {/* Not the 18px heading it was — in a pinned 52px bar the count is
+                a label on the board, not a title for the page. */}
+            <span className="shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
+              {loading
+                ? "Searching…"
+                : error
+                  ? "Couldn’t load"
+                  : (() => {
+                      // Reads `applied`, never live form state: the deals on
+                      // screen were fetched with the PREVIOUS settings, and
+                      // reading the live values once relabelled 57 weekend
+                      // results as "bridge escapes" before any search ran.
+                      const isBridges = applied ? applied.bridges : bridges;
+                      const noun = isBridges
+                        ? `long weekend${visible.length === 1 ? "" : "s"}`
+                        : `flight${visible.length === 1 ? "" : "s"}`;
+                      return activeFilters > 0
+                        ? `${visible.length} of ${total} ${noun}`
+                        : `${visible.length} ${noun}`;
+                    })()}
+            </span>
+            {/* Rides with the count now rather than with the stamp above: at
+                depth, undoing three filters would otherwise mean opening three
+                triggers. */}
+            {!loading && !error && activeFilters > 0 && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="shrink-0 text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+              >
+                Clear all
+              </button>
+            )}
             {searched && hasRefinements && (
               /* Insurance, not the normal case: the widest state — all three
                  set, each multi-select — measured 325px in a 350px column. */
@@ -851,40 +818,42 @@ export default function Home() {
                 </button>
               )}
             </div>
-          </div>
 
-          {/* The opened facet's values, under the bar that opened them.
-              pt-0.5 so the chips' focus rings clear the trigger above. */}
-          {hasRefinements && openFacet === "month" && (
-            <div id="refine-month" className="animate-fade-in pt-0.5">
-              <MonthFilter
-                months={available}
-                selected={selectedMonths}
-                onToggle={toggleMonth}
-              />
-            </div>
-          )}
-          {hasRefinements && openFacet === "region" && (
-            <div id="refine-region" className="animate-fade-in pt-0.5">
-              <ContinentFilter
-                continents={availableContinents}
-                selected={selectedContinents}
-                counts={continentCounts}
-                onToggle={toggleContinent}
-              />
-            </div>
-          )}
-          {hasRefinements && openFacet === "price" && (
-            <div id="refine-price" className="animate-fade-in pt-0.5">
-              <PriceFilter
-                buckets={priceBucketList}
-                max={bounds.max}
-                value={cap}
-                currency={currency}
-                onChange={setMaxPrice}
-              />
-            </div>
-          )}
+            {/* Inside the sticky container on purpose: the chips pin with the
+                bar, so opening a facet 2,000px down drops its values over the
+                board instead of somewhere off screen. basis-full puts them on
+                their own line under the triggers. */}
+            {hasRefinements && openFacet === "month" && (
+              <div id="refine-month" className="animate-fade-in basis-full">
+                <MonthFilter
+                  months={available}
+                  selected={selectedMonths}
+                  onToggle={toggleMonth}
+                />
+              </div>
+            )}
+            {hasRefinements && openFacet === "region" && (
+              <div id="refine-region" className="animate-fade-in basis-full">
+                <ContinentFilter
+                  continents={availableContinents}
+                  selected={selectedContinents}
+                  counts={continentCounts}
+                  onToggle={toggleContinent}
+                />
+              </div>
+            )}
+            {hasRefinements && openFacet === "price" && (
+              <div id="refine-price" className="animate-fade-in basis-full">
+                <PriceFilter
+                  buckets={priceBucketList}
+                  max={bounds.max}
+                  value={cap}
+                  currency={currency}
+                  onChange={setMaxPrice}
+                />
+              </div>
+            )}
+          </div>
 
           {hiddenCount > 0 && (
             /* Not a facet — a rule about what counts as a trip. It reads as a
@@ -902,63 +871,7 @@ export default function Home() {
               </span>
             </label>
           )}
-        </div>
-      )}
-
-      {/* The one piece of persistent chrome, and it charges rent only while it
-          is telling you something you cannot otherwise see: a filter is on AND
-          the rows that show it have scrolled off the top. Unfiltered — which is
-          how the board arrives and how it spends most of a session — this does
-          not exist, and the page is byte-identical without it.
-
-          The all-in-one sticky header (receipt + sort + filters, pinned) was
-          considered and rejected: sorting reorders 52 rows the same on a 27"
-          monitor as on a phone, so those controls gain nothing from
-          persistence and would tax every board forever to help a filtered one.
-
-          `fixed`, not `sticky`: a sticky element occupies flow at its natural
-          position, so applying a filter would push the whole board down —
-          the 34px shift the removable-chip row was just deleted for. */}
-      {searched && !loading && !error && activeFilters > 0 && pastFilters && (
-        <div
-          ref={barRef}
-          className="animate-fade-in fixed inset-x-0 top-0 z-40 border-b border-black/10 bg-background/90 backdrop-blur-sm dark:border-white/10"
-        >
-          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:px-6">
-            <span className="text-[13px] font-semibold tabular-nums">
-              {visible.length} of {total}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-              {selectedMonths.map((m) => (
-                <StickyChip
-                  key={m}
-                  label={monthShort(m)}
-                  onRemove={() => toggleMonth(m)}
-                />
-              ))}
-              {selectedContinents.map((c) => (
-                <StickyChip
-                  key={c}
-                  label={c}
-                  onRemove={() => toggleContinent(c)}
-                />
-              ))}
-              {cap < bounds.max && (
-                <StickyChip
-                  label={`≤ ${cap} ${currency}`}
-                  onRemove={() => setMaxPrice(bounds.max)}
-                />
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={clearAll}
-              className="shrink-0 text-[12px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
-            >
-              Clear all
-            </button>
-          </div>
-        </div>
+        </>
       )}
 
       {/* Renders `visible` — the same array DealList gets — so every filter
@@ -1052,16 +965,6 @@ export default function Home() {
         </p>
       )}
       </div>
-      )}
-
-      {searched && showJump && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-5 left-4 z-30 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-lg transition duration-200 hover:opacity-90 motion-safe:hover:scale-105 dark:bg-white dark:text-black"
-        >
-          ↑ Sort &amp; filter
-        </button>
       )}
 
       {/* One disclosure for the whole site rather than a line under each widget.
