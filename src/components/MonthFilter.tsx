@@ -19,15 +19,17 @@ export function MonthFilter({
     // Fill now only ever marks a real selection. Clearing is tapping the lit
     // chip again, or Clear all in the header beside the removable chips.
     //
-    // Scrolls rather than wraps. A filter row that grows a second line pushes
-    // the board down every time it does — and merging all the rows into ONE
-    // scroller was measured at 1007px of chips in a 358px box, which would hide
-    // two thirds of the controls. Per-row, at 390px, this fits, so the scroller
-    // is insurance rather than the normal case.
+    // WRAPS. It used to scroll horizontally, on the argument that a second line
+    // pushes the board down. Measured on the live app at 390px: a seven-month
+    // row is 390px of chips in a 282px box, so 108px of months sat off-screen
+    // behind an invisible swipe with no affordance pointing at them. That is
+    // the "options are disappearing" complaint, shipped. A row that grows is
+    // honest; a row that silently truncates is not — and now that these only
+    // render when their facet is open, the extra line is opted into.
     <div
       role="group"
       aria-label="Month filter"
-      className="-mx-1 flex snap-x gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex flex-wrap gap-1"
     >
       {months.map((m) => (
         <button

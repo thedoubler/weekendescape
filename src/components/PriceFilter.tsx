@@ -23,7 +23,7 @@ export function PriceFilter({
     <div
       role="group"
       aria-label={`Max price in ${currency}`}
-      className="-mx-1 flex snap-x gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex flex-wrap gap-1"
     >
       {buckets.map((b) => (
         <button

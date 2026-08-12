@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -28,6 +27,7 @@ import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { SearchReceipt, type StopMode } from "@/components/SearchReceipt";
+import { FacetTrigger } from "@/components/FacetTrigger";
 import { OriginSheet } from "@/components/OriginSheet";
 import { parseOrigins, serializeOrigins } from "@/lib/origins";
 import { MonthFilter } from "@/components/MonthFilter";
@@ -60,26 +60,9 @@ function agoLabel(ts: number): string {
   return `${h} h ago`;
 }
 
-function FilterRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-14 shrink-0 text-xs font-medium text-black/55 dark:text-white/55">
-        {label}
-      </span>
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
-}
-
-// Denser than the chips in the filter rows on purpose: this one lives in a
-// 41px bar that every card scrolls under, so it is read at a glance and tapped
-// to undo, not browsed.
+// Denser than the chips behind the facet triggers on purpose: this one lives
+// in a 39px bar that every card scrolls under, so it is read at a glance and
+// tapped to undo, not browsed.
 function StickyChip({
   label,
   onRemove,
@@ -158,6 +141,11 @@ export default function Home() {
   // Whether the filter block has scrolled off the top. Only ever acted on when
   // a filter is actually applied — see the sticky bar in the render.
   const [pastFilters, setPastFilters] = useState(false);
+  // Which facet's chips are showing. One at a time: two open rows is most of
+  // the height the trigger row was introduced to reclaim.
+  const [openFacet, setOpenFacet] = useState<"month" | "region" | "price" | null>(
+    null
+  );
   const refineRef = useRef<HTMLDivElement>(null);
   // The bar's real height, not a guessed one. The month dividers pin directly
   // beneath it, and the chips inside it wrap to a second line on a narrow
@@ -810,48 +798,105 @@ export default function Home() {
         </div>
       )}
 
-      {/* No card. The receipt above unpacked itself out of one, and leaving
-          this in a bordered, filled box made the free controls the single
-          heaviest object between the header and the first result — the exact
-          inversion of what they cost. A hairline underneath is enough.
+      {/* Three doors, one row, and the row costs the same whether the board has
+          three months or seven. That last property is the point: as three rows
+          of chips this block was 135px of a 723px phone screen, and the first
+          card started at y=510 — 70% of the screen spent before one result.
 
-          The caption that used to sit here ("Narrows the results below
-          instantly — no new search") is gone too. The receipt's amber rules
-          say which controls reload; the absence of a rule down here says the
-          rest are free. A sentence explaining a distinction the design already
-          draws is a sentence admitting it doesn't. */}
+          Hiding controls is what "i don't like that options are disappearing"
+          objected to, so this earns it three ways. The facets are NAMED, not
+          buried behind one word like the old "Refine". Each closed door prints
+          how many options are behind it. And once a facet is set the trigger
+          stops naming the field and shows the value — "Region" becomes
+          "✓ Europe" — so a filtered board says what it is filtered to with
+          nothing open.
+
+          Inline expansion, deliberately not a popover: the receipt above owns
+          popovers, and there a popover means "this reloads the board". These
+          are free. They push the board down and filter under your thumb, which
+          is what cheap should look like. No Apply button either — that is a
+          server round trip made visible, and this is an Array.filter. */}
       {searched && hasRefinements && (
         <div
           id="refine-panel"
           ref={refineRef}
-          className="flex flex-col gap-3.5 border-b border-black/[0.07] pb-4 dark:border-white/10"
+          className="flex flex-col gap-2 border-b border-black/[0.07] pb-3 dark:border-white/10"
         >
-          {available.length > 0 && (
-            <FilterRow label="Month">
+          {/* Insurance, not the normal case: the widest state — all three set,
+              each multi-select — measured 325px in a 350px column. */}
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {available.length > 0 && (
+              <FacetTrigger
+                label="Month"
+                count={available.length}
+                controls="refine-month"
+                value={
+                  selectedMonths.length === 1
+                    ? monthShort(selectedMonths[0])
+                    : selectedMonths.length > 1
+                      ? `${monthShort(selectedMonths[0])} +${selectedMonths.length - 1}`
+                      : null
+                }
+                open={openFacet === "month"}
+                onClick={() =>
+                  setOpenFacet((f) => (f === "month" ? null : "month"))
+                }
+              />
+            )}
+            {availableContinents.length > 1 && (
+              <FacetTrigger
+                label="Region"
+                count={availableContinents.length}
+                controls="refine-region"
+                value={
+                  selectedContinents.length === 1
+                    ? selectedContinents[0]
+                    : selectedContinents.length > 1
+                      ? `${selectedContinents[0]} +${selectedContinents.length - 1}`
+                      : null
+                }
+                open={openFacet === "region"}
+                onClick={() =>
+                  setOpenFacet((f) => (f === "region" ? null : "region"))
+                }
+              />
+            )}
+            {priceBucketList.length > 0 && (
+              <FacetTrigger
+                label="Price"
+                count={priceBucketList.length}
+                controls="refine-price"
+                value={cap < bounds.max ? `≤ ${cap}` : null}
+                open={openFacet === "price"}
+                onClick={() =>
+                  setOpenFacet((f) => (f === "price" ? null : "price"))
+                }
+              />
+            )}
+          </div>
+
+          {/* pt-0.5 so the chips' focus rings clear the trigger above. */}
+          {openFacet === "month" && (
+            <div id="refine-month" className="animate-fade-in pt-0.5">
               <MonthFilter
                 months={available}
                 selected={selectedMonths}
                 onToggle={toggleMonth}
               />
-            </FilterRow>
+            </div>
           )}
-          {availableContinents.length > 1 && (
-            <FilterRow label="Region">
+          {openFacet === "region" && (
+            <div id="refine-region" className="animate-fade-in pt-0.5">
               <ContinentFilter
                 continents={availableContinents}
                 selected={selectedContinents}
                 counts={continentCounts}
                 onToggle={toggleContinent}
               />
-            </FilterRow>
+            </div>
           )}
-          {priceBucketList.length > 0 && (
-            /* Label is "Price", not "Price (EUR)": three words wrapped the
-               label column onto two lines and knocked that row out of
-               alignment with the two above it. The unit is not in doubt — every
-               card below prints its own currency — and each chip still carries
-               "Up to 90 EUR" as its accessible name. */
-            <FilterRow label="Price">
+          {openFacet === "price" && (
+            <div id="refine-price" className="animate-fade-in pt-0.5">
               <PriceFilter
                 buckets={priceBucketList}
                 max={bounds.max}
@@ -859,12 +904,13 @@ export default function Home() {
                 currency={currency}
                 onChange={setMaxPrice}
               />
-            </FilterRow>
+            </div>
           )}
+
           {hiddenCount > 0 && (
-            /* Not a filter row — a rule about what counts as a trip. It reads
-               as a sentence you agree with rather than a value you pick, so it
-               keeps the checkbox and sits under the chip rows. */
+            /* Not a facet — a rule about what counts as a trip. It reads as a
+               sentence you agree with rather than a value you pick, so it stays
+               out of the trigger row and keeps its checkbox. */
             <label className="flex cursor-pointer items-start gap-2 text-[13px]">
               <input
                 type="checkbox"

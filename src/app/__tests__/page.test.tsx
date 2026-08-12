@@ -153,19 +153,53 @@ describe("Home page", () => {
     expect(weekendsCalls.length).toBe(0);
   });
 
-  it("shows the filters without anything having to be opened", async () => {
-    // The Refine disclosure is gone. Filters are instant and free, and hiding
-    // them behind a toggle cost 268px to open and pushed the first card off a
-    // phone screen entirely.
+  // The disclosure question, settled twice in opposite directions, so the test
+  // records where it landed. "Refine" hid three rows behind ONE word and drew
+  // "options are disappearing"; three permanent rows answered that and cost
+  // 135px, putting the first card at y=510 on a 723px phone. What ships is
+  // three NAMED doors, each printing how many options it holds — nothing
+  // vanishes unannounced, and the row costs the same at three months or seven.
+  it("names every facet and its option count without anything being opened", async () => {
     grantGeolocation();
     vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Month, \d+ options$/ })
+    ).toBeInTheDocument();
+    // Only Month is asserted by name: the two-deal fixture yields no price
+    // buckets, so that trigger correctly does not render at all.
+    // Closed, so the values themselves are not on the page yet...
+    expect(screen.queryByRole("button", { name: "Aug" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /refine/i })
+    ).not.toBeInTheDocument();
+
+    // ...and one tap brings them back, in place.
+    fireEvent.click(screen.getByRole("button", { name: /^Month, \d+ options$/ }));
+    expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
+  });
+
+  // Kayak's rule, and the reason hiding the chips is survivable: a set facet
+  // stops naming the field and shows the value, so a filtered board says what
+  // it is filtered to with nothing open.
+  it("shows the chosen value on the trigger once a facet is set", async () => {
+    grantGeolocation();
+    vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /^Month, \d+ options$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Aug" }));
+
+    expect(
+      screen.getByRole("button", { name: /^Month: Aug\. Change$/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Month, \d+ options$/ })
     ).not.toBeInTheDocument();
   });
 

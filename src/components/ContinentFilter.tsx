@@ -18,7 +18,7 @@ export function ContinentFilter({
     <div
       role="group"
       aria-label="Continent filter"
-      className="-mx-1 flex snap-x gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex flex-wrap gap-1"
     >
       {continents.map((c) => (
         <button
