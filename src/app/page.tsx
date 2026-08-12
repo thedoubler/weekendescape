@@ -685,13 +685,34 @@ export default function Home() {
               the bar below, because the bar is pinned and a count you cannot
               see while scrolling a filtered board is a count that is not
               doing its job. */}
-          {!loading && !error && fetchedAt && visible.length > 0 && (
-            <div className="flex items-baseline gap-2.5">
+          {/* Map lives here, not in the pinned bar. It is a view toggle you
+              reach for once, not a control you adjust while scrolling — and
+              its 72px was the difference between all three facet triggers
+              fitting the bar and "Any price" being scrolled off it entirely on
+              a bridge-mode board. Losing a control off the edge of the
+              filter bar is the exact failure this whole surface exists to
+              avoid. */}
+          <div className="flex items-center justify-between gap-3">
+            {!loading && !error && fetchedAt && visible.length > 0 ? (
               <span className="text-[11px] text-black/55 dark:text-white/60">
                 Checked {agoLabel(fetchedAt)}
               </span>
-            </div>
-          )}
+            ) : (
+              <span />
+            )}
+            {!loading && !error && visible.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowMap((v) => !v)}
+                aria-expanded={showMap}
+                aria-controls="results-map"
+                className="relative inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-black/15 px-3 text-[13px] text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+              >
+                Map
+                <span aria-hidden>{showMap ? "▴" : "▾"}</span>
+              </button>
+            )}
+          </div>
 
           {/* THE CONTROL BAR, and the only persistent chrome on the page.
               What you are looking at and everything that changes it, on one
@@ -728,7 +749,20 @@ export default function Home() {
             className="sticky top-0 z-30 border-b border-black/[0.07] bg-background/70 backdrop-blur-xl dark:border-white/10"
           >
             {/* The bar bleeds; its CONTENTS stay on the column. */}
-            <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6">
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 py-2 sm:px-6">
+              {/* `sm:flex-nowrap` is load-bearing. This row's width is not
+                  fixed: the count runs from "14 flights" (66px) to "23 long
+                  weekends" (125px), and "Clear all" appears with a filter.
+                  Measured, a bridge-mode board needed 770px of a 768px box and
+                  broke the Sort/Map cluster onto a second line — over by two
+                  pixels, and by ~57 once a filter is on. Trimming pixels could
+                  not hold that.
+
+                  So above `sm` the row never wraps and the trigger group, the
+                  only shrinkable child, scrolls instead. Below `sm` it still
+                  wraps, because at 342px one line would crush the triggers to
+                  nothing. */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap">
             {/* Not the 18px heading it was — in a pinned 52px bar the count is
                 a label on the board, not a title for the page. */}
             <span className="shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
@@ -765,7 +799,7 @@ export default function Home() {
             {searched && hasRefinements && (
               /* Insurance, not the normal case: the widest state — all three
                  set, each multi-select — measured 325px in a 350px column. */
-              <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
@@ -826,7 +860,7 @@ export default function Home() {
                 the row needed 748 of a 768px box — so it was the difference
                 between one line and two. A two-segment Soonest/Cheapest control
                 does not need telling you it sorts. */}
-            <div className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <SegmentedControl
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },
@@ -836,26 +870,19 @@ export default function Home() {
                 onChange={setSort}
                 ariaLabel="Sort"
               />
-              {!loading && !error && visible.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowMap((v) => !v)}
-                  aria-expanded={showMap}
-                  aria-controls="results-map"
-                  className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-black/15 px-3.5 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
-                >
-                  Map
-                  <span aria-hidden>{showMap ? "▴" : "▾"}</span>
-                </button>
-              )}
+
             </div>
 
-            {/* Inside the sticky container on purpose: the chips pin with the
-                bar, so opening a facet 2,000px down drops its values over the
-                board instead of somewhere off screen. basis-full puts them on
-                their own line under the triggers. */}
-            {hasRefinements && openFacet === "month" && (
-              <div id="refine-month" className="animate-fade-in basis-full">
+              </div>
+
+              {/* Inside the sticky container so the chips pin with the bar —
+                  opening a facet 2,000px down drops its values over the board
+                  rather than somewhere off screen. But a SIBLING of the
+                  controls row, not a flex item in it: as a `basis-full` child
+                  of a `sm:flex-nowrap` row it was forced onto the same line,
+                  which crushed the trigger group to 71px and hid 277px. */}
+              {hasRefinements && openFacet === "month" && (
+              <div id="refine-month" className="animate-fade-in">
                 <MonthFilter
                   months={available}
                   selected={selectedMonths}
@@ -863,8 +890,8 @@ export default function Home() {
                 />
               </div>
             )}
-            {hasRefinements && openFacet === "region" && (
-              <div id="refine-region" className="animate-fade-in basis-full">
+              {hasRefinements && openFacet === "region" && (
+              <div id="refine-region" className="animate-fade-in">
                 <ContinentFilter
                   continents={availableContinents}
                   selected={selectedContinents}
@@ -873,8 +900,8 @@ export default function Home() {
                 />
               </div>
             )}
-            {hasRefinements && openFacet === "price" && (
-              <div id="refine-price" className="animate-fade-in basis-full">
+              {hasRefinements && openFacet === "price" && (
+              <div id="refine-price" className="animate-fade-in">
                 <PriceFilter
                   buckets={priceBucketList}
                   max={bounds.max}
