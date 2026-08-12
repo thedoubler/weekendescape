@@ -774,10 +774,14 @@ export default function Home() {
                   full width and `shrink-0` so they can never be crushed again.
                   `order-*` assigns that arrangement on a phone and returns them
                   inline from `sm` up, where all three genuinely fit one line. */}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:flex sm:flex-nowrap">
+                {/* Count and Clear all share the top-left cell so the count can
+                    wrap INSIDE it rather than shoving the sort control onto a
+                    row of its own. */}
+                <div className="col-start-1 row-start-1 flex min-w-0 flex-wrap items-center gap-2 sm:flex-none sm:contents">
             {/* Not the 18px heading it was — in a pinned 52px bar the count is
                 a label on the board, not a title for the page. */}
-            <span className="order-1 shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
+            <span className="shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
               {loading
                 ? "Searching…"
                 : error
@@ -803,15 +807,21 @@ export default function Home() {
               <button
                 type="button"
                 onClick={clearAll}
-                className="order-1 shrink-0 text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+                // The text box is 41x17 — below WCAG 2.5.8's 24px floor on its
+                // own. Same `before:` expander the Map button uses.
+                className="relative shrink-0 text-[11px] text-black/55 underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:text-white/60 dark:hover:text-white"
               >
                 Clear all
               </button>
             )}
+                </div>
+
             {searched && hasRefinements && (
               /* Insurance, not the normal case: the widest state — all three
                  set, each multi-select — measured 325px in a 350px column. */
-              <div className="order-3 -mx-1 flex w-full min-w-0 shrink-0 basis-full gap-1.5 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:order-2 sm:w-auto sm:shrink sm:basis-auto [&::-webkit-scrollbar]:hidden">
+              /* col-end-3, NOT col-span-2: in Tailwind v4 col-span-* emits the
+                 grid-column shorthand and would clobber col-start-1. */
+              <div className="col-start-1 col-end-3 row-start-2 -mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
@@ -875,7 +885,7 @@ export default function Home() {
                 the row needed 748 of a 768px box — so it was the difference
                 between one line and two. A two-segment Soonest/Cheapest control
                 does not need telling you it sorts. */}
-            <div className="order-2 ml-auto flex shrink-0 items-center gap-1.5 sm:order-3">
+            <div className="col-start-2 row-start-1 ml-auto flex shrink-0 items-center gap-1.5">
               <SegmentedControl
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },

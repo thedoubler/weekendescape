@@ -54,7 +54,9 @@ export function FacetTrigger({
       // h-9, not py-1.5: at 34px these sat 2px shy of the Sort control and
       // the Map button they share a row with, which reads as a wobble rather
       // than as a size difference.
-      className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm transition ${
+      // h-11 below `sm`: 36px missed the 44px iOS tap floor. px-2.5 buys the
+      // width back so all three still fit a 328px row at 360.
+      className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-sm transition sm:h-9 sm:px-3 ${
         set
           ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
           : open
