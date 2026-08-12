@@ -762,10 +762,22 @@ export default function Home() {
                   only shrinkable child, scrolls instead. Below `sm` it still
                   wraps, because at 342px one line would crush the triggers to
                   nothing. */}
+              {/* On a phone this is TWO ROWS, and which control sits on which
+                  is assigned rather than left to flexbox. It used to be one
+                  `flex-wrap` row, and the result was not a wrap at all: given a
+                  shrinkable child, flexbox shrinks before it wraps, so the
+                  trigger group collapsed to a 37px sliver at 390px and 8px at
+                  360px — 313px and 342px of filters scrolled out of sight. The
+                  filters were, in effect, not on the page.
+
+                  Row 1 is the count and the ordering; row 2 is the filters,
+                  full width and `shrink-0` so they can never be crushed again.
+                  `order-*` assigns that arrangement on a phone and returns them
+                  inline from `sm` up, where all three genuinely fit one line. */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap">
             {/* Not the 18px heading it was — in a pinned 52px bar the count is
                 a label on the board, not a title for the page. */}
-            <span className="shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
+            <span className="order-1 shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
               {loading
                 ? "Searching…"
                 : error
@@ -791,7 +803,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={clearAll}
-                className="shrink-0 text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+                className="order-1 shrink-0 text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
               >
                 Clear all
               </button>
@@ -799,11 +811,12 @@ export default function Home() {
             {searched && hasRefinements && (
               /* Insurance, not the normal case: the widest state — all three
                  set, each multi-select — measured 325px in a 350px column. */
-              <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="order-3 -mx-1 flex w-full min-w-0 shrink-0 basis-full gap-1.5 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:order-2 sm:w-auto sm:shrink sm:basis-auto [&::-webkit-scrollbar]:hidden">
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
                     placeholder="Any month"
+                    shortPlaceholder="Month"
                     controls="refine-month"
                     value={
                       selectedMonths.length === 1
@@ -824,6 +837,7 @@ export default function Home() {
                     // Not "Any region": this product's question is "where can
                     // I go", and the unfiltered answer to that is anywhere.
                     placeholder="Anywhere"
+                    shortPlaceholder="Region"
                     controls="refine-region"
                     value={
                       selectedContinents.length === 1
@@ -842,6 +856,7 @@ export default function Home() {
                   <FacetTrigger
                     label="Price"
                     placeholder="Any price"
+                    shortPlaceholder="Price"
                     controls="refine-price"
                     value={cap < bounds.max ? `≤ ${cap}` : null}
                     open={openFacet === "price"}
@@ -860,7 +875,7 @@ export default function Home() {
                 the row needed 748 of a 768px box — so it was the difference
                 between one line and two. A two-segment Soonest/Cheapest control
                 does not need telling you it sorts. */}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="order-2 ml-auto flex shrink-0 items-center gap-1.5 sm:order-3">
               <SegmentedControl
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },

@@ -17,6 +17,7 @@
 export function FacetTrigger({
   label,
   placeholder,
+  shortPlaceholder,
   value,
   open,
   onClick,
@@ -26,6 +27,11 @@ export function FacetTrigger({
   label: string;
   /** What the trigger reads when nothing is chosen, e.g. "Any month". */
   placeholder: string;
+  /** The phone-width version, e.g. "Month". At 390px the three triggers are
+   *  350px against a 294px row; the short forms are ~235px and fit without
+   *  scrolling. Only the UNSET label shortens — a set trigger already reads
+   *  "✓ Aug", which is short either way. */
+  shortPlaceholder?: string;
   value?: string | null;
   open: boolean;
   onClick: () => void;
@@ -57,7 +63,12 @@ export function FacetTrigger({
       }`}
     >
       {set && <span aria-hidden>✓</span>}
-      {value ?? placeholder}
+      {value ?? (
+        <>
+          <span className="sm:hidden">{shortPlaceholder ?? placeholder}</span>
+          <span className="hidden sm:inline">{placeholder}</span>
+        </>
+      )}
       <span aria-hidden className="-ml-px text-[10px] opacity-55">
         {open ? "▲" : "▼"}
       </span>
