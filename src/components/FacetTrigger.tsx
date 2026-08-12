@@ -44,7 +44,10 @@ export function FacetTrigger({
       // `border` on BOTH branches, colour-only flip. pillClass drops the border
       // when active, which is invisible on a lone chip but a 2px jump in a row
       // of three triggers.
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+      // h-9, not py-1.5: at 34px these sat 2px shy of the Sort control and
+      // the Map button they now share a row with, which reads as a wobble
+      // rather than as a size difference.
+      className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm transition ${
         set
           ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
           : open

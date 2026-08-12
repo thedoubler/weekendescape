@@ -702,13 +702,18 @@ export default function Home() {
         onToggleBridges={toggleBridges}
       />
 
-      {/* Results header — primary: what you're seeing + how it's ordered */}
+      {/* Results header and filter controls, one block under one hairline.
+          They used to be two: the count/Sort/Map row, then the facet triggers
+          on a line of their own. That left 414px of dead space to the right of
+          "Price 4" and a half-empty row above it — two ragged lines where the
+          content fits comfortably on one. Measured: triggers 306px + Sort/Map
+          267px = 573px in a 720px box. */}
       {searched && (
-        <div className="flex flex-col gap-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <div className="flex flex-col">
-              <span className="text-lg font-semibold tracking-tight">
-                {loading
+        <div className="flex flex-col gap-3 border-b border-black/[0.07] pb-3 dark:border-white/10">
+          {/* What you are looking at. Description, not controls. */}
+          <div className="flex flex-col">
+            <span className="text-lg font-semibold tracking-tight">
+              {loading
                   ? "Searching…"
                   : error
                     ? "Couldn’t load results"
@@ -730,35 +735,95 @@ export default function Home() {
                           ? `${visible.length} of ${total} ${noun}`
                           : `${visible.length} ${noun}`;
                       })()}
-              </span>
-              <div className="flex items-baseline gap-2.5">
-                {!loading && !error && fetchedAt && visible.length > 0 && (
-                  <span className="text-[11px] text-black/55 dark:text-white/60">
-                    Checked {agoLabel(fetchedAt)}
-                  </span>
+            </span>
+            <div className="flex items-baseline gap-2.5">
+              {!loading && !error && fetchedAt && visible.length > 0 && (
+                <span className="text-[11px] text-black/55 dark:text-white/60">
+                  Checked {agoLabel(fetchedAt)}
+                </span>
+              )}
+              {/* Sits with the number it restores — clearing three filters by
+                  tapping three triggers is three taps. */}
+              {!loading && !error && activeFilters > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* THE CONTROL BAR. Everything that changes what you see, on one
+              line: what narrows the board on the left, how it is ordered and
+              where it is drawn on the right. Wraps to two lines on a phone,
+              which is the only width where it has to. */}
+          <div
+            id="refine-panel"
+            ref={refineRef}
+            className="flex flex-wrap items-center gap-y-2"
+          >
+            {searched && hasRefinements && (
+              /* Insurance, not the normal case: the widest state — all three
+                 set, each multi-select — measured 325px in a 350px column. */
+              <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {available.length > 0 && (
+                  <FacetTrigger
+                    label="Month"
+                    count={available.length}
+                    controls="refine-month"
+                    value={
+                      selectedMonths.length === 1
+                        ? monthShort(selectedMonths[0])
+                        : selectedMonths.length > 1
+                          ? `${monthShort(selectedMonths[0])} +${selectedMonths.length - 1}`
+                          : null
+                    }
+                    open={openFacet === "month"}
+                    onClick={() =>
+                      setOpenFacet((f) => (f === "month" ? null : "month"))
+                    }
+                  />
                 )}
-                {/* Sits with the number it restores. It used to head a row of
-                    removable chips; those are gone (see below), but a way back
-                    to the whole board in one tap is worth keeping — clearing
-                    three filters by tapping three chips is three taps. */}
-                {!loading && !error && activeFilters > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearAll}
-                    className="text-[11px] text-black/55 underline underline-offset-2 hover:text-black dark:text-white/60 dark:hover:text-white"
-                  >
-                    Clear all
-                  </button>
+                {availableContinents.length > 1 && (
+                  <FacetTrigger
+                    label="Region"
+                    count={availableContinents.length}
+                    controls="refine-region"
+                    value={
+                      selectedContinents.length === 1
+                        ? selectedContinents[0]
+                        : selectedContinents.length > 1
+                          ? `${selectedContinents[0]} +${selectedContinents.length - 1}`
+                          : null
+                    }
+                    open={openFacet === "region"}
+                    onClick={() =>
+                      setOpenFacet((f) => (f === "region" ? null : "region"))
+                    }
+                  />
+                )}
+                {priceBucketList.length > 0 && (
+                  <FacetTrigger
+                    label="Price"
+                    count={priceBucketList.length}
+                    controls="refine-price"
+                    value={cap < bounds.max ? `≤ ${cap}` : null}
+                    open={openFacet === "price"}
+                    onClick={() =>
+                      setOpenFacet((f) => (f === "price" ? null : "price"))
+                    }
+                  />
                 )}
               </div>
-            </div>
-            {/* One line from `sm` up. Below that, Sort + two segments + Map +
-                Refine is ~390px against a 288px content box, so it wraps rather
-                than scrolling the whole page sideways. */}
-            {/* ml-auto, not just justify-end: the parent is justify-between, so
-                once this cluster wraps onto its own line it would otherwise sit
-                hard left. This keeps Sort/Map/Refine right-aligned either way. */}
-            <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
+            )}
+
+            {/* ml-auto rather than justify-between: with no filters on the
+                board the left side is empty, and justify-between would park
+                these hard left. */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 pl-3">
               {/* The segmented control is self-explanatory on a phone; the word
                   only earns its width once there's room. */}
               <span className="hidden text-xs text-black/45 sm:inline dark:text-white/45">
@@ -773,15 +838,13 @@ export default function Home() {
                 onChange={setSort}
                 ariaLabel="Sort"
               />
-              {/* Sits after Refine so opening the map never inserts anything
-                  above the control you just tapped. */}
               {!loading && !error && visible.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowMap((v) => !v)}
                   aria-expanded={showMap}
                   aria-controls="results-map"
-                  className="relative ml-1 inline-flex items-center gap-1.5 h-9 rounded-full border border-black/15 px-3.5 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                  className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-black/15 px-3.5 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
                 >
                   Map
                   <span aria-hidden>{showMap ? "▴" : "▾"}</span>
@@ -789,94 +852,10 @@ export default function Home() {
               )}
             </div>
           </div>
-          {/* The row of removable chips that used to sit here is gone. It
-              existed to keep filter state visible while Refine was collapsed
-              behind a disclosure — and Refine no longer collapses. Every chip
-              it mirrored is lit, in colour, two rows below it: the same facts
-              twice, 34px apart. Tapping a lit chip removes that filter, which
-              is what the ✕ did. */}
-        </div>
-      )}
 
-      {/* Three doors, one row, and the row costs the same whether the board has
-          three months or seven. That last property is the point: as three rows
-          of chips this block was 135px of a 723px phone screen, and the first
-          card started at y=510 — 70% of the screen spent before one result.
-
-          Hiding controls is what "i don't like that options are disappearing"
-          objected to, so this earns it three ways. The facets are NAMED, not
-          buried behind one word like the old "Refine". Each closed door prints
-          how many options are behind it. And once a facet is set the trigger
-          stops naming the field and shows the value — "Region" becomes
-          "✓ Europe" — so a filtered board says what it is filtered to with
-          nothing open.
-
-          Inline expansion, deliberately not a popover: the receipt above owns
-          popovers, and there a popover means "this reloads the board". These
-          are free. They push the board down and filter under your thumb, which
-          is what cheap should look like. No Apply button either — that is a
-          server round trip made visible, and this is an Array.filter. */}
-      {searched && hasRefinements && (
-        <div
-          id="refine-panel"
-          ref={refineRef}
-          className="flex flex-col gap-2 border-b border-black/[0.07] pb-3 dark:border-white/10"
-        >
-          {/* Insurance, not the normal case: the widest state — all three set,
-              each multi-select — measured 325px in a 350px column. */}
-          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {available.length > 0 && (
-              <FacetTrigger
-                label="Month"
-                count={available.length}
-                controls="refine-month"
-                value={
-                  selectedMonths.length === 1
-                    ? monthShort(selectedMonths[0])
-                    : selectedMonths.length > 1
-                      ? `${monthShort(selectedMonths[0])} +${selectedMonths.length - 1}`
-                      : null
-                }
-                open={openFacet === "month"}
-                onClick={() =>
-                  setOpenFacet((f) => (f === "month" ? null : "month"))
-                }
-              />
-            )}
-            {availableContinents.length > 1 && (
-              <FacetTrigger
-                label="Region"
-                count={availableContinents.length}
-                controls="refine-region"
-                value={
-                  selectedContinents.length === 1
-                    ? selectedContinents[0]
-                    : selectedContinents.length > 1
-                      ? `${selectedContinents[0]} +${selectedContinents.length - 1}`
-                      : null
-                }
-                open={openFacet === "region"}
-                onClick={() =>
-                  setOpenFacet((f) => (f === "region" ? null : "region"))
-                }
-              />
-            )}
-            {priceBucketList.length > 0 && (
-              <FacetTrigger
-                label="Price"
-                count={priceBucketList.length}
-                controls="refine-price"
-                value={cap < bounds.max ? `≤ ${cap}` : null}
-                open={openFacet === "price"}
-                onClick={() =>
-                  setOpenFacet((f) => (f === "price" ? null : "price"))
-                }
-              />
-            )}
-          </div>
-
-          {/* pt-0.5 so the chips' focus rings clear the trigger above. */}
-          {openFacet === "month" && (
+          {/* The opened facet's values, under the bar that opened them.
+              pt-0.5 so the chips' focus rings clear the trigger above. */}
+          {hasRefinements && openFacet === "month" && (
             <div id="refine-month" className="animate-fade-in pt-0.5">
               <MonthFilter
                 months={available}
@@ -885,7 +864,7 @@ export default function Home() {
               />
             </div>
           )}
-          {openFacet === "region" && (
+          {hasRefinements && openFacet === "region" && (
             <div id="refine-region" className="animate-fade-in pt-0.5">
               <ContinentFilter
                 continents={availableContinents}
@@ -895,7 +874,7 @@ export default function Home() {
               />
             </div>
           )}
-          {openFacet === "price" && (
+          {hasRefinements && openFacet === "price" && (
             <div id="refine-price" className="animate-fade-in pt-0.5">
               <PriceFilter
                 buckets={priceBucketList}
@@ -909,8 +888,7 @@ export default function Home() {
 
           {hiddenCount > 0 && (
             /* Not a facet — a rule about what counts as a trip. It reads as a
-               sentence you agree with rather than a value you pick, so it stays
-               out of the trigger row and keeps its checkbox. */
+               sentence you agree with rather than a value you pick. */
             <label className="flex cursor-pointer items-start gap-2 text-[13px]">
               <input
                 type="checkbox"
