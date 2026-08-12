@@ -135,15 +135,15 @@ export function SearchReceipt({
       type="button"
       aria-haspopup="dialog"
       aria-expanded={open === key}
+      aria-label={reloadHint(label)}
       onClick={(e) => toggle(key, e)}
-      className={`-mx-0.5 rounded px-0.5 pb-0.5 font-semibold whitespace-nowrap transition-colors ${
+      className={`relative -mx-0.5 rounded px-0.5 pb-0.5 font-semibold whitespace-nowrap transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] ${
         open === key
           ? "bg-amber-500/10 text-black dark:bg-amber-300/15 dark:text-white"
           : "text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white"
       } border-b-2 border-dotted border-amber-700 dark:border-amber-400`}
     >
       {label}
-      <Reload />
     </button>
   );
 
@@ -159,10 +159,10 @@ export function SearchReceipt({
       <button
         type="button"
         onClick={onEditOrigins}
-        className="-mx-0.5 rounded border-b-2 border-dotted border-amber-700 px-0.5 pb-0.5 font-semibold whitespace-nowrap text-black/70 transition-colors hover:text-black dark:border-amber-400 dark:text-white/70 dark:hover:text-white"
+        aria-label={reloadHint(originLabel)}
+        className="relative -mx-0.5 rounded border-b-2 border-dotted border-amber-700 px-0.5 pb-0.5 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] font-semibold whitespace-nowrap text-black/70 transition-colors hover:text-black dark:border-amber-400 dark:text-white/70 dark:hover:text-white"
       >
         {originLabel}
-        <Reload />
       </button>
 
       <Sep />
@@ -180,6 +180,7 @@ export function SearchReceipt({
         type="button"
         role="switch"
         aria-checked={bridges}
+        aria-label={reloadHint("Long weekends")}
         onClick={onToggleBridges}
         className={`ml-auto inline-flex shrink-0 items-center gap-1.5 self-center rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
           bridges
@@ -189,7 +190,6 @@ export function SearchReceipt({
       >
         <span aria-hidden>🌉</span>
         Long weekends
-        <Reload />
       </button>
 
       {open && (
@@ -235,28 +235,15 @@ function Sep() {
   );
 }
 
-// The two classes on this page used to be told apart by a superscript ↻ after
-// every facet. The rule under the words does that job on its own now: an amber
-// DOTTED underline at full strength means "editing this costs an upstream call
-// and replaces the board". Everything free below is a neutral pill with no rule
-// at all.
-//
-// The ↻ went for three measured reasons. (1) U+21BB is not in Space Grotesk —
-// next/font's generated @font-face declares the latin subset as U+0000-00FF
-// plus a short list ending at U+2215 — so it fell through to whatever symbol
-// font the OS offered and drew differently per platform, the exact failure
-// emoji are banned here for. (2) It cost 9.31px per facet, 37.25px across the
-// sentence: the difference between "Searching BCN + GRO · Thu–Mon · any stops ·
-// 2 adults" fitting the 358px content box of a 390px phone (352.0px) and
-// wrapping to a second line (389.2px). (3) At 8.5px it reads as an ambiguous
-// curl rather than a reload icon.
-//
-// The old 45%-opacity rule was 1.65:1 on white — below the 3:1 floor in WCAG
-// 1.4.11 — so it could not have been the sole cue until now. At full strength
-// it is 5.02:1 light / 10.83:1 dark. What survives unchanged is the sentence a
-// screen reader hears, which never depended on the glyph.
-function Reload() {
-  return <span className="sr-only"> (reloads results)</span>;
+// The hint that used to live here as a repeated `sr-only` span is now part of
+// each control's accessible name instead. Same information to a screen reader,
+// but `sr-only` text is real text: it rode along in every copy-paste and every
+// text extraction, so the line came out as "CLJ (reloads results) · Fri–Sun
+// (reloads results) · …" — five times, in a product whose whole SEO/GEO problem
+// is what a text-only reader sees. Each accessible name still STARTS with the
+// visible label, which is what WCAG 2.5.3 (Label in Name) requires.
+function reloadHint(label: string): string {
+  return `${label} — changing this reloads results`;
 }
 
 function Popover({ tailX, children }: { tailX: number; children: React.ReactNode }) {

@@ -57,6 +57,24 @@ body::before {
   background-repeat: no-repeat;
 }
 
+/* Keyboard focus, everywhere, once.
+   Measured before this rule existed: 59 of the 60 focusable elements on the
+   board had neither an outline nor a shadow on :focus — no sort control, no
+   filter chip, no facet trigger, no receipt facet. The app could be tabbed
+   through but not seen, which is WCAG 2.4.7 failed across the whole surface.
+   Tailwind's preflight resets the UA outline and nothing put one back.
+
+   :where() so it lands at zero specificity — any component that wants its own
+   treatment overrides it with a plain class, no !important needed. The outline
+   uses --foreground (≈15:1 on either ground, and it stays visible on the solid
+   black/white fill of a selected chip because the 2px offset puts it on the
+   page rather than on the control). :focus-visible, so a mouse click never
+   draws it. Outlines follow border-radius automatically, so pills stay round. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
 /* Gentle reveal for content that replaces the first-load spinner. */
 @keyframes fade-in {
   from {

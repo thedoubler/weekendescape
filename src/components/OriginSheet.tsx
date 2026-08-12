@@ -54,7 +54,12 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
         // The backdrop is the dialog element itself; anything inside is a child.
         if (e.target === ref.current) ref.current?.close();
       }}
-      className="m-0 mt-auto w-full max-w-none rounded-t-2xl border-t border-black/10 bg-white p-0 text-black backdrop:bg-black/45 sm:mx-auto sm:mt-auto sm:mb-6 sm:max-w-md sm:rounded-2xl sm:border dark:border-white/15 dark:bg-[#1b1e26] dark:text-white"
+      // Bottom sheet on a phone, where the bottom edge is where the thumb is.
+      // CENTRED from `sm` up: `mt-auto` pinned it to the bottom of the desktop
+      // window too, which put a 278px dialog 421px down a 723px viewport with
+      // 24px under it — it read as something sliding off the screen rather than
+      // as a modal. `sm:m-auto` restores the UA's own centring.
+      className="m-0 mt-auto w-full max-w-none rounded-t-2xl border-t border-black/10 bg-white p-0 text-black backdrop:bg-black/45 sm:m-auto sm:max-w-md sm:rounded-2xl sm:border dark:border-white/15 dark:bg-[#1b1e26] dark:text-white"
     >
       <div className="flex flex-col gap-3.5 p-4">
         <div aria-hidden className="mx-auto h-1 w-9 rounded-full bg-black/10 dark:bg-white/15" />
