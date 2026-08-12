@@ -2,27 +2,30 @@
 // cost is independent of how many months, regions or price bands the board
 // happens to have — which is the property three rows of chips did not have.
 //
-// The rule that makes hiding survivable, borrowed from Kayak Explore: once a
-// facet is SET, the trigger stops naming the field and shows the chosen value.
-// "Region" becomes "✓ Europe". So a filtered board still says what it is
-// filtered to without opening anything.
+// Each trigger says what the filter IS SET TO, never how many options sit
+// behind it. Unset that means "Any month"; set, it becomes "✓ Aug". Same
+// grammar as the receipt line above, which also prints values ("direct",
+// "1 adult") rather than fields.
 //
-// The count ("Month 4") is deliberately suppressed once the facet is open. Its
-// job is to answer "what is behind this door" for a door you have not opened;
-// the moment the chips are on screen it is redundant, AND it collides — the
-// dim number in "Region 3" means options while the dim number in "Europe 12"
-// forty pixels below means deals. Same treatment, two meanings. Showing it only
-// while closed means the two are never on screen together.
+// The option count that used to sit here ("Month 6") is gone for three
+// reasons. It was ambiguous — "Month 6" reads as June on a board where every
+// other number is a date or a price, and "Price 4" named a quantity of
+// buckets, which is an implementation detail nobody asked about. It collided —
+// the dim number in "Region 3" meant options while the dim number in
+// "Europe 12" forty pixels below meant deals. And it was answering a question
+// the chevron already answers: that there is something to open.
 export function FacetTrigger({
   label,
-  count,
+  placeholder,
   value,
   open,
   onClick,
   controls,
 }: {
+  /** The field name. Spoken, never shown — the visible text is the value. */
   label: string;
-  count: number;
+  /** What the trigger reads when nothing is chosen, e.g. "Any month". */
+  placeholder: string;
   value?: string | null;
   open: boolean;
   onClick: () => void;
@@ -35,18 +38,16 @@ export function FacetTrigger({
       onClick={onClick}
       aria-expanded={open}
       aria-controls={controls}
-      // The visible label drops the field name once a value is set — "Europe"
-      // identifies itself. Read aloud it does not, so the accessible name keeps
-      // the field, and keeps the option count the sighted user loses on open.
-      aria-label={
-        set ? `${label}: ${value}. Change` : `${label}, ${count} options`
-      }
+      // The visible text is a value; read aloud it does not identify which
+      // field it belongs to, so the accessible name puts the field back. It
+      // still CONTAINS the visible text, which is what WCAG 2.5.3 requires.
+      aria-label={`${label}: ${value ?? placeholder}. Change`}
       // `border` on BOTH branches, colour-only flip. pillClass drops the border
       // when active, which is invisible on a lone chip but a 2px jump in a row
       // of three triggers.
       // h-9, not py-1.5: at 34px these sat 2px shy of the Sort control and
-      // the Map button they now share a row with, which reads as a wobble
-      // rather than as a size difference.
+      // the Map button they share a row with, which reads as a wobble rather
+      // than as a size difference.
       className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm transition ${
         set
           ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
@@ -55,21 +56,8 @@ export function FacetTrigger({
             : "border-black/15 text-black/75 hover:bg-black/5 dark:border-white/20 dark:text-white/75 dark:hover:bg-white/10"
       }`}
     >
-      {set ? (
-        <>
-          <span aria-hidden>✓</span>
-          {value}
-        </>
-      ) : (
-        <>
-          {label}
-          {!open && (
-            <span aria-hidden className="tabular-nums opacity-50">
-              {count}
-            </span>
-          )}
-        </>
-      )}
+      {set && <span aria-hidden>✓</span>}
+      {value ?? placeholder}
       <span aria-hidden className="-ml-px text-[10px] opacity-55">
         {open ? "▲" : "▼"}
       </span>

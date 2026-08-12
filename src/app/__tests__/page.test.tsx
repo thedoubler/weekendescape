@@ -157,20 +157,22 @@ describe("Home page", () => {
   // records where it landed. "Refine" hid three rows behind ONE word and drew
   // "options are disappearing"; three permanent rows answered that and cost
   // 135px, putting the first card at y=510 on a 723px phone. What ships is
-  // three NAMED doors, each printing how many options it holds — nothing
-  // vanishes unannounced, and the row costs the same at three months or seven.
-  it("names every facet and its option count without anything being opened", async () => {
+  // three doors, each stating what its filter is currently set to, and the row
+  // costs the same at three months or seven.
+  it("states each facet's current setting without anything being opened", async () => {
     grantGeolocation();
     vi.spyOn(global, "fetch").mockImplementation(mockFetch() as any);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
+    // "Any month", not "Month 6": an option count read as a date on a board
+    // where every other number is one, and named a quantity of buckets nobody
+    // asked about. Only Month is asserted — the two-deal fixture yields no
+    // price buckets, so that trigger correctly does not render at all.
     expect(
-      screen.getByRole("button", { name: /^Month, \d+ options$/ })
+      screen.getByRole("button", { name: "Month: Any month. Change" })
     ).toBeInTheDocument();
-    // Only Month is asserted by name: the two-deal fixture yields no price
-    // buckets, so that trigger correctly does not render at all.
     // Closed, so the values themselves are not on the page yet...
     expect(screen.queryByRole("button", { name: "Aug" })).not.toBeInTheDocument();
     expect(
@@ -178,7 +180,9 @@ describe("Home page", () => {
     ).not.toBeInTheDocument();
 
     // ...and one tap brings them back, in place.
-    fireEvent.click(screen.getByRole("button", { name: /^Month, \d+ options$/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Month: Any month. Change" })
+    );
     expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
   });
 
@@ -192,14 +196,16 @@ describe("Home page", () => {
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole("button", { name: /^Month, \d+ options$/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Month: Any month. Change" })
+    );
     fireEvent.click(screen.getByRole("button", { name: "Aug" }));
 
     expect(
-      screen.getByRole("button", { name: /^Month: Aug\. Change$/ })
+      screen.getByRole("button", { name: "Month: Aug. Change" })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /^Month, \d+ options$/ })
+      screen.queryByRole("button", { name: "Month: Any month. Change" })
     ).not.toBeInTheDocument();
   });
 

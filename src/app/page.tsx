@@ -137,11 +137,31 @@ export default function Home() {
   // covers the one case with no render behind it.
   const barRef = useRef<HTMLDivElement>(null);
   const [barH, setBarH] = useState(0);
+  // How far the bar has to reach on each side to span the viewport. Measured,
+  // not `calc((100vw - 100%) / 2)`: 100vw counts the scrollbar, so that made
+  // the document 15px wider than the viewport and the page scrollable
+  // sideways — a real overflow, clipped by body's overflow-x-hidden and
+  // therefore invisible until measured.
+  const [bleed, setBleed] = useState(0);
   useEffect(() => {
     const measure = () => {
-      const h = barRef.current?.getBoundingClientRect().height ?? 0;
+      const node = barRef.current;
+      const h = node?.getBoundingClientRect().height ?? 0;
       // Only ever writes on a real change, so this cannot loop.
       setBarH((prev) => (Math.abs(prev - h) < 0.5 ? prev : h));
+      // How far the bar's own left edge sits from the window's. That IS the
+      // margin it needs, and it needs no arithmetic about the column: measuring
+      // the inner row instead was 24px out, because the bar's natural width is
+      // main's CONTENT box while the row carries its own padding.
+      const main = node?.closest("main");
+      if (main) {
+        const cs = getComputedStyle(main);
+        const g = Math.max(
+          0,
+          Math.round(main.getBoundingClientRect().left + parseFloat(cs.paddingLeft))
+        );
+        setBleed((prev) => (prev === g ? prev : g));
+      }
     };
     measure();
     window.addEventListener("resize", measure);
@@ -697,8 +717,18 @@ export default function Home() {
           <div
             id="refine-panel"
             ref={barRef}
-            className="sticky top-0 z-30 -mx-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-black/[0.07] bg-background/90 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 dark:border-white/10"
+            // Full-bleed. At 1280 the column is 768px, so a bar that stopped
+            // at its edge read as a floating strip with a hard vertical cut
+            // and the page showing past it.
+            //
+            // Properly frosted rather than nearly-opaque: bg-background/90 over
+            // a 4px blur let card text read straight through, which is most of
+            // what made it look unfinished. /70 over a 24px blur is glass.
+            style={{ marginInline: `-${bleed}px` }}
+            className="sticky top-0 z-30 border-b border-black/[0.07] bg-background/70 backdrop-blur-xl dark:border-white/10"
           >
+            {/* The bar bleeds; its CONTENTS stay on the column. */}
+            <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6">
             {/* Not the 18px heading it was — in a pinned 52px bar the count is
                 a label on the board, not a title for the page. */}
             <span className="shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
@@ -739,7 +769,7 @@ export default function Home() {
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
-                    count={available.length}
+                    placeholder="Any month"
                     controls="refine-month"
                     value={
                       selectedMonths.length === 1
@@ -757,7 +787,9 @@ export default function Home() {
                 {availableContinents.length > 1 && (
                   <FacetTrigger
                     label="Region"
-                    count={availableContinents.length}
+                    // Not "Any region": this product's question is "where can
+                    // I go", and the unfiltered answer to that is anywhere.
+                    placeholder="Anywhere"
                     controls="refine-region"
                     value={
                       selectedContinents.length === 1
@@ -775,7 +807,7 @@ export default function Home() {
                 {priceBucketList.length > 0 && (
                   <FacetTrigger
                     label="Price"
-                    count={priceBucketList.length}
+                    placeholder="Any price"
                     controls="refine-price"
                     value={cap < bounds.max ? `≤ ${cap}` : null}
                     open={openFacet === "price"}
@@ -790,12 +822,11 @@ export default function Home() {
             {/* ml-auto rather than justify-between: with no filters on the
                 board the left side is empty, and justify-between would park
                 these hard left. */}
-            <div className="ml-auto flex shrink-0 items-center gap-2 pl-3">
-              {/* The segmented control is self-explanatory on a phone; the word
-                  only earns its width once there's room. */}
-              <span className="hidden text-xs text-black/45 sm:inline dark:text-white/45">
-                Sort
-              </span>
+            {/* The word "Sort" used to label this. It cost 25px + its gap, and
+                the row needed 748 of a 768px box — so it was the difference
+                between one line and two. A two-segment Soonest/Cheapest control
+                does not need telling you it sorts. */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 pl-2">
               <SegmentedControl
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },
@@ -853,6 +884,7 @@ export default function Home() {
                 />
               </div>
             )}
+            </div>
           </div>
 
           {hiddenCount > 0 && (
