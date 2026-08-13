@@ -16,7 +16,6 @@ import PlaceLinks from "@/components/PlaceLinks";
 import {
   timeLabel,
   durationLabel,
-  daysUntil,
   dayBlocks,
   crossesMidnight,
   isNightHour,
@@ -24,6 +23,7 @@ import {
   holidaySearchUrl,
   stopsSummary,
   weekendRange,
+  weekendWhen,
 } from "@/lib/format";
 import { hotelUrl } from "@/lib/hotels";
 import { airlineName } from "@/lib/airlines";
@@ -299,7 +299,6 @@ export function DealCard({
   // half or more at the destination. Shorter (red-eye) stays get a neutral pill
   // so the colour isn't a false "good" signal.
   const goodStay = deal.stayMinutes >= 36 * 60;
-  const days = daysUntil(deal.outDepart, new Date());
   const adults = cheapest?.adults ?? 1;
   const bags = baggageInfo(deal, adults);
   // Astronomy, so it needs no caveat — but it only earns a row when daylight
@@ -414,20 +413,23 @@ export function DealCard({
           </div>
           <div className="mt-0.5 text-xs">
             <span className="font-medium text-black/70 dark:text-white/70">
-              {/* outDepart/backArrive — when you TRAVEL — not outArrive/
-                  backDepart, which is when you are at the destination. On an
-                  overnight leg those differ by a day, and the card was telling
-                  people to take the wrong day off: the Istanbul card read
-                  "Sat 7 – Sun 8 Nov" for a flight leaving Cluj Fri 6 Nov at
-                  21:25, with the digit 6 appearing nowhere on the collapsed
-                  card. Measured on the live board: the departure day was wrong
-                  on 1/14 direct results and 17/69 with stops allowed, and the
-                  return day was understated on 2/14 and 11/69.
-                  CheapestWeekend.tsx already used this pair, so the two were
-                  printing different dates for the same trip. The day strip
-                  below still spans outArrive..backDepart, which is correct
-                  there — it shows the days you actually get. */}
-              {weekendRange(deal.outDepart, deal.backArrive)}
+              {/* The coarse "when", because that is the decision at the browse
+                  stage — the exact days are in the strip directly below, with
+                  the flight times that make them mean something.
+
+                  Reads outDepart, never outArrive. Those differ by a day on an
+                  overnight leg, and this header used to print the arrival day:
+                  the Istanbul card said "Sat 7 – Sun 8 Nov" for a flight
+                  leaving Cluj Fri 6 Nov at 21:25. Measured on the live board,
+                  the departure day was wrong on 1/14 direct results and 17/69
+                  with stops allowed. */}
+              {weekendWhen(deal.outDepart, new Date())}
+              {/* Assistive-tech users cannot glance down at the strip, so the
+                  exact range is still announced here — only the visible glyphs
+                  moved. */}
+              <span className="sr-only">
+                , {weekendRange(deal.outDepart, deal.backArrive)}
+              </span>
             </span>
             <span className="text-black/35 dark:text-white/35"> · </span>
             <span
@@ -486,11 +488,10 @@ export function DealCard({
               {adults} travellers
             </div>
           )}
-          {days > 0 && (
-            <div className="text-xs tabular-nums text-black/55 dark:text-white/60">
-              in {days} days
-            </div>
-          )}
+          {/* "in 169 days" is gone: the header now carries the when, and both
+              sides of the date debate agreed this was the duplicate to cut. It
+              was derived arithmetic sitting in the price column the whole board
+              is sorted by, on a board whose median result is 57 days out. */}
         </div>
         {/* The disclosure lives at the trailing edge of the header, where an
             accordion's control is expected — the card previously had two

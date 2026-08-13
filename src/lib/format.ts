@@ -251,3 +251,44 @@ export function dayBlocks(outArrive: string, backDepart: string): DayCell[] {
   }
   return cells;
 }
+
+// The Saturday of the weekend a date belongs to. Saturday is the anchor
+// because it is the only day of a weekend that always lies in one month — a
+// Fri 30 Oct – Sun 1 Nov trip has one unambiguous home, where a Friday or
+// Sunday anchor gives two. Mon/Tue look back at the weekend just gone;
+// Wed–Sun look forward.
+function weekendSaturday(ms: number): number {
+  const wd = new Date(ms).getUTCDay(); // 0 Sun … 6 Sat
+  const off = [-1, -2, -3, 3, 2, 1, 0][wd];
+  return ms + off * 86400000;
+}
+
+// "This weekend" / "In 5 weeks" / "Late November" — the coarse "when" the
+// board is actually browsed by, for the collapsed card header. The exact dates
+// stay in the day strip below it, beside the flight times that give them
+// meaning.
+//
+// Takes outDepart, not outArrive: a 21:25 departure landing at 00:10 is a
+// Friday trip, and the header called it Saturday on 21% of direct results.
+//
+// Beyond six weeks a week count stops meaning anything ("in 24 weeks"), so it
+// degrades to a third-of-month bucket. That bucket is deliberately fuzzy: an
+// ordinal ("3rd weekend of Nov") reads as precise and is off by one under 29%
+// of the counting conventions a reader might apply — measured on the live
+// board. "Late November" looks approximate, so it cannot mislead.
+export function weekendWhen(outDepartIso: string, now: Date): string {
+  const p = /^(\d{4})-(\d{2})-(\d{2})/.exec(outDepartIso);
+  if (!p) return "";
+  const sat = weekendSaturday(Date.UTC(+p[1], +p[2] - 1, +p[3]));
+  const here = weekendSaturday(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  );
+  const weeks = Math.round((sat - here) / (7 * 86400000));
+  if (weeks <= 0) return "This weekend";
+  if (weeks === 1) return "Next weekend";
+  if (weeks <= 6) return `In ${weeks} weeks`;
+  const d = new Date(sat);
+  const day = d.getUTCDate();
+  const part = day <= 10 ? "Early" : day <= 20 ? "Mid" : "Late";
+  return `${part} ${MO_FULL[d.getUTCMonth()]}`;
+}

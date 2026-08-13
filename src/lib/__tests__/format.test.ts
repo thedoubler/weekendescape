@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  weekendWhen,
   holidaySearchUrl,
   dayLabel,
   timeLabel,
@@ -170,3 +171,38 @@ describe("holidaySearchUrl", () => {
   });
 });
 
+describe("weekendWhen", () => {
+  // Fixed clock: the label is relative, so a real `new Date()` would make
+  // these pass in August and fail in October.
+  const now = new Date("2026-08-13T12:00:00.000Z"); // a Thursday
+
+  it("counts in weekends, not days, and anchors on Saturday", () => {
+    // Wed-Sun look forward, so Thu 13 Aug belongs to the Sat 15 weekend.
+    expect(weekendWhen("2026-08-14T18:00:00.000Z", now)).toBe("This weekend");
+    expect(weekendWhen("2026-08-21T18:00:00.000Z", now)).toBe("Next weekend");
+    expect(weekendWhen("2026-08-28T18:00:00.000Z", now)).toBe("In 2 weeks");
+  });
+
+  it("degrades to a fuzzy month bucket past six weeks", () => {
+    // "In 24 weeks" means nothing to anyone; a third-of-month does.
+    expect(weekendWhen("2026-11-20T21:25:00.000Z", now)).toBe("Late November");
+    expect(weekendWhen("2026-11-06T21:25:00.000Z", now)).toBe("Early November");
+    expect(weekendWhen("2026-11-13T21:25:00.000Z", now)).toBe("Mid November");
+  });
+
+  // The reason the anchor is Saturday: it is the only day of a weekend that
+  // always sits in one month, so a trip straddling a month boundary has one
+  // home rather than two.
+  it("gives a month-straddling weekend a single home", () => {
+    // Fri 30 Oct and Sun 1 Nov are the same weekend — Sat 31 Oct.
+    expect(weekendWhen("2026-10-30T08:40:00.000Z", now)).toBe("Late October");
+    expect(weekendWhen("2026-11-01T08:40:00.000Z", now)).toBe("Late October");
+  });
+
+  // The bug this whole change came out of: a 21:25 departure landing at 00:10
+  // is a Friday trip. The caller must pass outDepart.
+  it("dates an overnight departure by the day you leave", () => {
+    expect(weekendWhen("2026-11-06T21:25:00.000Z", now)).toBe("Early November");
+    expect(weekendWhen("2026-11-07T00:10:00.000Z", now)).toBe("Early November");
+  });
+});

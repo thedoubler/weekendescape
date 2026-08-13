@@ -49,9 +49,13 @@ describe("DealCard", () => {
       backDepart: "2026-11-08T22:15:00.000Z",
       backArrive: "2026-11-09T01:30:00.000Z",
     };
-    render(<DealCard deal={redEye} />);
-    expect(screen.getByText(/Fri 6 – Mon 9 Nov/)).toBeInTheDocument();
-    expect(screen.queryByText(/Sat 7 – Sun 8 Nov/)).not.toBeInTheDocument();
+    const { container } = render(<DealCard deal={redEye} />);
+    // The exact range is no longer the VISIBLE header — it is announced to
+    // assistive tech instead, while the strip below carries the days visually.
+    // What must never appear, in either place, is the arrival-day reading.
+    const sr = container.querySelector(".sr-only");
+    expect(sr?.textContent).toContain("Fri 6 – Mon 9 Nov");
+    expect(container.textContent).not.toContain("Sat 7 – Sun 8 Nov");
   });
 
 
