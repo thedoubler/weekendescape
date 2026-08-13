@@ -37,12 +37,17 @@ export function AirportInput({
   value,
   onSearch,
   inputRef,
+  autoFocus,
   chips = [],
   onRemoveChip,
   disabled = false,
   placeholder = "Airport or city, e.g. Barcelona",
 }: {
   value: string;
+  /** Renders the `autofocus` attribute. A modal <dialog> honours autofocus on
+   *  a descendant in preference to its own "first focusable child" rule —
+   *  which here was the ✕ that removes an airport chip. */
+  autoFocus?: boolean;
   onSearch: (code: string) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
   // Already-selected airports, rendered inside the field so the whole thing
@@ -176,7 +181,7 @@ export function AirportInput({
         // White rather than a grey wash: on the panel's tinted card, a filled
         // field read as disabled. The accent is spent here, on focus, where it
         // means something — the board itself is deliberately neutral.
-        className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition focus-within:border-orange-400/70 focus-within:ring-4 focus-within:ring-orange-400/15 dark:border-white/20 dark:bg-white/[0.07] dark:focus-within:border-orange-400/60"
+        className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition focus-within:border-orange-400/70 dark:border-white/20 dark:bg-white/[0.07] dark:focus-within:border-orange-400/60"
       >
         <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-black/35 dark:text-white/50" />
         {chips.map((code) => (
@@ -253,6 +258,9 @@ export function AirportInput({
           }
         }}
         placeholder={placeholder}
+        // Scoped to a modal dialog the user just opened in order to type into,
+        // which is the one place autofocus is correct.
+        autoFocus={autoFocus}
         className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-black/40 disabled:cursor-not-allowed dark:placeholder:text-white/40"
       />
       </div>

@@ -36,8 +36,12 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
       // not defensive padding — it is what makes this component testable.
       if (typeof d.showModal === "function") d.showModal();
       else d.open = true;
-      // Someone who opened this came to type an airport.
-      inputRef.current?.focus();
+      // Focus is handled by `autoFocus` on the input itself, not from here. A
+      // modal <dialog> focuses its first focusable child, which is the ✕ that
+      // REMOVES an airport chip — so opening the sheet armed the button that
+      // deletes the airport you already have. Calling .focus() after
+      // showModal() does not win, nor does deferring it a frame; the attribute
+      // does, because the dialog consults it while choosing.
     } else if (!open && d.open) {
       if (typeof d.close === "function") d.close();
       else d.open = false;
@@ -84,6 +88,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
                 : "Add another…"
           }
           inputRef={inputRef}
+          autoFocus
         />
 
         <button
