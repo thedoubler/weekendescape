@@ -685,35 +685,6 @@ export default function Home() {
               the bar below, because the bar is pinned and a count you cannot
               see while scrolling a filtered board is a count that is not
               doing its job. */}
-          {/* Map lives here, not in the pinned bar. It is a view toggle you
-              reach for once, not a control you adjust while scrolling — and
-              its 72px was the difference between all three facet triggers
-              fitting the bar and "Any price" being scrolled off it entirely on
-              a bridge-mode board. Losing a control off the edge of the
-              filter bar is the exact failure this whole surface exists to
-              avoid. */}
-          <div className="flex items-center justify-between gap-3">
-            {!loading && !error && fetchedAt && visible.length > 0 ? (
-              <span className="text-[11px] text-black/55 dark:text-white/60">
-                Checked {agoLabel(fetchedAt)}
-              </span>
-            ) : (
-              <span />
-            )}
-            {!loading && !error && visible.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowMap((v) => !v)}
-                aria-expanded={showMap}
-                aria-controls="results-map"
-                className="relative inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-black/15 px-3 text-[13px] text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
-              >
-                Map
-                <span aria-hidden>{showMap ? "▴" : "▾"}</span>
-              </button>
-            )}
-          </div>
-
           {/* THE CONTROL BAR, and the only persistent chrome on the page.
               What you are looking at and everything that changes it, on one
               pinned line: the count and the filters on the left, the ordering
@@ -800,6 +771,15 @@ export default function Home() {
                         : `${visible.length} ${noun}`;
                     })()}
             </span>
+            {/* The freshness stamp sits UNDER the count, not on a band of its
+                own above the bar. It is a caption for that number, and as its
+                own row it was a third near-empty band — while the 23px count
+                floated alone beside a 48px control. */}
+            {!loading && !error && fetchedAt && visible.length > 0 && (
+              <span className="basis-full text-[11px] text-black/55 sm:basis-auto dark:text-white/60">
+                Checked {agoLabel(fetchedAt)}
+              </span>
+            )}
             {/* Rides with the count now rather than with the stamp above: at
                 depth, undoing three filters would otherwise mean opening three
                 triggers. */}
@@ -821,12 +801,16 @@ export default function Home() {
                  set, each multi-select — measured 325px in a 350px column. */
               /* col-end-3, NOT col-span-2: in Tailwind v4 col-span-* emits the
                  grid-column shorthand and would clobber col-start-1. */
-              <div className="col-start-1 col-end-3 row-start-2 -mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+              /* -my-1/py-1, NOT -mx-1/px-1. The horizontal version kept focus
+                 rings clear of the scroller's overflow, but it also pulled the
+                 whole group 4px left of the count above it — measured 450
+                 against 454 — which is the ragged left edge on a phone. Focus
+                 rings only ever needed vertical room. */
+              <div className="col-start-1 col-end-3 row-start-2 -my-1 flex min-w-0 gap-1 overflow-x-auto py-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
-                    placeholder="Any month"
-                    shortPlaceholder="Month"
+                    placeholder="Month"
                     controls="refine-month"
                     value={
                       selectedMonths.length === 1
@@ -844,10 +828,7 @@ export default function Home() {
                 {availableContinents.length > 1 && (
                   <FacetTrigger
                     label="Region"
-                    // Not "Any region": this product's question is "where can
-                    // I go", and the unfiltered answer to that is anywhere.
-                    placeholder="Anywhere"
-                    shortPlaceholder="Region"
+                    placeholder="Region"
                     controls="refine-region"
                     value={
                       selectedContinents.length === 1
@@ -865,8 +846,7 @@ export default function Home() {
                 {priceBucketList.length > 0 && (
                   <FacetTrigger
                     label="Price"
-                    placeholder="Any price"
-                    shortPlaceholder="Price"
+                    placeholder="Price"
                     controls="refine-price"
                     value={cap < bounds.max ? `≤ ${cap}` : null}
                     open={openFacet === "price"}
@@ -885,6 +865,11 @@ export default function Home() {
                 the row needed 748 of a 768px box — so it was the difference
                 between one line and two. A two-segment Soonest/Cheapest control
                 does not need telling you it sorts. */}
+            {/* Map rides with Sort rather than on a band of its own. As its
+                own row it was one right-aligned button with an empty half-row
+                beside it — the gap you see above the count on a phone. It fits
+                here only because the triggers dropped their "Any " prefixes:
+                350px of labels became 235, and Map is 72. */}
             <div className="col-start-2 row-start-1 ml-auto flex shrink-0 items-center gap-1.5">
               <SegmentedControl
                 options={[
@@ -895,7 +880,18 @@ export default function Home() {
                 onChange={setSort}
                 ariaLabel="Sort"
               />
-
+              {!loading && !error && visible.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowMap((v) => !v)}
+                  aria-expanded={showMap}
+                  aria-controls="results-map"
+                  className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-black/15 px-3 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-black/5 sm:h-9 sm:px-3.5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                >
+                  Map
+                  <span aria-hidden>{showMap ? "▴" : "▾"}</span>
+                </button>
+              )}
             </div>
 
               </div>

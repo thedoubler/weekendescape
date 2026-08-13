@@ -17,7 +17,6 @@
 export function FacetTrigger({
   label,
   placeholder,
-  shortPlaceholder,
   value,
   open,
   onClick,
@@ -25,13 +24,12 @@ export function FacetTrigger({
 }: {
   /** The field name. Spoken, never shown — the visible text is the value. */
   label: string;
-  /** What the trigger reads when nothing is chosen, e.g. "Any month". */
+  /** What the trigger reads when nothing is chosen: the field name, e.g.
+   *  "Month". It was "Any month" at desktop widths until the Map button moved
+   *  into this row — the long forms are 350px against the short forms' 235,
+   *  and that 115px is what makes room for it. A SET trigger reads "✓ Aug"
+   *  either way, so only the empty state is affected. */
   placeholder: string;
-  /** The phone-width version, e.g. "Month". At 390px the three triggers are
-   *  350px against a 294px row; the short forms are ~235px and fit without
-   *  scrolling. Only the UNSET label shortens — a set trigger already reads
-   *  "✓ Aug", which is short either way. */
-  shortPlaceholder?: string;
   value?: string | null;
   open: boolean;
   onClick: () => void;
@@ -47,7 +45,9 @@ export function FacetTrigger({
       // The visible text is a value; read aloud it does not identify which
       // field it belongs to, so the accessible name puts the field back. It
       // still CONTAINS the visible text, which is what WCAG 2.5.3 requires.
-      aria-label={`${label}: ${value ?? placeholder}. Change`}
+      // Unset, the visible text IS the field name, so "Month: Month" would be
+      // the accessible name — say it once.
+      aria-label={set ? `${label}: ${value}. Change` : `${label}. Change`}
       // `border` on BOTH branches, colour-only flip. pillClass drops the border
       // when active, which is invisible on a lone chip but a 2px jump in a row
       // of three triggers.
@@ -65,12 +65,7 @@ export function FacetTrigger({
       }`}
     >
       {set && <span aria-hidden>✓</span>}
-      {value ?? (
-        <>
-          <span className="sm:hidden">{shortPlaceholder ?? placeholder}</span>
-          <span className="hidden sm:inline">{placeholder}</span>
-        </>
-      )}
+      {value ?? placeholder}
       <span aria-hidden className="-ml-px text-[10px] opacity-55">
         {open ? "▲" : "▼"}
       </span>

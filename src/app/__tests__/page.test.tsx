@@ -166,12 +166,11 @@ describe("Home page", () => {
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    // "Any month", not "Month 6": an option count read as a date on a board
-    // where every other number is one, and named a quantity of buckets nobody
-    // asked about. Only Month is asserted — the two-deal fixture yields no
-    // price buckets, so that trigger correctly does not render at all.
+    // "Month", not "Month 6": the option count read as a date on a board where
+    // every other number is one. Only Month is asserted — the two-deal fixture
+    // yields no price buckets, so that trigger correctly does not render.
     expect(
-      screen.getByRole("button", { name: "Month: Any month. Change" })
+      screen.getByRole("button", { name: "Month. Change" })
     ).toBeInTheDocument();
     // Closed, so the values themselves are not on the page yet...
     expect(screen.queryByRole("button", { name: "Aug" })).not.toBeInTheDocument();
@@ -181,7 +180,7 @@ describe("Home page", () => {
 
     // ...and one tap brings them back, in place.
     fireEvent.click(
-      screen.getByRole("button", { name: "Month: Any month. Change" })
+      screen.getByRole("button", { name: "Month. Change" })
     );
     expect(screen.getByRole("button", { name: "Aug" })).toBeInTheDocument();
   });
@@ -197,7 +196,7 @@ describe("Home page", () => {
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Month: Any month. Change" })
+      screen.getByRole("button", { name: "Month. Change" })
     );
     fireEvent.click(screen.getByRole("button", { name: "Aug" }));
 
@@ -205,7 +204,7 @@ describe("Home page", () => {
       screen.getByRole("button", { name: "Month: Aug. Change" })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Month: Any month. Change" })
+      screen.queryByRole("button", { name: "Month. Change" })
     ).not.toBeInTheDocument();
   });
 
