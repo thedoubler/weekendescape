@@ -749,52 +749,6 @@ export default function Home() {
                 {/* Count and Clear all share the top-left cell so the count can
                     wrap INSIDE it rather than shoving the sort control onto a
                     row of its own. */}
-                <div className="col-start-1 row-start-1 flex min-w-0 flex-wrap items-center gap-2 sm:flex-none sm:contents">
-            {/* Not the 18px heading it was — in a pinned 52px bar the count is
-                a label on the board, not a title for the page. */}
-            <span className="shrink-0 text-[15px] font-semibold tracking-tight tabular-nums">
-              {loading
-                ? "Searching…"
-                : error
-                  ? "Couldn’t load"
-                  : (() => {
-                      // Reads `applied`, never live form state: the deals on
-                      // screen were fetched with the PREVIOUS settings, and
-                      // reading the live values once relabelled 57 weekend
-                      // results as "bridge escapes" before any search ran.
-                      const isBridges = applied ? applied.bridges : bridges;
-                      const noun = isBridges
-                        ? `long weekend${visible.length === 1 ? "" : "s"}`
-                        : `flight${visible.length === 1 ? "" : "s"}`;
-                      return activeFilters > 0
-                        ? `${visible.length} of ${total} ${noun}`
-                        : `${visible.length} ${noun}`;
-                    })()}
-            </span>
-            {/* The freshness stamp sits UNDER the count, not on a band of its
-                own above the bar. It is a caption for that number, and as its
-                own row it was a third near-empty band — while the 23px count
-                floated alone beside a 48px control. */}
-            {!loading && !error && fetchedAt && visible.length > 0 && (
-              <span className="basis-full text-[11px] text-black/55 sm:basis-auto dark:text-white/60">
-                Checked {agoLabel(fetchedAt)}
-              </span>
-            )}
-            {/* Rides with the count now rather than with the stamp above: at
-                depth, undoing three filters would otherwise mean opening three
-                triggers. */}
-            {!loading && !error && activeFilters > 0 && (
-              <button
-                type="button"
-                onClick={clearAll}
-                // The text box is 41x17 — below WCAG 2.5.8's 24px floor on its
-                // own. Same `before:` expander the Map button uses.
-                className="relative shrink-0 text-[11px] text-black/55 underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:text-white/60 dark:hover:text-white"
-              >
-                Clear all
-              </button>
-            )}
-                </div>
 
             {searched && hasRefinements && (
               /* Insurance, not the normal case: the widest state — all three
@@ -806,7 +760,12 @@ export default function Home() {
                  whole group 4px left of the count above it — measured 450
                  against 454 — which is the ragged left edge on a phone. Focus
                  rings only ever needed vertical room. */
-              <div className="col-start-1 col-end-3 row-start-2 -my-1 flex min-w-0 gap-1 overflow-x-auto py-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+              /* basis-full + shrink-0 below `sm`, so the triggers own a row
+                 and flexbox cannot crush them: given a shrinkable child it
+                 SHRINKS before it wraps, which is how they ended up 137px
+                 truncated at 390px. From `sm` up they go back to an inline
+                 shrinkable item, where all three fit one line. */
+              <div className="-my-1 flex w-full min-w-0 shrink-0 basis-full gap-1 overflow-x-auto py-1 sm:w-auto sm:shrink sm:basis-auto [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
@@ -870,7 +829,7 @@ export default function Home() {
                 beside it — the gap you see above the count on a phone. It fits
                 here only because the triggers dropped their "Any " prefixes:
                 350px of labels became 235, and Map is 72. */}
-            <div className="col-start-2 row-start-1 ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <SegmentedControl
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },
@@ -953,6 +912,55 @@ export default function Home() {
           )}
         </>
       )}
+
+          {/* Below the pinned bar and directly above the first card, so it
+              scrolls away under the bar on the first flick. It is status, not
+              control: a timestamp and a total that answer "did the search
+              work" once, at the top, and have no business occupying a row you
+              carry with you for 3,000px.
+
+              Inside the bar it took the left third, forced the phone layout
+              into a two-line cell, and left 23px of text floating beside a
+              48px pill. A filtered board still announces itself once this has
+              scrolled off, because every set filter lights its own trigger
+              ("✓ Europe") in the bar that IS pinned. */}
+          {searched && (
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <span className="text-[15px] font-semibold tracking-tight tabular-nums">
+              {loading
+                ? "Searching…"
+                : error
+                  ? "Couldn’t load"
+                  : (() => {
+                      // Reads `applied`, never live form state: the deals on
+                      // screen were fetched with the PREVIOUS settings, and
+                      // reading the live values once relabelled 57 weekend
+                      // results as "bridge escapes" before any search ran.
+                      const isBridges = applied ? applied.bridges : bridges;
+                      const noun = isBridges
+                        ? `long weekend${visible.length === 1 ? "" : "s"}`
+                        : `flight${visible.length === 1 ? "" : "s"}`;
+                      return activeFilters > 0
+                        ? `${visible.length} of ${total} ${noun}`
+                        : `${visible.length} ${noun}`;
+                    })()}
+              </span>
+              {!loading && !error && fetchedAt && visible.length > 0 && (
+                <span className="text-[11px] text-black/55 dark:text-white/60">
+                  Checked {agoLabel(fetchedAt)}
+                </span>
+              )}
+              {!loading && !error && activeFilters > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="relative text-[11px] text-black/55 underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:text-white/60 dark:hover:text-white"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
 
       {/* Renders `visible` — the same array DealList gets — so every filter
           chip and price cap repaints the pins. The map deliberately does not
