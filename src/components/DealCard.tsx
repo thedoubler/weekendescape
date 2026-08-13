@@ -22,6 +22,7 @@ import {
   holidayDate,
   holidaySearchUrl,
   stopsSummary,
+  dateWithMonth,
   weekendRange,
   weekendWhen,
 } from "@/lib/format";
@@ -319,6 +320,17 @@ export function DealCard({
     time: timeLabel(deal.backDepart),
     night: isNightHour(deal.backDepart),
   };
+  // The two flight legs, for the day-strip hover. These carry the one fact the
+  // strip cannot: when you leave home and when you get back, which differ from
+  // the first and last cells whenever the itinerary crosses midnight.
+  const legs = {
+    arrive: `Leaves ${deal.cityFrom} ${dateWithMonth(deal.outDepart)} ${timeLabel(
+      deal.outDepart
+    )} · lands ${timeLabel(deal.outArrive)}`,
+    leave: `Leaves ${deal.cityTo} ${timeLabel(deal.backDepart)} · home ${dateWithMonth(
+      deal.backArrive
+    )} ${timeLabel(deal.backArrive)}`,
+  };
   const returnPlusOne = crossesMidnight(deal.backDepart, deal.backArrive);
   const direct = deal.outStops === 0 && deal.backStops === 0;
   const stops = stopsSummary(deal.outStops, deal.backStops);
@@ -527,6 +539,7 @@ export function DealCard({
           cityTo={deal.cityTo}
           homeHolidays={deal.homeHolidays}
           daysOff={deal.ptoDates}
+          legs={legs}
         />
       </button>
 

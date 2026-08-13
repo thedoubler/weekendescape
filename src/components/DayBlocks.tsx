@@ -66,6 +66,7 @@ export function DayBlocks({
   cityTo,
   homeHolidays,
   daysOff,
+  legs,
 }: {
   cells: DayCell[];
   arrival: { time: string; night: boolean; plusOne: boolean };
@@ -79,6 +80,12 @@ export function DayBlocks({
   // days so the puente reads at a glance.
   homeHolidays?: { date: string; name: string }[] | null;
   daysOff?: string[] | null;
+  // Hover text for the first and last cells. The strip shows the days you get
+  // AT the destination, so on an itinerary that crosses midnight the day you
+  // actually leave home appears nowhere on the collapsed card — 20% of results
+  // once stops are allowed. Rather than restate it and make every card longer,
+  // it hangs off the two cells it belongs to.
+  legs?: { arrive?: string; leave?: string } | null;
 }) {
   const months: string[] = [];
   for (const c of cells) if (!months.includes(c.month)) months.push(c.month);
@@ -106,7 +113,16 @@ export function DayBlocks({
             <div
               key={i}
               role="listitem"
+              // `title` is the hover affordance; the same fact goes into the
+              // accessible name below, because title alone is not reliably
+              // announced and is invisible on touch.
+              title={
+                (showArrive ? legs?.arrive : undefined) ??
+                (showLeave ? legs?.leave : undefined)
+              }
               aria-label={`${c.weekday} ${c.day}, ${usable}% of the day usable${
+                showArrive && legs?.arrive ? `. ${legs.arrive}` : ""
+              }${showLeave && legs?.leave ? `. ${legs.leave}` : ""}${
                 isHomeHoliday ? ", your public holiday — off work" : ""
               }${isDayOff ? ", day off to book" : ""}${
                 isHoliday
