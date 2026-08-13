@@ -30,6 +30,31 @@ const base: Deal = {
 };
 
 describe("DealCard", () => {
+  // The header must print when you TRAVEL, not when you are at the
+  // destination. It used to call weekendRange(outArrive, backDepart), which on
+  // an overnight leg is a different day: the real Istanbul card read
+  // "Sat 7 – Sun 8 Nov" for a flight leaving Cluj on Fri 6 Nov at 21:25, and
+  // the digit 6 appeared nowhere on the collapsed card — so the board was
+  // telling people to book the wrong day off. Measured on the live board at
+  // the time: departure day wrong on 1/14 direct results, 17/69 with stops.
+  it("dates the trip from departure, not from arrival at the destination", () => {
+    const redEye: Deal = {
+      ...base,
+      cityTo: "Istanbul",
+      flyTo: "IST",
+      // Leaves Friday night, lands Saturday.
+      outDepart: "2026-11-06T21:25:00.000Z",
+      outArrive: "2026-11-07T00:10:00.000Z",
+      // Flies back Sunday evening, lands after midnight on Monday.
+      backDepart: "2026-11-08T22:15:00.000Z",
+      backArrive: "2026-11-09T01:30:00.000Z",
+    };
+    render(<DealCard deal={redEye} />);
+    expect(screen.getByText(/Fri 6 – Mon 9 Nov/)).toBeInTheDocument();
+    expect(screen.queryByText(/Sat 7 – Sun 8 Nov/)).not.toBeInTheDocument();
+  });
+
+
   it("shows the origin chip, price, times and a booking link", () => {
     render(<DealCard deal={base} />);
     expect(screen.getByText("Ibiza")).toBeInTheDocument();

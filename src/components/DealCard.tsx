@@ -414,7 +414,20 @@ export function DealCard({
           </div>
           <div className="mt-0.5 text-xs">
             <span className="font-medium text-black/70 dark:text-white/70">
-              {weekendRange(deal.outArrive, deal.backDepart)}
+              {/* outDepart/backArrive — when you TRAVEL — not outArrive/
+                  backDepart, which is when you are at the destination. On an
+                  overnight leg those differ by a day, and the card was telling
+                  people to take the wrong day off: the Istanbul card read
+                  "Sat 7 – Sun 8 Nov" for a flight leaving Cluj Fri 6 Nov at
+                  21:25, with the digit 6 appearing nowhere on the collapsed
+                  card. Measured on the live board: the departure day was wrong
+                  on 1/14 direct results and 17/69 with stops allowed, and the
+                  return day was understated on 2/14 and 11/69.
+                  CheapestWeekend.tsx already used this pair, so the two were
+                  printing different dates for the same trip. The day strip
+                  below still spans outArrive..backDepart, which is correct
+                  there — it shows the days you actually get. */}
+              {weekendRange(deal.outDepart, deal.backArrive)}
             </span>
             <span className="text-black/35 dark:text-white/35"> · </span>
             <span
