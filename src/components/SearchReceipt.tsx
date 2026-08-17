@@ -38,6 +38,13 @@ const STOP_OPTS: { value: StopMode; label: string }[] = [
 ];
 const ADULT_OPTS = [1, 2, 3, 4];
 
+// One sentence, used on the toggle and again beside the count once the mode is
+// on. It has to carry the WHY: "long weekends" describes the result, not the
+// trick, and the trick — a public holiday doing the work of a day's leave — is
+// the reason anyone would want it.
+export const BRIDGE_HELP =
+  "Only weekends a public holiday stretches, so one day off can buy three or four.";
+
 type FacetKey = "style" | "stops" | "adults";
 
 export function styleLabelOf(v: WeekendStyle): string {
@@ -180,7 +187,14 @@ export function SearchReceipt({
         type="button"
         role="switch"
         aria-checked={bridges}
-        aria-label={reloadHint("Long weekends")}
+        // The label alone never said what the mode DOES. The panel this
+        // receipt replaced carried a hint under it ("One day off can buy three
+        // or four") and that explanation was lost in the rewrite — the cards
+        // explain themselves once you are in bridge mode, but nothing invited
+        // the tap. Both title and aria-label, because title is invisible on
+        // touch and unreliable to assistive tech.
+        title={BRIDGE_HELP}
+        aria-label={reloadHint(`Long weekends. ${BRIDGE_HELP}`)}
         onClick={onToggleBridges}
         // Neutral when off, amber when on. It used to carry an amber OUTLINE
         // while off, which read as a warning — and on this page amber means

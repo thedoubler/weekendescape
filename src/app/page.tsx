@@ -26,7 +26,11 @@ import { monthShort } from "@/lib/format";
 import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
-import { SearchReceipt, type StopMode } from "@/components/SearchReceipt";
+import {
+  BRIDGE_HELP,
+  SearchReceipt,
+  type StopMode,
+} from "@/components/SearchReceipt";
 import { FacetTrigger } from "@/components/FacetTrigger";
 import { OriginSheet } from "@/components/OriginSheet";
 import { parseOrigins, serializeOrigins } from "@/lib/origins";
@@ -948,6 +952,14 @@ export default function Home() {
               {!loading && !error && fetchedAt && visible.length > 0 && (
                 <span className="text-[11px] text-black/55 dark:text-white/60">
                   Checked {agoLabel(fetchedAt)}
+                </span>
+              )}
+              {/* Why the board just got shorter. The toggle says what the mode
+                  is called; this says what it did. Only while it is on — off,
+                  it would be explaining something that is not happening. */}
+              {!loading && !error && (applied ? applied.bridges : bridges) && (
+                <span className="basis-full text-[11px] text-black/55 sm:basis-auto dark:text-white/60">
+                  {BRIDGE_HELP}
                 </span>
               )}
               {!loading && !error && activeFilters > 0 && (
