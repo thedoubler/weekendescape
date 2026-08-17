@@ -182,13 +182,27 @@ export function SearchReceipt({
         aria-checked={bridges}
         aria-label={reloadHint("Long weekends")}
         onClick={onToggleBridges}
-        className={`ml-auto inline-flex shrink-0 items-center gap-1.5 self-center rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+        // Neutral when off, amber when on. It used to carry an amber OUTLINE
+        // while off, which read as a warning — and on this page amber means
+        // "changing this reloads the board", a claim an untouched toggle has no
+        // business making. Filled-when-on is the same grammar the facet
+        // triggers use; amber rather than their black keeps a mode distinct
+        // from a filter.
+        //
+        // `before:` expands the hit box past the 24px ink, as elsewhere.
+        className={`relative ml-auto inline-flex shrink-0 items-center gap-1.5 self-center rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] ${
           bridges
-            ? "border-amber-300 bg-amber-100/70 text-amber-900 dark:border-amber-300/40 dark:bg-amber-300/15 dark:text-amber-100"
-            : "border-amber-700/75 text-black/60 hover:bg-black/[0.03] dark:border-amber-400/50 dark:text-white/60 dark:hover:bg-white/[0.06]"
+            ? "border-amber-400/70 bg-amber-100 text-amber-900 dark:border-amber-300/40 dark:bg-amber-300/20 dark:text-amber-50"
+            : "border-black/15 text-black/65 hover:border-black/25 hover:bg-black/[0.04] dark:border-white/20 dark:text-white/65 dark:hover:border-white/30 dark:hover:bg-white/[0.07]"
         }`}
       >
-        <span aria-hidden>🌉</span>
+        <CalendarPlusIcon
+          className={`h-3.5 w-3.5 shrink-0 ${
+            bridges
+              ? "text-amber-700 dark:text-amber-200"
+              : "text-black/40 dark:text-white/40"
+          }`}
+        />
         Long weekends
       </button>
 
@@ -224,6 +238,33 @@ export function SearchReceipt({
         </Popover>
       )}
     </div>
+  );
+}
+
+// Inline SVG, currentColor — the same call DayBlocks.tsx made when it replaced
+// the ✈ emoji: emoji do not render consistently across platforms and cannot
+// take the theme. At 12px the 🌉 that used to sit here was a grey-orange
+// smudge that fought the amber border around it.
+//
+// A calendar with a plus rather than a literal bridge: "bridge day" is the
+// Romanian/Spanish idiom (punte, puente) and does not travel, whereas adding
+// days to a weekend is what the mode actually does. The words carry the rest.
+function CalendarPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M8 2v4M16 2v4M3 10h18" />
+      <path d="M12 14v5M9.5 16.5h5" />
+    </svg>
   );
 }
 
