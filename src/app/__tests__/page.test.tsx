@@ -270,15 +270,13 @@ describe("Home page", () => {
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
     expect(screen.getByText(/^\d+ flights?$/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("switch", { name: /long weekends/i }));
+    // Long weekends is a choice inside the trip-length facet now, not a switch
+    // of its own — it answers the same question as Fri–Sun rather than running
+    // alongside it. Like every facet, it commits when the popover closes.
+    fireEvent.click(screen.getByRole("button", { name: /^Fri–Sun/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Long weekends/ }));
+    fireEvent.keyDown(document, { key: "Escape" });
 
-    expect(screen.getByRole("switch", { name: /long weekends/i })).toHaveAttribute(
-      "aria-checked",
-      "true"
-    );
-    // The switch is on and a search is running, but nothing on screen may claim
-    // to be a long weekend until the results that are actually long weekends
-    // have replaced the ones that aren't.
     await waitFor(() => expect(screen.getByText("Searching…")).toBeInTheDocument());
     // Scoped to the results heading — the switch itself says "Long weekends"
     // and is legitimately on.

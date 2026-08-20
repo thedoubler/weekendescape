@@ -9,6 +9,10 @@ export interface ReceiptValues {
   style: WeekendStyle;
   stopMode: StopMode;
   adults: number;
+  /** Long-weekend hunting. It lives in this object rather than as its own
+   *  control because to a user it is not a mode running alongside "Fri–Sun" —
+   *  it is another answer to the same question, "how long is the trip". */
+  bridges: boolean;
 }
 
 // One line of prose that IS the control surface: "Searching CLJ · Fri–Sun ·
@@ -27,10 +31,16 @@ export interface ReceiptValues {
 // seconds — and if production ever measures much worse, the fix is to move the
 // commit from popover-dismiss back to an explicit button, not to add a number.
 
-const STYLE_OPTS: { value: WeekendStyle; label: string }[] = [
+// The three fixed shapes, plus "bridges" — which is not a shape at all but a
+// search strategy. They share a control because they answer one question: how
+// long is the trip. As a separate pill, "Long weekends" read as a filter
+// running on top of "Fri–Sun" rather than instead of it.
+type StyleChoice = WeekendStyle | "bridges";
+const STYLE_OPTS: { value: StyleChoice; label: string }[] = [
   { value: "strict", label: "Fri–Sun" },
   { value: "frimon", label: "Fri–Mon" },
   { value: "loose", label: "Thu–Mon" },
+  { value: "bridges", label: "Long weekends" },
 ];
 const STOP_OPTS: { value: StopMode; label: string }[] = [
   { value: "any", label: "Any stops" },
@@ -47,30 +57,26 @@ export const BRIDGE_HELP =
 
 type FacetKey = "style" | "stops" | "adults";
 
-export function styleLabelOf(v: WeekendStyle): string {
+export function styleLabelOf(v: StyleChoice): string {
   return STYLE_OPTS.find((o) => o.value === v)?.label ?? v;
 }
 
 interface Props {
   origins: string[];
   values: ReceiptValues;
-  bridges: boolean;
   /** Live edit — updates the label immediately, without searching. */
   onChange: (patch: Partial<ReceiptValues>) => void;
   /** Commit — one search, on dismiss. Tapping 1→2→3→4 adults must not fire three. */
   onCommit: (patch: Partial<ReceiptValues>) => void;
   onEditOrigins: () => void;
-  onToggleBridges: () => void;
 }
 
 export function SearchReceipt({
   origins,
   values,
-  bridges,
   onChange,
   onCommit,
   onEditOrigins,
-  onToggleBridges,
 }: Props) {
   const [open, setOpen] = useState<FacetKey | null>(null);
   // Where the popover's tail should point. Read from the button at click time
@@ -92,6 +98,7 @@ export function SearchReceipt({
     if (before.style !== values.style) patch.style = values.style;
     if (before.stopMode !== values.stopMode) patch.stopMode = values.stopMode;
     if (before.adults !== values.adults) patch.adults = values.adults;
+    if (before.bridges !== values.bridges) patch.bridges = values.bridges;
     if (Object.keys(patch).length > 0) onCommit(patch);
   }, [values, onCommit]);
 
@@ -173,61 +180,27 @@ export function SearchReceipt({
       </button>
 
       <Sep />
-      {facet("style", styleLabelOf(values.style))}
+      {facet("style", styleLabelOf(values.bridges ? "bridges" : values.style))}
       <Sep />
       {facet("stops", values.stopMode === "direct" ? "direct" : "any stops")}
       <Sep />
       {facet("adults", values.adults === 1 ? "1 adult" : `${values.adults} adults`)}
 
-      {/* Bridge days stays OUT of the facet list: it is a mode, not a value —
-          it changes which searches run, not a parameter of one. A single tap
-          with no options to choose between doesn't want a popover either, so
-          it commits on the spot. */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={bridges}
-        // The label alone never said what the mode DOES. The panel this
-        // receipt replaced carried a hint under it ("One day off can buy three
-        // or four") and that explanation was lost in the rewrite — the cards
-        // explain themselves once you are in bridge mode, but nothing invited
-        // the tap. Both title and aria-label, because title is invisible on
-        // touch and unreliable to assistive tech.
-        title={BRIDGE_HELP}
-        aria-label={reloadHint(`Long weekends. ${BRIDGE_HELP}`)}
-        onClick={onToggleBridges}
-        // Neutral when off, amber when on. It used to carry an amber OUTLINE
-        // while off, which read as a warning — and on this page amber means
-        // "changing this reloads the board", a claim an untouched toggle has no
-        // business making. Filled-when-on is the same grammar the facet
-        // triggers use; amber rather than their black keeps a mode distinct
-        // from a filter.
-        //
-        // `before:` expands the hit box past the 24px ink, as elsewhere.
-        className={`relative ml-auto inline-flex shrink-0 items-center gap-1.5 self-center rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] ${
-          bridges
-            ? "border-amber-400/70 bg-amber-100 text-amber-900 dark:border-amber-300/40 dark:bg-amber-300/20 dark:text-amber-50"
-            : "border-black/15 text-black/65 hover:border-black/25 hover:bg-black/[0.04] dark:border-white/20 dark:text-white/65 dark:hover:border-white/30 dark:hover:bg-white/[0.07]"
-        }`}
-      >
-        <CalendarPlusIcon
-          className={`h-3.5 w-3.5 shrink-0 ${
-            bridges
-              ? "text-amber-700 dark:text-amber-200"
-              : "text-black/40 dark:text-white/40"
-          }`}
-        />
-        Long weekends
-      </button>
-
       {open && (
         <Popover tailX={tailX}>
           {open === "style" && (
             <Options
-              title="Weekend length"
+              title="Trip length"
               options={STYLE_OPTS}
-              value={values.style}
-              onPick={(v) => onChange({ style: v })}
+              value={values.bridges ? "bridges" : values.style}
+              // Picking a shape turns bridge-hunting off; picking bridges keeps
+              // the shape underneath, so switching back lands where you were.
+              onPick={(v) =>
+                onChange(
+                  v === "bridges" ? { bridges: true } : { style: v, bridges: false }
+                )
+              }
+              hint={{ value: "bridges", text: BRIDGE_HELP }}
             />
           )}
           {open === "stops" && (
@@ -252,33 +225,6 @@ export function SearchReceipt({
         </Popover>
       )}
     </div>
-  );
-}
-
-// Inline SVG, currentColor — the same call DayBlocks.tsx made when it replaced
-// the ✈ emoji: emoji do not render consistently across platforms and cannot
-// take the theme. At 12px the 🌉 that used to sit here was a grey-orange
-// smudge that fought the amber border around it.
-//
-// A calendar with a plus rather than a literal bridge: "bridge day" is the
-// Romanian/Spanish idiom (punte, puente) and does not travel, whereas adding
-// days to a weekend is what the mode actually does. The words carry the rest.
-function CalendarPlusIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M8 2v4M16 2v4M3 10h18" />
-      <path d="M12 14v5M9.5 16.5h5" />
-    </svg>
   );
 }
 
@@ -325,11 +271,16 @@ function Options<T extends string | number>({
   options,
   value,
   onPick,
+  hint,
 }: {
   title: string;
   options: readonly { value: T; label: string }[];
   value: T;
   onPick: (v: T) => void;
+  /** Explanatory text for one option whose label names a result rather than a
+   *  mechanism — "Long weekends" says what you get, not that a public holiday
+   *  is doing the work. */
+  hint?: { value: T; text: string };
 }) {
   return (
     <>
@@ -342,6 +293,10 @@ function Options<T extends string | number>({
             key={String(o.value)}
             type="button"
             aria-pressed={o.value === value}
+            title={hint && hint.value === o.value ? hint.text : undefined}
+            aria-label={
+              hint && hint.value === o.value ? `${o.label}. ${hint.text}` : undefined
+            }
             onClick={() => onPick(o.value)}
             className={`rounded-full border px-3 py-1.5 text-[12.5px] whitespace-nowrap transition-colors ${
               o.value === value

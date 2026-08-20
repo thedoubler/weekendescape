@@ -492,20 +492,18 @@ export default function Home() {
     style?: WeekendStyle;
     stopMode?: StopMode;
     adults?: number;
+    bridges?: boolean;
   }) {
     if (!home.trim()) return;
     runSearch(origins, {
       style: patch.style,
       direct: patch.stopMode ? patch.stopMode === "direct" : undefined,
       adults: patch.adults,
+      bridges: patch.bridges,
     });
   }
 
-  function toggleBridges() {
-    const next = !bridges;
-    setBridges(next);
-    if (home.trim()) runSearch(origins, { bridges: next });
-  }
+
 
   // The sheet edits `origins` live (chips appear as you add them), so the
   // before-image has to be taken when it opens.
@@ -660,16 +658,15 @@ export default function Home() {
           the window is pinned at six, so choosing a month never re-searches. */}
       <SearchReceipt
         origins={origins}
-        values={{ style, stopMode, adults }}
-        bridges={bridges}
+        values={{ style, stopMode, adults, bridges }}
         onChange={(patch) => {
           if (patch.style !== undefined) setStyle(patch.style);
           if (patch.stopMode !== undefined) setStopMode(patch.stopMode);
           if (patch.adults !== undefined) setAdults(patch.adults);
+          if (patch.bridges !== undefined) setBridges(patch.bridges);
         }}
         onCommit={commitReceipt}
         onEditOrigins={openOriginSheet}
-        onToggleBridges={toggleBridges}
       />
 
       {/* Results header and filter controls, one block under one hairline.
