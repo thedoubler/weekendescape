@@ -39,6 +39,8 @@ import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
 import { DealList, SkeletonCard } from "@/components/DealList";
 import { DealsMap } from "@/components/DealsMap";
+import { CalendarView } from "@/components/CalendarView";
+import { weekendKey } from "@/lib/calendar";
 import { RotatingWord } from "@/components/RotatingWord";
 import OverflowDebug from "@/components/OverflowDebug";
 
@@ -93,6 +95,11 @@ export default function Home() {
     { code: string; coords: [number, number] | null }[]
   >([]);
   const [showMap, setShowMap] = useState(false);
+  // The calendar view, and the weekend it is filtered to. Opening one panel
+  // closes the other: both answer "which of these do I want" and stacking them
+  // would push the board off a phone entirely.
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [pickedWeekend, setPickedWeekend] = useState<string | null>(null);
   // Destination the pointer is over in the list; the map lifts its arc out of
   // the fan. Only meaningful while the map is open, and only on pointer/focus
   // devices — a tap never sets it.
@@ -390,7 +397,16 @@ export default function Home() {
   // Memoised: this array is a dependency of the map's marker/framing effects, so
   // a new identity on every render made opening Refine (or crossing the scroll
   // threshold) re-frame the map.
-  const visible = useMemo(
+  const visible = useMemo(() => {
+    const base = showHidden ? filtered : filtered.filter((d) => !isShortStay(d));
+    // Picking a weekend in the calendar narrows the list under it. It is a
+    // filter like any other, so it feeds `visible` rather than being a separate
+    // display mode — the count, the map and the board all follow it for free.
+    return pickedWeekend
+      ? base.filter((d) => weekendKey(d.outDepart) === pickedWeekend)
+      : base;
+  }, [showHidden, filtered, pickedWeekend]);
+  const calendarDeals = useMemo(
     () => (showHidden ? filtered : filtered.filter((d) => !isShortStay(d))),
     [showHidden, filtered]
   );
@@ -452,6 +468,7 @@ export default function Home() {
   const currency = rawDeals[0]?.currency ?? "EUR";
 
   function clearAll() {
+    setPickedWeekend(null);
     setSelectedMonths([]);
     setSelectedContinents([]);
     setMaxPrice(bounds.max);
@@ -484,7 +501,8 @@ export default function Home() {
   const activeFilters =
     selectedMonths.length +
     selectedContinents.length +
-    (cap < bounds.max ? 1 : 0);
+    (cap < bounds.max ? 1 : 0) +
+    (pickedWeekend ? 1 : 0);
   // Commit-on-dismiss for the receipt facets. `patch` carries the value the
   // popover was closed on, because state set moments ago has not reached the
   // refs runSearch would otherwise read.
@@ -853,10 +871,28 @@ export default function Home() {
                 onChange={setSort}
                 ariaLabel="Sort"
               />
+              {!loading && !error && calendarDeals.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCalendar((v) => !v);
+                    setShowMap(false);
+                  }}
+                  aria-expanded={showCalendar}
+                  aria-controls="results-calendar"
+                  className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-black/15 px-3 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-black/5 sm:h-9 sm:px-3.5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+                >
+                  Dates
+                  <span aria-hidden>{showCalendar ? "▴" : "▾"}</span>
+                </button>
+              )}
               {!loading && !error && visible.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowMap((v) => !v)}
+                  onClick={() => {
+                    setShowMap((v) => !v);
+                    setShowCalendar(false);
+                  }}
                   aria-expanded={showMap}
                   aria-controls="results-map"
                   className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-black/15 px-3 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-black/5 sm:h-9 sm:px-3.5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
@@ -983,6 +1019,17 @@ export default function Home() {
               )}
             </div>
           )}
+
+      {searched && showCalendar && (
+        <div id="results-calendar" className="animate-fade-in flex flex-col gap-2">
+          <CalendarView
+            deals={calendarDeals}
+            currency={currency}
+            selected={pickedWeekend}
+            onSelect={setPickedWeekend}
+          />
+        </div>
+      )}
 
       {/* Renders `visible` — the same array DealList gets — so every filter
           chip and price cap repaints the pins. The map deliberately does not
