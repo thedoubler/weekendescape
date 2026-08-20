@@ -56,7 +56,9 @@ export function FacetTrigger({
       // than as a size difference.
       // h-11 below `sm`: 36px missed the 44px iOS tap floor. px-2.5 buys the
       // width back so all three still fit a 328px row at 360.
-      className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-sm transition sm:h-9 sm:px-3 ${
+      // min-w-0 + justify-center: inside a grid track the button fills its
+      // third; shrink-0 would let it push the track wider than the row.
+      className={`inline-flex h-11 min-w-0 items-center justify-center gap-1 rounded-full border px-2 text-sm transition sm:h-9 sm:shrink-0 sm:gap-1.5 sm:px-3 ${
         set
           ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
           : open
@@ -65,7 +67,7 @@ export function FacetTrigger({
       }`}
     >
       {set && <span aria-hidden>✓</span>}
-      {value ?? placeholder}
+      <span className="truncate">{value ?? placeholder}</span>
       <span aria-hidden className="-ml-px text-[10px] opacity-55">
         {open ? "▲" : "▼"}
       </span>

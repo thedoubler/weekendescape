@@ -746,7 +746,12 @@ export default function Home() {
                   full width and `shrink-0` so they can never be crushed again.
                   `order-*` assigns that arrangement on a phone and returns them
                   inline from `sm` up, where all three genuinely fit one line. */}
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:flex sm:flex-nowrap">
+              {/* Plain wrapping flex. This was a 2-column grid left over from
+                  when the count lived in the bar; the count has since moved
+                  out, but the grid stayed — so the trigger row was nested in a
+                  `minmax(0,1fr)` column that the sort cluster squeezed to about
+                  100px, giving 33px tracks and overlapping labels at 320. */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap">
                 {/* Count and Clear all share the top-left cell so the count can
                     wrap INSIDE it rather than shoving the sort control onto a
                     row of its own. */}
@@ -761,12 +766,20 @@ export default function Home() {
                  whole group 4px left of the count above it — measured 450
                  against 454 — which is the ragged left edge on a phone. Focus
                  rings only ever needed vertical room. */
-              /* basis-full + shrink-0 below `sm`, so the triggers own a row
-                 and flexbox cannot crush them: given a shrinkable child it
-                 SHRINKS before it wraps, which is how they ended up 137px
-                 truncated at 390px. From `sm` up they go back to an inline
-                 shrinkable item, where all three fit one line. */
-              <div className="-my-1 flex w-full min-w-0 shrink-0 basis-full gap-1 overflow-x-auto py-1 sm:w-auto sm:shrink sm:basis-auto [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+              /* A 3-COLUMN GRID below `sm`, not a flex scroller. Each trigger
+                 gets exactly a third of the row, so they cannot overlap, cannot
+                 shrink each other, and there is nothing to scroll — measured
+                 before this, the group had 109px of box holding 246px of
+                 triggers at 390px, so "Price" was off the edge and only
+                 reachable by swiping a row most people would not guess was
+                 swipeable.
+
+                 Flex kept failing here for the same reason each time: a
+                 shrinkable child absorbs the overflow instead of the line
+                 wrapping. A grid track cannot do that — the width is declared,
+                 not negotiated. From `sm` up it is an inline flex row again,
+                 where all three fit with room to spare. */
+              <div className="grid w-full basis-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:basis-auto sm:gap-1.5 sm:overflow-x-auto">
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
