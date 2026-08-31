@@ -14,12 +14,21 @@ export async function GET(request: NextRequest) {
   const city = (searchParams.get("city") || "").trim();
   const country = (searchParams.get("country") || "").trim();
   const key = process.env.UNSPLASH_ACCESS_KEY;
-  // Kill switch — set DESTINATION_IMAGES=off (or false/0) to disable the feature
-  // without removing the key. Cards degrade gracefully to no hero.
-  const disabled = /^(off|false|0|no)$/i.test(
-    process.env.DESTINATION_IMAGES || ""
-  );
-  if (!city || !key || disabled) return NextResponse.json({ image: null });
+  // OPT-IN, not opt-out. This route makes two Unsplash calls per cache miss
+  // (search, then the download ping their guidelines require) on a free tier
+  // capped at 50 requests an hour, and `city` is free text that lands in the
+  // cache key — so ~50 crafted requests removed hero images for every visitor
+  // for the rest of the hour. Defaulting to off means a deployment that never
+  // sets the flag cannot be used that way at all. Turn it on deliberately, and
+  // only behind a bounded `city` and a rate limit.
+  const enabled = /^(on|true|1|yes)$/i.test(process.env.DESTINATION_IMAGES || "");
+  // Bounded even when enabled: free text in a cache key is the whole problem.
+  const sane =
+    city.length <= 60 &&
+    country.length <= 60 &&
+    /^[\p{L}\p{N}\s'’.,()-]*$/u.test(city + country);
+  if (!city || !key || !enabled || !sane)
+    return NextResponse.json({ image: null });
 
   try {
     const q = [city, country].filter(Boolean).join(" ");

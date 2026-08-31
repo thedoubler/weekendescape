@@ -60,10 +60,34 @@ describe("GET /api/airports", () => {
       country: "Spain",
     });
 
+    // Numbers, not the raw query strings: coordinates are parsed and range-checked
+    // before they reach Tequila or the cache key.
     const params = (axios.get as any).mock.calls[0][1].params;
-    expect(params.lat).toBe("41.4");
-    expect(params.lon).toBe("2.1");
+    expect(params.lat).toBe(41.4);
+    expect(params.lon).toBe(2.1);
     expect(params.location_types).toBe("airport");
+  });
+
+  it("rejects coordinates that are not real numbers in range", async () => {
+    for (const q of ["lat=abc&lon=2.1", "lat=999&lon=2.1", "lat=41.4&lon=500"]) {
+      const res = await GET(
+        new NextRequest(`http://localhost/api/airports?${q}`)
+      );
+      expect(res.status).toBe(400);
+    }
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized search term instead of caching it", async () => {
+    // The term is a cache key, and the cache is shared with the flight search —
+    // so unbounded junk terms evicted real results. Bounded at the door.
+    const res = await GET(
+      new NextRequest(
+        `http://localhost/api/airports?term=${"a".repeat(200)}`
+      )
+    );
+    expect(res.status).toBe(400);
+    expect(axios.get).not.toHaveBeenCalled();
   });
 
   it("searches by term via locations/query for autocomplete", async () => {

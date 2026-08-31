@@ -27,7 +27,7 @@ export async function fetchHolidays(
 ): Promise<Holiday[]> {
   try {
     const res = await fetch(
-      `https://date.nager.at/api/v3/publicholidays/${year}/${countryCode.toUpperCase()}`,
+      `https://date.nager.at/api/v3/publicholidays/${year}/${encodeURIComponent(countryCode.toUpperCase())}`,
       { next: { revalidate: 86400 } } as RequestInit
     );
     if (!res.ok) return [];

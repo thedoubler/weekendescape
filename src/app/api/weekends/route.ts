@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logSafe } from "@/lib/log-safe";
 import axios from "axios";
 import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
 import { timelineRange } from "@/lib/timeline";
@@ -72,9 +73,35 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const maxPrice = maxPriceRaw ? parseInt(maxPriceRaw, 10) : undefined;
-    if (maxPriceRaw && (!Number.isFinite(maxPrice) || (maxPrice as number) <= 0)) {
+    // QUANTIZED, and that is a security control rather than tidiness. maxPrice
+    // goes into the cache key, so an unbounded value gave an attacker an
+    // unbounded key space: `maxPrice=1`, `=2`, `=3` … each missed the cache and
+    // each spent one upstream search. Measured before this landed — three
+    // consecutive values cost 2.6s, 2.6s and 2.3s upstream, while repeating one
+    // came back in 0.04s from cache. A short loop drained the day's quota.
+    // Rounding to a 25-unit step and capping at 5000 leaves 200 possible keys,
+    // and the filter is a coarse price band where 25 units never mattered.
+    const maxPriceParsed = maxPriceRaw ? parseInt(maxPriceRaw, 10) : undefined;
+    if (
+      maxPriceRaw &&
+      (!Number.isFinite(maxPriceParsed) || (maxPriceParsed as number) <= 0)
+    ) {
       return NextResponse.json({ error: "Invalid maxPrice" }, { status: 400 });
+    }
+    const maxPrice =
+      maxPriceParsed === undefined
+        ? undefined
+        : Math.min(5000, Math.ceil(maxPriceParsed / 25) * 25);
+
+    // Same reasoning for flyTo, which was passed to Tequila verbatim and never
+    // checked. It accepts more than an airport code (`country:GB`, radius
+    // syntax), so it was both an unvalidated upstream passthrough and a second
+    // unbounded dimension in the cache key.
+    if (flyTo && !/^[A-Z]{3}$/.test(flyTo)) {
+      return NextResponse.json(
+        { error: "Invalid flyTo. Use a single 3-letter IATA code." },
+        { status: 400 }
+      );
     }
 
     const apiKey = process.env.TEQUILA_API_KEY;
@@ -296,8 +323,13 @@ export async function GET(request: NextRequest) {
       );
     }
     if (status === 422) {
+      // The PARSED codes, not the raw query string. Echoing the raw value back
+      // reflected however many kilobytes an attacker sent; it renders as a
+      // React text child so it was never an injection, just a mirror.
       const from =
-        new URL(request.url).searchParams.get("flyFrom") ?? "that airport";
+        parseOrigins(new URL(request.url).searchParams.get("flyFrom")).join(
+          ", "
+        ) || "that airport";
       return NextResponse.json(
         {
           error: `We couldn't search weekends from ${from}. Try a different airport or a longer window.`,
@@ -311,7 +343,7 @@ export async function GET(request: NextRequest) {
         { status: 429 }
       );
     }
-    console.error("Weekend search error:", error);
+    console.error("Weekend search error:", logSafe(error));
     return NextResponse.json(
       { error: "Failed to search weekend flights" },
       { status: 500 }

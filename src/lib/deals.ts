@@ -289,7 +289,12 @@ export function normalizeDeals(raw: unknown, currency: string): Deal[] {
     if (
       !cityTo ||
       typeof price !== "number" ||
-      !deepLink ||
+      // Not just truthy: this string becomes an href. Kiwi is trusted, so the
+      // practical risk is nil — but a scheme check is free, and "the upstream
+      // would never send javascript:" is the assumption you only get to be
+      // wrong about once.
+      typeof deepLink !== "string" ||
+      !deepLink.startsWith("https://") ||
       !flyFrom ||
       !flyTo ||
       !outDepart ||

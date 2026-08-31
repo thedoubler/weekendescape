@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logSafe } from "@/lib/log-safe";
 import {
   pickMode,
   forecastUrl,
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       weather: summarizeTypical(data?.daily ?? {}, range.targetKeys, range.years),
     });
   } catch (error) {
-    console.error("Weather lookup error:", error);
+    console.error("Weather lookup error:", logSafe(error));
     return NextResponse.json({ weather: null });
   }
 }

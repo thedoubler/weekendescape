@@ -40,7 +40,11 @@ import { PriceFilter } from "@/components/PriceFilter";
 import { DealList, SkeletonCard } from "@/components/DealList";
 import { DealsMap } from "@/components/DealsMap";
 import { CalendarDialog } from "@/components/CalendarDialog";
+// Dev-only. The runtime cost was already nil without ?debug=overflow, but the
+// component still shipped in every visitor's JS; the constant lets the bundler
+// drop it from the production build entirely.
 import OverflowDebug from "@/components/OverflowDebug";
+const SHOW_OVERFLOW_DEBUG = process.env.NODE_ENV !== "production";
 
 // Fetch that aborts after `ms` so a stalled request (slow upstream, a dropped
 // tunnel connection) fails into a retryable error instead of spinning forever.
@@ -1283,7 +1287,7 @@ export default function Home() {
         onClose={closeOriginSheet}
       />
 
-      <OverflowDebug />
+      {SHOW_OVERFLOW_DEBUG && <OverflowDebug />}
     </main>
   );
 }

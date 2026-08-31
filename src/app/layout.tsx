@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Space_Grotesk, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
@@ -93,6 +94,30 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
+        {/* GA4. `afterInteractive` rather than the raw async tag from Google's
+            snippet: next/script then loads it after hydration instead of
+            competing with the board's own first paint, which is the number
+            this product is judged on. Measurement id is a public identifier,
+            so it is inline rather than an env var — nothing to leak.
+
+            Production only. Without the guard every `npm run dev` session, and
+            every preview deploy, writes into the same property as real
+            visitors, and the first month of data is the one you cannot
+            re-collect. */}
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <Script
+              src="https://www.googletagmanager.com/gtag/js?id=G-BVSSW686DH"
+              strategy="afterInteractive"
+            />
+            <Script id="ga4" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-BVSSW686DH');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
