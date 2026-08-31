@@ -745,7 +745,7 @@ export default function Home() {
                 already sitting on top of it. The reassurance survives as four
                 words, because that is the part a reader actually weighs; the
                 full privacy answer lives on /about. */}
-            <p className="mt-1.5 text-black/55 dark:text-white/60">
+            <p className="mt-1.5 text-muted">
               📍 Finding your nearest airport — used only for this. Decline and
               type it in.
             </p>
@@ -1104,7 +1104,7 @@ export default function Home() {
                     })()}
               </span>
               {!loading && !error && fetchedAt && visible.length > 0 && (
-                <span className="text-[11px] text-black/55 dark:text-white/60">
+                <span className="text-[11px] text-muted">
                   Checked {agoLabel(fetchedAt)}
                 </span>
               )}
@@ -1112,7 +1112,7 @@ export default function Home() {
                   is called; this says what it did. Only while it is on — off,
                   it would be explaining something that is not happening. */}
               {!loading && !error && (applied ? applied.bridges : bridges) && (
-                <span className="basis-full text-[11px] text-black/55 sm:basis-auto dark:text-white/60">
+                <span className="basis-full text-[11px] text-muted sm:basis-auto">
                   {BRIDGE_HELP}
                 </span>
               )}
@@ -1120,7 +1120,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="relative text-[11px] text-black/55 underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:text-white/60 dark:hover:text-white"
+                  className="relative text-[11px] text-muted underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:hover:text-white"
                 >
                   Clear all
                 </button>
@@ -1166,7 +1166,7 @@ export default function Home() {
               ) : undefined
             }
           />
-          <p className="text-[11px] text-black/55 dark:text-white/55">
+          <p className="text-[11px] text-muted">
             Pins mark the arrival airport, which isn’t always the city centre.
           </p>
         </div>
@@ -1234,7 +1234,7 @@ export default function Home() {
       )}
       {/* Terminal state at the widest window, so the list has a definite bottom. */}
       {searched && !loading && !error && !loadingMore && visible.length > 0 && (
-        <p className="pt-1 pb-2 text-center text-xs text-black/55 dark:text-white/60">
+        <p className="pt-1 pb-2 text-center text-xs text-muted">
           That’s every weekend in the next {applied?.months ?? months} months.
         </p>
       )}

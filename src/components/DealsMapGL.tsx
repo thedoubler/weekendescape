@@ -510,7 +510,7 @@ export default function DealsMapGL({
       // decoration; the city saves you cross-referencing a dot against the list.
       const city = document.createElement("span");
       city.textContent = p.city;
-      city.className = "text-black/60 dark:text-white/60";
+      city.className = "text-muted";
       const price = document.createElement("span");
       price.textContent = `${p.price} ${p.currency}`;
       el.append(city, document.createTextNode(" "), price);
@@ -580,7 +580,7 @@ export default function DealsMapGL({
 
   if (failed) {
     return (
-      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-black/10 text-sm text-black/55 dark:border-white/10 dark:text-white/55">
+      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-black/10 text-sm text-muted dark:border-white/10">
         Map unavailable — the list below is unaffected.
       </div>
     );

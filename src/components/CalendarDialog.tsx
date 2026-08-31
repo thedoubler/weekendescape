@@ -101,7 +101,7 @@ export function CalendarDialog({
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/[0.07] px-4 py-3 sm:px-6 dark:border-white/10">
           <div>
             <h2 className="text-base font-semibold tracking-tight">Calendar</h2>
-            <p className="text-[12.5px] text-black/55 dark:text-white/55">
+            <p className="text-[12.5px] text-muted">
               Every weekend you could fly. Tap one to see all its flights.
             </p>
           </div>
@@ -150,7 +150,7 @@ export function CalendarDialog({
                   <h3 className="text-sm font-semibold tracking-tight">
                     {weekendRange(first.outDepart, first.backDepart)}
                   </h3>
-                  <p className="text-[12.5px] text-black/55 dark:text-white/55">
+                  <p className="text-[12.5px] text-muted">
                     {trips.length} flight{trips.length === 1 ? "" : "s"} this
                     weekend, cheapest first
                   </p>
@@ -175,7 +175,7 @@ export function CalendarDialog({
                 </div>
               </>
             ) : (
-              <p className="p-4 text-sm text-black/55 dark:text-white/55">
+              <p className="p-4 text-sm text-muted">
                 Tap a weekend on the calendar to see every flight on it.
               </p>
             )}

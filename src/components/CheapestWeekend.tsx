@@ -122,7 +122,7 @@ export function CheapestWeekend({
           <span className="text-sm font-medium">
             {weekendRange(deal.outDepart, deal.backArrive)}
           </span>
-          <span className="text-[11px] text-black/60 dark:text-white/60">
+          <span className="text-[11px] text-muted">
             {saving.amount} {deal.currency} less
             {saving.allIn ? ", with one checked bag" : " on the fare"}
           </span>

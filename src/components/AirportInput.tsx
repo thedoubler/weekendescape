@@ -385,7 +385,7 @@ export function AirportInput({
         <div
           id="airport-suggestions"
           role="status"
-          className="absolute inset-x-0 z-20 mt-1 rounded-lg border border-black/15 bg-white px-3 py-2.5 text-sm text-black/60 shadow-lg sm:inset-x-auto sm:w-72 dark:border-white/15 dark:bg-neutral-900 dark:text-white/60"
+          className="absolute inset-x-0 z-20 mt-1 rounded-lg border border-black/15 bg-white px-3 py-2.5 text-sm text-muted shadow-lg sm:inset-x-auto sm:w-72 dark:border-white/15 dark:bg-neutral-900"
         >
           No airports match “{query.trim()}” — try a city or 3-letter code.
         </div>

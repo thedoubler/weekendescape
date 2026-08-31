@@ -101,7 +101,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold tracking-tight">Flying from</h2>
-            <p className="mt-0.5 text-[12.5px] text-black/55 dark:text-white/55">
+            <p className="mt-0.5 text-[12.5px] text-muted">
               Up to {MAX_ORIGINS} airports. Closing this reloads the board.
             </p>
           </div>

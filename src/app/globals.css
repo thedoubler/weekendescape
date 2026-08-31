@@ -12,16 +12,36 @@
   /* Warm brand glow behind the header — subtle, theme-aware. */
   --glow: rgba(249, 115, 22, 0.08);
 
-  /* Secondary text, one token per theme.
-     The board used to tint every muted string with an alpha of the foreground
-     — black/40, /45, /50 — and the ramp was tuned on the dark ground, where
-     white/45 measures 4.52:1, then reused in light, where black/45 measures
-     3.36:1. Same class, opposite verdicts: ~27 informational strings failed
-     WCAG 1.4.3 in light mode only (day-strip labels, leg durations, "in N
-     days", the footer). An alpha cannot be the fix because the two grounds
-     need different distances from their background, so this is a real token
-     with a real value on each side. Measured against both the page ground and
-     the translucent card ground above it. */
+  /* SECONDARY TEXT — the one token for supporting copy, one value per theme.
+     Use it for anything that explains, qualifies or timestamps the primary
+     content: day-strip labels, leg durations, "in N days", captions, helper
+     lines, the footer.
+
+     It exists because the board used to tint those strings with an alpha of
+     the foreground — black/40, /45, /50 — and the ramp was tuned on the dark
+     ground, where white/45 measures 4.52:1, then reused in light, where
+     black/45 measures 3.36:1. Same class, opposite verdicts: ~27 informational
+     strings failed WCAG 1.4.3 in light mode only. An alpha cannot be the fix,
+     because the two grounds need different distances from their background —
+     hence a real token with a real value on each side, measured against both
+     the page ground and the translucent card above it.
+
+     It then absorbed black/55 and /60, which were the same role at two more
+     values: 59 call sites now share one definition, and changing what "muted"
+     means is one edit rather than a search-and-replace with three spellings.
+
+     Being SOLID rather than an alpha also removed a bug class: an alpha sets
+     -webkit-text-fill-color, which browsers apply to colour emoji and wash
+     them out (see the weather glyph in DealCard).
+
+     What deliberately did NOT fold in here, because it is a different job:
+       · text-black/70 — body prose on /about, and control labels that darken
+         to full foreground on hover. Reading text, not supporting text.
+       · text-black/25–/35 — separator dots, the → glyph, out-of-weekend
+         calendar days, disabled pills. Decoration and disabled states, which
+         are allowed to sit below text contrast because they carry no words.
+       · One documented light/dark asymmetry in DealCard ("2d to explore" over
+         a pastel flag wash) that is /55 in light and full white in dark. */
   --muted: #5f6368; /* 6.05:1 on #fff, 5.55:1 on the light card */
 }
 
