@@ -1249,13 +1249,16 @@ export default function Home() {
           Every outbound booking link here is affiliate — Kiwi, Booking.com and
           GetYourGuide — so stating it once, where it can't be mistaken for part
           of a card, is both more honest and less noisy. */}
-      <footer className="mt-2 flex flex-col gap-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-muted dark:border-white/10">
+      {/* Centred, on the masthead's axis — the wordmark, the promise line and
+          the receipt row all sit on it, so a left-aligned block at the very
+          bottom was the one thing hanging off the page's centre line. */}
+      <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted dark:border-white/10">
         {/* Capped at a readable measure. The board is max-w-4xl, and this
             paragraph took the whole of it: 141 characters a line at desktop
             width, measured — roughly double the 65–75 a reader tracks without
             losing the return sweep. It is the one paragraph on the page anybody
             reads as prose, and the one that most needs to be believed. */}
-        <p className="max-w-prose">
+        <p className="mx-auto max-w-prose">
           Flights, stays and activities are booked on Kiwi.com, Booking.com and
           GetYourGuide. We may earn a commission from those bookings, at no extra
           cost to you. Prices and availability are set by them, not by us.
