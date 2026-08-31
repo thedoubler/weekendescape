@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimited } from "@/lib/rate-limit";
 import { logSafe } from "@/lib/log-safe";
 import {
   pickMode,
@@ -17,6 +18,8 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
 // average for the same calendar window (see src/lib/weather.ts).
 export async function GET(request: NextRequest) {
   try {
+    const limited = await rateLimited(request, "API_RATE_LIMIT");
+    if (limited) return limited;
     const { searchParams } = new URL(request.url);
     const iata = searchParams.get("iata");
     const from = searchParams.get("from");

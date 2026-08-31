@@ -24,7 +24,11 @@ and belong in the second group. Every `NEXT_PUBLIC_` one belongs in the first.
       it had previously served a NEWER build and then gone backwards. Check the
       branch under Workers Builds → Git configuration. Everything below assumes
       the deploy actually tracks `main`.
-- [ ] **Rate limiting on `/api/*`.** There is none. Quantizing the cache keys
+- [x] ~~**Rate limiting on `/api/*`.**~~ Done — Cloudflare's native rate-limit
+      bindings, 20/min on the weekend search and 120/min on the cheap routes,
+      keyed on `CF-Connecting-IP`. Verified in workerd: exactly 20 pass, then
+      429 with `Retry-After: 60`, and a different IP is unaffected. Per-colo, so
+      it is a cost control rather than an access control. Previously: Quantizing the cache keys
       shrank the blast radius (a loop over `maxPrice` no longer misses the cache
       every time) but nothing caps request volume, and every miss is a paid Kiwi
       search. On Cloudflare this is a WAF Rate Limiting rule, not code — the free

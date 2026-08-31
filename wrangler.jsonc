@@ -10,6 +10,22 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Per-IP rate limiting, counted at the edge before a request costs anything.
+  // Two tiers because the routes are not equally expensive: a weekend search is
+  // a paid Kiwi query, while autocomplete and weather are cheap and fire several
+  // times per interaction. Periods may only be 10 or 60 seconds.
+  "ratelimits": [
+    {
+      "name": "SEARCH_RATE_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 }
+    },
+    {
+      "name": "API_RATE_LIMIT",
+      "namespace_id": "1002",
+      "simple": { "limit": 120, "period": 60 }
+    }
+  ],
   "observability": {
     "enabled": true
   }

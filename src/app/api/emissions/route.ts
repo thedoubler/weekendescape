@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimited } from "@/lib/rate-limit";
 import { cached } from "@/lib/api-cache";
 import type { FlightSegment } from "@/lib/deals";
 
@@ -39,6 +40,8 @@ function isSegment(v: unknown): v is FlightSegment {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await rateLimited(request, "API_RATE_LIMIT");
+  if (limited) return limited;
   const key = process.env.GOOGLE_TIM_API_KEY;
   // Not an error: the feature is optional, and the card falls back to its own
   // estimate. A 500 here would surface as a broken panel.

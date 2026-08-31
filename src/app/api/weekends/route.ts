@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimited } from "@/lib/rate-limit";
 import { logSafe } from "@/lib/log-safe";
 import axios from "axios";
 import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
@@ -31,6 +32,8 @@ const VALID_MONTHS = [1, 2, 3, 6];
 
 export async function GET(request: NextRequest) {
   try {
+    const limited = await rateLimited(request, "SEARCH_RATE_LIMIT");
+    if (limited) return limited;
     const { searchParams } = new URL(request.url);
     // One to three home airports, comma-separated. Kiwi's fly_from takes the
     // same shape, so the multi-origin search costs us nothing upstream.

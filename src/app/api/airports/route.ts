@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimited } from "@/lib/rate-limit";
 import { logSafe } from "@/lib/log-safe";
 import axios from "axios";
 import { cached } from "@/lib/api-cache";
@@ -10,6 +11,8 @@ const AIRPORTS_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
   try {
+    const limited = await rateLimited(request, "API_RATE_LIMIT");
+    if (limited) return limited;
     const { searchParams } = new URL(request.url);
     const term = searchParams.get("term");
     const lat = searchParams.get("lat");
