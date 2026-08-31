@@ -4,11 +4,6 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type Deal, isBridge, dealDomId } from "@/lib/deals";
 import { type WeatherResult, packingCue } from "@/lib/weather";
 
-interface DestinationImage {
-  url: string | null;
-  alt: string;
-  credit: { name: string; profile: string | null; photo: string | null };
-}
 import type { WeekendStyle } from "@/lib/weekend";
 import { CheapestWeekend } from "@/components/CheapestWeekend";
 import ThingsToDo from "@/components/ThingsToDo";
@@ -250,8 +245,6 @@ export function DealCard({
   }
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
-  const [image, setImage] = useState<DestinationImage | null>(null);
-  const imageTried = useRef(false);
   // Weather is fetched lazily the first time a card is expanded, so the list
   // view stays free of per-destination network calls.
   const weatherTried = useRef(false);
@@ -294,23 +287,6 @@ export function DealCard({
       .catch(() => setWeather(null))
       .finally(() => setWeatherLoading(false));
   }, [open, deal.flyTo, deal.outArrive, deal.backDepart]);
-
-  // Load the destination photo lazily the first time the card is hovered — so
-  // the peel-to-reveal only costs a request for cards you actually point at.
-  function loadImage() {
-    if (imageTried.current) return;
-    imageTried.current = true;
-    const params = new URLSearchParams({
-      city: deal.cityTo,
-      country: deal.countryTo,
-    });
-    // no-store so the DESTINATION_IMAGES kill switch takes effect immediately,
-    // bypassing any image response cached while it was on.
-    fetch(`/api/destination-image?${params.toString()}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setImage(d?.image ?? null))
-      .catch(() => setImage(null));
-  }
 
   const cells = dayBlocks(deal.outArrive, deal.backDepart);
   const stay = durationLabel(deal.stayMinutes);
@@ -360,12 +336,7 @@ export function DealCard({
           ? { boxShadow: "0 12px 28px -12px rgba(0,0,0,0.28)" }
           : undefined
       }
-      // One handler: the card already prefetched its image on hover, and the
-      // map highlight rides along rather than adding a second listener.
-      onMouseEnter={() => {
-        loadImage();
-        onHover?.(deal.flyTo);
-      }}
+      onMouseEnter={() => onHover?.(deal.flyTo)}
       onMouseLeave={() => onHover?.(null)}
       // Keyboard parity: tabbing through the board drives the same highlight.
       onFocus={() => onHover?.(deal.flyTo)}
@@ -389,41 +360,6 @@ export function DealCard({
           : "border-black/[0.14] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-black/25 hover:shadow-md dark:border-white/[0.14] dark:shadow-none dark:hover:border-white/25"
       }`}
     >
-      {/* Peel the destination photo in from the top-right corner — but ONLY when
-          that corner is hovered (a `peer`), so reading the rest of the card
-          never triggers it. A dog-ear marks the spot. Collapsed cards only. */}
-      {!open && image?.url && (
-        <div
-          className="peer absolute right-0 top-0 z-30 h-14 w-14 cursor-pointer"
-          aria-hidden
-        >
-          <span className="absolute right-0 top-0 h-5 w-5 bg-gradient-to-br from-black/15 to-black/30 [clip-path:polygon(100%_0,0_0,100%_100%)] dark:from-white/20 dark:to-white/35" />
-        </div>
-      )}
-      {!open && image?.url && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-20 [clip-path:circle(0px_at_100%_0)] transition-[clip-path] duration-500 ease-out peer-hover:[clip-path:circle(175%_at_100%_0)]"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={image.url}
-            alt={image.alt}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4 opacity-0 transition-opacity delay-100 duration-300 peer-hover:opacity-100">
-            <span className="font-serif text-2xl leading-none text-white drop-shadow">
-              {deal.cityTo}
-            </span>
-            {image.credit?.name && (
-              <span className="text-[10px] text-white/70">
-                {image.credit.name} / Unsplash
-              </span>
-            )}
-          </div>
-        </div>
-      )}
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"

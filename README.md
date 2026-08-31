@@ -21,7 +21,6 @@ future timeline. Built with Next.js + the Kiwi Tequila API.
 | `NEXT_PUBLIC_COFFEE_URL` | The "buy me a coffee" paragraph on `/about` does not render at all. |
 | `NEXT_PUBLIC_GYG_PARTNER_ID` | Falls back to the built-in GetYourGuide partner ID. Set to disable or re-point the activities panel. |
 | `NEXT_PUBLIC_BOOKING_AID` | Booking.com links go out without an affiliate ID. |
-| `UNSPLASH_ACCESS_KEY` / `DESTINATION_IMAGES` | Destination images are skipped. The feature is **opt-in**: it stays off unless `DESTINATION_IMAGES=on`, because the Unsplash free tier is 50 req/hour and the route is publicly callable. |
 | `WEEKEND_CURRENCY` | **Leave it unset.** Currency is chosen from the origin — EUR for a European home airport, USD otherwise (`src/lib/currency.ts`). Setting this pins every board to one currency and overrides that. |
 
 ## How it works
