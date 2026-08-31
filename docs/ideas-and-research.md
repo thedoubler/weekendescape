@@ -123,6 +123,50 @@ Ranked by fit × delight for a weekend-getaway tool:
   protection.
 - Slim `cities.json` if the serverless bundle size ever bites (see below).
 
+### Design-system drift — what is left after the `--muted` pass (2026-08-31)
+
+The secondary-text ramp is done: `--muted` is one per-theme token, 60 call
+sites, documented in `globals.css` beside its own definition. What follows is
+what was measured at the same time and deliberately NOT folded in, because each
+needs a decision rather than a sweep. Counts are from `src/` on 2026-08-31.
+
+**The type scale runs to seventeen sizes.** Eleven arbitrary px values
+(`8, 10, 11, 12, 12.5, 13, 15, 17, 20, 38, 54`) plus six named (`xs` through
+`2xl`). `text-[11px]` alone appears 27 times and `text-sm` 45, so there is a
+real spine in there; the question is whether 12 / 12.5 / 13 are three sizes or
+one. That is a typographic decision that moves layout on every surface, so it
+belongs to a deliberate pass, not a find-and-replace. Renaming them 1:1 into
+tokens would be motion without consolidation.
+
+**Amber means two things.** Seven shades (`100, 200, 300, 400, 500, 700, 900`)
+carry both "this costs an upstream call" (the receipt's dotted underlines,
+which are load-bearing product grammar) and "good news" (the calendar's weekend
+blocks, the bridge-day chips). Same hue, opposite valence. Fixing it means
+picking a second hue for one of the two meanings — a brand decision.
+
+**Glyphs are text where the rest of the app draws SVG.** `✕` ×6, `▼`/`▲`, `+`/`−`
+stand in for a close button, a disclosure caret and an expander, while
+`TakeoffIcon` and `MapPinIcon` in the same components are authored SVG at a
+consistent stroke. The glyphs also carry the app's only sub-11px text (the
+10px `▼`). An icon set would settle both.
+
+**`/about` has its own prose ramp.** Eight paragraphs at `text-black/70`, two
+at `/60` and `/55`, all `text-sm leading-relaxed` — one role, three values.
+Not folded into `--muted`, because `/70` is reading text rather than supporting
+text; the fix is to pick one value for that page, which needs someone to look
+at the page.
+
+**Outline pills are NOT drift.** Six variants exist and they differ in intent —
+facet trigger, option chip, map price pill, quiet recovery action. The two that
+genuinely match (`Clear filters`, `Try again`) are only two uses, below the
+threshold worth abstracting. Left alone on purpose.
+
+Two things stay non-token by design, and the reasons are in `globals.css`:
+`text-black/70` (body prose and control labels that darken to full foreground
+on hover) and `text-black/25–/35` (separator dots, the `→`, out-of-weekend
+calendar days, disabled pills — decoration, which carries no words and is
+allowed below text contrast).
+
 ---
 
 ## Filter strictness & the weekend presets (research, 2026-07-23)

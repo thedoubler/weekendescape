@@ -60,13 +60,21 @@ references live in the task list; the strategy behind the first two is in
 - Verify the map renders in a production build (reported, not reproduced).
 
 **Interface**
-- Light-mode muted text fails WCAG AA in ~100 places; the same alphas pass in
-  dark, so the ramp was tuned there and reused. Needs per-theme tokens.
-- The error state has no retry.
 - A 72px reserved slot sits empty above "Book on Kiwi" on most deals.
 - Map labels clip at narrow widths; two separator/wrap bugs.
-- Design-system consolidation: six outline-pill variants, fourteen type sizes,
-  four disclosure glyphs, and amber used for both warnings and good news.
+- Design-system consolidation, the part still outstanding: the type scale runs
+  to seventeen sizes (eleven arbitrary px values plus six named), amber carries
+  both "warning" and "good news", and ✕ / ▼ / ▲ / + / − are text characters
+  where the rest of the app draws SVG. Detail in
+  `docs/ideas-and-research.md`. Six outline-pill variants turned out NOT to be
+  drift — they differ in intent (facet trigger, option chip, map pill, quiet
+  action) and should stay separate.
+- `/about` uses three values — `black/55`, `/60` and `/70` — for one prose
+  role; the board's paragraphs no longer do.
+
+Done since this list was written: light-mode muted text now uses a per-theme
+`--muted` token (it failed WCAG AA in light only, because the alpha ramp was
+tuned on the dark ground and reused); the error state has a retry button.
 
 **Config** — see the optional environment table above; `WEEKEND_CURRENCY`
 should be removed from any existing `.env.local`.
