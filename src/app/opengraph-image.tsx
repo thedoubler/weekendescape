@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { spaceGroteskBold, spaceGroteskRegular } from "./og-fonts";
 
 // Site-wide Open Graph / Twitter card, generated in code so it matches the app's
 // header and dark palette. Next auto-adds the og:image / twitter tags.
@@ -12,10 +11,12 @@ export default async function OpengraphImage() {
   // Passing `fonts` replaces Satori's default, so we bundle the one face the
   // card renders. Space Grotesk is the header's face; the wordmark is a
   // weight/colour treatment of it, not a second family.
-  const [sans, sansBold] = await Promise.all([
-    readFile(join(process.cwd(), "assets/SpaceGrotesk-400.ttf")),
-    readFile(join(process.cwd(), "assets/SpaceGrotesk-700.ttf")),
-  ]);
+  //
+  // Read from a bundled module rather than from disk: Cloudflare Workers has no
+  // filesystem, so the readFile version threw on every request and this route
+  // 500'd in production — which meant every shared link had no preview image.
+  const sans = spaceGroteskRegular();
+  const sansBold = spaceGroteskBold();
 
   return new ImageResponse(
     (

@@ -10,8 +10,13 @@ import type { NextConfig } from "next";
 // workers, so a script-src written blind would break both. That is a follow-up
 // with the page in front of you, not a launch gate.
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+  // SAMEORIGIN rather than DENY. The attack this exists to stop is a third
+  // party framing the board and overlaying its own links on the Book buttons —
+  // 'self' prevents that completely, because only weekend.flights can frame
+  // weekend.flights. DENY additionally forbade the site framing itself, which
+  // bought no security and broke same-origin previews and responsive testing.
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Send the origin to affiliate partners (they attribute on it) but never the
   // full URL, which carries the visitor's airport and dates.
