@@ -1,4 +1,4 @@
-# shortliday
+# weekend.flights
 
 Finds the cheapest weekend round-trip flights from your home airport across a
 future timeline. Built with Next.js + the Kiwi Tequila API.

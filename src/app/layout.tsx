@@ -23,11 +23,11 @@ export const siteUrl =
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "http://localhost:3000");
 
-// The product is called shortliday — short + holiday. The name has to match
-// the header everywhere it is quoted back at a reader: tab title, search
-// result, link preview, share card. It used to say "Weekend Escape" in all
-// four while the page said shortliday.
-export const SITE_NAME = "shortliday";
+// The product is called weekend.flights — the name is the pitch and the
+// address at once. It has to match the header everywhere it is quoted back at
+// a reader: tab title, search result, link preview, share card. Keep the dot
+// lowercase and unspaced; it is part of the name, not punctuation around it.
+export const SITE_NAME = "weekend.flights";
 const title = `${SITE_NAME} — cheapest weekend flights`;
 const description =
   "Find the cheapest weekend round-trips from your home airport.";
@@ -77,7 +77,16 @@ export default function RootLayout({
       lang="en"
       className={`${spaceGrotesk.variable} ${instrumentSerif.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col overflow-x-hidden">
+      {/* overflow-x-CLIP, not -hidden, and the difference is not cosmetic.
+          `overflow-x: hidden` forces body's computed overflow-y to `auto`,
+          which makes body a scroll container — one that can never actually
+          scroll (its scrollHeight equals its clientHeight; the viewport
+          scrolls via html). Chrome's SMOOTH scrollIntoView walks the ancestor
+          chain, meets that inert scroll container, and silently stops: every
+          smooth jump-to-card on the page was a no-op (behavior:"auto" still
+          worked, which is what made it look intermittent). `clip` clips the
+          same sideways overflow without creating a scroll container. */}
+      <body className="min-h-full flex flex-col overflow-x-clip">
         <script
           type="application/ld+json"
           // Local literal, no user input — nothing here can be injected.

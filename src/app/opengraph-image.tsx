@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 // Site-wide Open Graph / Twitter card, generated in code so it matches the app's
 // header and dark palette. Next auto-adds the og:image / twitter tags.
-export const alt = "shortliday — cheapest weekend getaways from home";
+export const alt = "weekend.flights — cheapest weekend getaways from home";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -62,24 +62,22 @@ export default async function OpengraphImage() {
           </div>
         </div>
 
-        {/* Hero wordmark — "shortliday", with the same s[ho]rt[liday] colour
-            split the header uses, so the share card and the page read as one
-            brand rather than two. */}
+        {/* Hero wordmark — "weekend.flights", with the same split-on-the-dot
+            colour treatment the header uses, so the share card and the page
+            read as one brand rather than two. */}
         <div
           style={{
             display: "flex",
             alignItems: "baseline",
             marginTop: "40px",
-            fontSize: "120px",
+            fontSize: "104px",
             lineHeight: 1,
             letterSpacing: "-3px",
             color: "#f5f6f8",
           }}
         >
-          <span style={{ fontWeight: 700 }}>s</span>
-          <span style={{ fontWeight: 700, color: "#f97316" }}>ho</span>
-          <span style={{ fontWeight: 700 }}>rt</span>
-          <span style={{ fontWeight: 700, color: "#f97316" }}>liday</span>
+          <span style={{ fontWeight: 700 }}>weekend</span>
+          <span style={{ fontWeight: 700, color: "#f97316" }}>.flights</span>
         </div>
 
         {/* Value prop */}

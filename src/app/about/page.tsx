@@ -14,7 +14,7 @@ import { SITE_NAME } from "@/app/layout";
 export const metadata: Metadata = {
   title: `About — ${SITE_NAME}`,
   description:
-    "What shortliday is, where its numbers come from, how it makes money, what it stores, and how to get in touch.",
+    "What weekend.flights is, where its numbers come from, how it makes money, what it stores, and how to get in touch.",
   alternates: { canonical: "/about" },
 };
 
