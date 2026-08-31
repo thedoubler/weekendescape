@@ -42,8 +42,13 @@ export function AirportInput({
   onRemoveChip,
   disabled = false,
   placeholder = "Airport or city, e.g. Barcelona",
+  flushRef,
 }: {
   value: string;
+  /** Filled with a function that resolves whatever is typed right now. The
+   *  parent calls it on the way out through an explicit control (Done), so the
+   *  commit lands before the dialog's close handler reads the result. */
+  flushRef?: RefObject<(() => void) | null>;
   /** Renders the `autofocus` attribute. A modal <dialog> honours autofocus on
    *  a descendant in preference to its own "first focusable child" rule —
    *  which here was the ✕ that removes an airport chip. */
@@ -154,7 +159,19 @@ export function AirportInput({
   // Only submit something we can actually search: an exact suggestion, a bare
   // 3-letter IATA code, or (for a typed city name) the top suggestion. A typo
   // with no matches does nothing rather than searching e.g. flyFrom=BARCELONA.
-  function submitTyped() {
+  //
+  // `guess` is what separates an EXPLICIT commit from an incidental one, and it
+  // is the whole fix for a bug that put an airport nobody chose onto the board:
+  // typing "vien" and pressing Escape closed the dialog, and the blur behind it
+  // resolved the half-typed word to the top suggestion — VIE was added, the
+  // receipt read "Cluj-Napoca + VIE", the URL still said from=CLJ and the board
+  // still showed CLJ-only data. Three states disagreeing, from a keystroke that
+  // means "abandon this".
+  //
+  // So: Enter, a click on a suggestion, and Done all mean "use your best
+  // match", and pass guess. Losing focus never does — it commits only text that
+  // resolves with no interpretation (an exact code, or an exact suggestion).
+  function submitTyped({ guess }: { guess: boolean }) {
     setOpen(false);
     const raw = query.trim();
     if (!raw) return;
@@ -163,10 +180,41 @@ export function AirportInput({
     const exact = suggestions.find((s) => s.code.toUpperCase() === upper);
     if (exact) return fire(exact.code);
     if (/^[A-Z]{3}$/.test(upper)) return fire(upper);
+    if (!guess) return;
     if (shown.length > 0) return fire(shown[0].code);
     // Unresolvable — keep the field open with the no-results hint, don't search.
     setOpen(true);
   }
+
+  // Set by Escape on its way out of the field, cleared by the next keystroke.
+  // The blur it triggers arrives a tick later, by which time the reason for it
+  // is gone; without this flag that blur cannot tell "the user left" from "the
+  // user cancelled", and the pending text would survive as a committed airport.
+  const abandoned = useRef(false);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+    },
+    []
+  );
+
+  // Called by the sheet's Done button, which has to resolve the field BEFORE
+  // the dialog closes: the close handler compares origins to decide whether to
+  // search, and a commit that lands after that comparison changes the receipt
+  // without reloading the board.
+  //
+  // No dependency array, so the stored closure is refreshed after every render
+  // and always sees the current query and suggestions. It is an effect rather
+  // than a plain assignment because writing a ref during render is unsafe under
+  // concurrent rendering — the same reason `lastSearched` above is set in one.
+  useEffect(() => {
+    if (!flushRef) return;
+    flushRef.current = () => submitTyped({ guess: true });
+    return () => {
+      flushRef.current = null;
+    };
+  });
 
   const showList = open && shown.length > 0;
   const showEmpty =
@@ -190,7 +238,7 @@ export function AirportInput({
         // regressing to the double ring it once had.
         className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition dark:border-white/20 dark:bg-white/[0.07]"
       >
-        <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-black/35 dark:text-white/50" />
+        <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-muted" />
         {chips.map((code) => (
           <span
             key={code}
@@ -205,7 +253,7 @@ export function AirportInput({
                   onRemoveChip(code);
                 }}
                 aria-label={`Remove ${code}`}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-black/35 transition hover:bg-black/10 hover:text-black dark:text-white/40 dark:hover:bg-white/15 dark:hover:text-white"
+                className="flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-muted transition hover:bg-black/10 hover:text-black dark:hover:bg-white/15 dark:hover:text-white"
               >
                 ×
               </button>
@@ -225,17 +273,34 @@ export function AirportInput({
         }
         inputMode="search"
         enterKeyHint="search"
+        // The placeholder was the only accessible name this field had, and a
+        // placeholder disappears the moment anyone types — so a screen-reader
+        // user who paused mid-entry had an unlabelled text box. It also shifts
+        // ("Add another…", "Up to 3 airports") as chips accumulate, which is
+        // status, not a name. A stable name, spoken independently of state.
+        aria-label="Airport or city"
         onChange={(e) => {
+          abandoned.current = false;
           setQuery(e.target.value);
           setOpen(true);
         }}
         onFocus={() => (suggestions.length > 0 || noResults) && setOpen(true)}
-        onBlur={() =>
-          setTimeout(() => {
+        // The delay lets a click on a suggestion win the race against the blur
+        // it causes. It never guesses (see submitTyped), and after Escape it
+        // discards instead: the field goes back to what the board is actually
+        // searching rather than keeping text that will never be committed.
+        onBlur={() => {
+          if (blurTimer.current) clearTimeout(blurTimer.current);
+          blurTimer.current = setTimeout(() => {
             setOpen(false);
-            submitTyped();
-          }, 150)
-        }
+            if (abandoned.current) {
+              abandoned.current = false;
+              setQuery(tokenMode ? "" : value);
+              return;
+            }
+            submitTyped({ guess: false });
+          }, 150);
+        }}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -249,10 +314,22 @@ export function AirportInput({
               e.preventDefault();
               choose(shown[active]);
             } else {
-              submitTyped();
+              submitTyped({ guess: true });
             }
           } else if (e.key === "Escape") {
-            setOpen(false);
+            if (showList || showEmpty) {
+              // The standard combobox contract: the first Escape dismisses the
+              // list only. Without preventDefault it also reached the <dialog>
+              // and closed the whole sheet in one press.
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(false);
+              setActive(-1);
+            } else {
+              // Nothing left to dismiss here, so this Escape belongs to the
+              // dialog. Flag the blur that follows as an abandonment.
+              abandoned.current = true;
+            }
           } else if (
             e.key === "Backspace" &&
             query === "" &&
@@ -273,7 +350,7 @@ export function AirportInput({
         // lost. Without it the sheet opens with a hard black 2px rectangle
         // drawn tight around this input.
         data-no-focus-ring
-        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-black/40 disabled:cursor-not-allowed dark:placeholder:text-white/40"
+        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-muted disabled:cursor-not-allowed"
       />
       </div>
       {showList && (

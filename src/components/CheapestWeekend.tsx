@@ -106,7 +106,7 @@ export function CheapestWeekend({
       {/* The row used to appear under the cost table with nothing saying what
           it was: a second date and a second price, unlabelled, directly beneath
           the total for the trip you were reading about. */}
-      <h5 className="text-[10px] font-semibold tracking-[0.08em] text-black/50 uppercase dark:text-white/50">
+      <h5 className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">
         Cheaper on another weekend
       </h5>
       {/* The whole card is the link, and it never says "Book" — that word

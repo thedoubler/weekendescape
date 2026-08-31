@@ -98,7 +98,7 @@ export function DayBlocks({
 
   return (
     <div>
-      <div className="mb-1 text-[11px] text-black/40 dark:text-white/40">
+      <div className="mb-1 text-[11px] text-muted">
         {months.join(" – ")}
       </div>
       <div className="flex gap-1.5" role="list" aria-label="Trip days">
@@ -136,7 +136,7 @@ export function DayBlocks({
               // fill was a second device for the same fact.
               className="min-w-0 flex-1 rounded-lg bg-black/[0.04] px-1.5 py-2.5 text-center dark:bg-white/[0.06]"
             >
-              <div className="text-[10px] font-medium uppercase tracking-wider text-black/45 dark:text-white/45">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-muted">
                 {c.weekday}
               </div>
               <div className="mt-0.5 flex items-center justify-center gap-0.5 text-sm font-semibold leading-none">
@@ -151,7 +151,7 @@ export function DayBlocks({
                     isHomeHoliday
                       ? "border-transparent bg-amber-200/80 text-amber-900 dark:bg-amber-300/25 dark:text-amber-100"
                       : isDayOff
-                        ? "border-dashed border-black/25 text-black/50 dark:border-white/30 dark:text-white/55"
+                        ? "border-dashed border-black/25 text-muted dark:border-white/30"
                         : "invisible border-transparent"
                   }`}
                 >
@@ -204,7 +204,7 @@ export function DayBlocks({
                 </div>
               )}
               {c.role === "middle" && (
-                <div className="text-[11px] text-black/40 dark:text-white/40">
+                <div className="text-[11px] text-muted">
                   full day
                 </div>
               )}

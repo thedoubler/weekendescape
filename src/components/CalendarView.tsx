@@ -41,7 +41,24 @@ export function CalendarView({
     // which is the whole argument for a calendar over a list. One column on a
     // phone, where a seven-column month needs the full width to stay legible.
     <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
-      {months.map((m) => (
+      {months.map((m) =>
+        !m.hasDeals ? (
+          // A month inside the span with nothing in it. It keeps its heading and
+          // its place in the sequence, because the confusing version was the one
+          // where December was missing between November and January and the
+          // reader had to guess whether that meant "empty" or "broken".
+          // Deliberately not a ghost grid of thirty greyed numerals: drawing a
+          // whole month to say nothing is there gives the emptiest column the
+          // most ink.
+          <section key={m.key} className="flex flex-col gap-1.5">
+            <h3 className="text-sm font-semibold tracking-tight text-muted">
+              {m.title}
+            </h3>
+            <p className="flex min-h-[104px] items-center justify-center rounded-lg border border-dashed border-black/12 px-3 text-center text-[12px] text-muted dark:border-white/15">
+              No weekend flights this month.
+            </p>
+          </section>
+        ) : (
         <section key={m.key} className="flex flex-col gap-1.5">
           <h3 className="text-sm font-semibold tracking-tight">{m.title}</h3>
           <div className="grid grid-cols-7 gap-1">
@@ -120,7 +137,7 @@ export function CalendarView({
                         className={`text-[11px] leading-none tabular-nums ${
                           on
                             ? "opacity-70"
-                            : "text-black/45 dark:text-white/45"
+                            : "text-muted"
                         }`}
                       >
                         {days}
@@ -140,7 +157,7 @@ export function CalendarView({
                           calendar looks like one destination per weekend. */}
                       <span
                         className={`text-[10px] leading-none ${
-                          on ? "opacity-70" : "text-black/45 dark:text-white/45"
+                          on ? "opacity-70" : "text-muted"
                         }`}
                       >
                         {trips.length > 1 ? `+${trips.length - 1} more` : " "}
@@ -154,10 +171,20 @@ export function CalendarView({
             })}
           </div>
         </section>
-      ))}
-      <p className="col-span-full text-[11px] text-black/50 dark:text-white/50">
-        Each block is a weekend you could fly, showing the cheapest destination
-        and its fare in {currency}. Tap one to see only those trips.
+        )
+      )}
+      {/* Says the ONE thing the dialog header does not. The header already
+          carries "Every weekend you could fly. Tap one to see all its flights",
+          so the old version of this line repeated both halves and then closed
+          with "Tap one to see only those trips" — an instruction left over from
+          the inline calendar that filtered the board. Selection has populated
+          the panel on the right since this became a dialog, so that sentence
+          described behaviour the product no longer has. What is left is the
+          only fact neither the header nor the blocks state: what the number on
+          each block means. */}
+      <p className="col-span-full text-[11px] text-muted">
+        Each block shows that weekend’s cheapest destination and its fare in{" "}
+        {currency}.
       </p>
     </div>
   );

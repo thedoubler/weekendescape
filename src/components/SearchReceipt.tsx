@@ -100,28 +100,43 @@ export function SearchReceipt({
   // nothing.
   const openedWith = useRef<ReceiptValues | null>(null);
 
-  const close = useCallback(() => {
-    const before = openedWith.current;
-    openedWith.current = null;
-    setOpen(null);
-    if (!before) return;
-    const patch: Partial<ReceiptValues> = {};
-    if (before.style !== values.style) patch.style = values.style;
-    if (before.stopMode !== values.stopMode) patch.stopMode = values.stopMode;
-    if (before.adults !== values.adults) patch.adults = values.adults;
-    if (before.bridges !== values.bridges) patch.bridges = values.bridges;
-    if (Object.keys(patch).length > 0) onCommit(patch);
-  }, [values, onCommit]);
+  // Dismissal is the commit — EXCEPT for Escape, which is the one gesture that
+  // means the opposite everywhere else on the web. It used to run this same
+  // path, so cancelling an edit fired the search it was cancelling: tap "2
+  // adults", think better of it, press Escape, and the board reloads for two
+  // adults anyway. The popover edits live (that is what makes the label update
+  // as you pick), so backing out cannot just drop a pending patch — it has to
+  // put the opening values back.
+  const close = useCallback(
+    (commit = true) => {
+      const before = openedWith.current;
+      openedWith.current = null;
+      setOpen(null);
+      if (!before) return;
+      const diff: Partial<ReceiptValues> = {};
+      if (before.style !== values.style)
+        diff.style = commit ? values.style : before.style;
+      if (before.stopMode !== values.stopMode)
+        diff.stopMode = commit ? values.stopMode : before.stopMode;
+      if (before.adults !== values.adults)
+        diff.adults = commit ? values.adults : before.adults;
+      if (before.bridges !== values.bridges)
+        diff.bridges = commit ? values.bridges : before.bridges;
+      if (Object.keys(diff).length === 0) return;
+      // onChange rewrites the label without searching; onCommit reloads.
+      if (commit) onCommit(diff);
+      else onChange(diff);
+    },
+    [values, onChange, onCommit]
+  );
 
-  // Dismissal is the commit, so both routes out — Escape and a click anywhere
-  // else — have to run through the same path.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       if (!rowRef.current?.contains(e.target as Node)) close();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") close(false);
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -191,7 +206,7 @@ export function SearchReceipt({
           it answers the headline's "Pick your airport" directly, and
           "Searching" read as an activity still in progress over a board that
           is already the answer. */}
-      <span className="text-black/45 dark:text-white/45">From</span>
+      <span className="text-muted">From</span>
 
       {/* Origin is not a picker — it needs autocomplete, up to three chips and
           a location prompt — so it opens the sheet instead of a popover. */}
@@ -204,12 +219,24 @@ export function SearchReceipt({
         {originLabel}
       </button>
 
-      <Sep />
-      {facet("style", styleLabelOf(values.bridges ? "bridges" : values.style))}
-      <Sep />
-      {facet("stops", values.stopMode === "direct" ? "direct" : "any stops")}
-      <Sep />
-      {facet("adults", values.adults === 1 ? "1 adult" : `${values.adults} adults`)}
+      {/* Each separator travels with the value AFTER it, so a wrap can never
+          strand one at the end of a line. Measured at 390px, where the row
+          genuinely does not fit on one line: it broke as
+          "From Cluj-Napoca · Fri–Sun · direct ·" / "1 adult" — a dot pointing at
+          nothing, and a value that read as a fragment rather than a
+          continuation. Grouped, the break reads "· 1 adult". The orphan line
+          stays (four values will not fit a phone at 15px, and this row is
+          deliberately not shrunk); what goes away is the dangling mark. */}
+      {[
+        facet("style", styleLabelOf(values.bridges ? "bridges" : values.style)),
+        facet("stops", values.stopMode === "direct" ? "direct" : "any stops"),
+        facet("adults", values.adults === 1 ? "1 adult" : `${values.adults} adults`),
+      ].map((control, i) => (
+        <span key={i} className="inline-flex items-baseline gap-x-2.5">
+          <Sep />
+          {control}
+        </span>
+      ))}
 
       {open && (
         <Popover tailOffset={tailOffset}>
@@ -320,9 +347,17 @@ function Options<T extends string | number>({
    *  is doing the work. */
   hint?: { value: T; text: string };
 }) {
+  // The hint used to live in `title` and an aria-label, which meant a sighted
+  // touch user — most of them — could not reach it at all: there is no hover on
+  // a phone, and "Long weekends" names the result rather than the mechanism, so
+  // the one option that needs explaining was the one nobody could get explained.
+  // Now it is visible text, shown BEFORE the choice rather than after it, and
+  // tied to its option with aria-describedby so a screen reader still hears the
+  // two together without the label repeating the whole sentence.
+  const hintId = hint ? `receipt-hint-${String(hint.value)}` : undefined;
   return (
     <>
-      <h5 className="text-[10px] font-bold tracking-[0.08em] text-black/45 uppercase dark:text-white/45">
+      <h5 className="text-[11px] font-bold tracking-[0.08em] text-muted uppercase">
         {title}
       </h5>
       <div className="flex flex-wrap gap-1.5">
@@ -331,9 +366,8 @@ function Options<T extends string | number>({
             key={String(o.value)}
             type="button"
             aria-pressed={o.value === value}
-            title={hint && hint.value === o.value ? hint.text : undefined}
-            aria-label={
-              hint && hint.value === o.value ? `${o.label}. ${hint.text}` : undefined
+            aria-describedby={
+              hint && hint.value === o.value ? hintId : undefined
             }
             onClick={() => onPick(o.value)}
             className={`rounded-full border px-3 py-1.5 text-[12.5px] whitespace-nowrap transition-colors ${
@@ -346,6 +380,11 @@ function Options<T extends string | number>({
           </button>
         ))}
       </div>
+      {hint && (
+        <p id={hintId} className="text-[11px] leading-snug text-muted">
+          {hint.text}
+        </p>
+      )}
     </>
   );
 }

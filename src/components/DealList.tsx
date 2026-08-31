@@ -79,6 +79,7 @@ export function DealList({
   groupByMonth = false,
   splitShape,
   onClearFilters,
+  onRetry,
   onHover,
   hideStops,
 }: {
@@ -99,6 +100,10 @@ export function DealList({
   // bridge-days mode, where off-shape puentes are the whole point.
   splitShape?: WeekendStyle;
   onClearFilters?: () => void;
+  /** Runs the same search again. The error copy already names a cause and an
+   *  action ("check your connection and try again"); without this the only way
+   *  to act on it was to go and touch some other control. */
+  onRetry?: () => void;
   onHover?: (flyTo: string | null) => void;
   /** See DealCard.hideStops. */
   hideStops?: boolean;
@@ -115,7 +120,29 @@ export function DealList({
         ))}
       </div>
     );
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (error)
+    return (
+      // role="alert" because this replaces the board without moving focus —
+      // a screen-reader user otherwise sits in front of a page that simply
+      // stopped having results, with nothing spoken.
+      //
+      // red-700/red-400 rather than red-500: red-500 measures 3.76:1 on the
+      // light ground and fails AA for body text. The pair below is 6.47:1 in
+      // light and 6.54:1 in dark. The message is also not colour alone — it
+      // reads as a sentence and carries its own recovery button.
+      <div role="alert" className="flex flex-col items-start gap-3">
+        <p className="text-red-700 dark:text-red-400">{error}</p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-full border border-black/15 px-3.5 py-1.5 text-sm text-black/70 transition hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
+          >
+            Try again
+          </button>
+        )}
+      </div>
+    );
   if (deals.length === 0)
     return (
       <div className="flex flex-col items-start gap-3">
@@ -163,7 +190,7 @@ export function DealList({
               {/* "August" beside a bare "6" reads as August 6th — a date, in a
                   product whose every other number IS a date or a price. The
                   noun is what disambiguates it. */}
-              <span className="text-xs tabular-nums text-black/45 dark:text-white/45">
+              <span className="text-xs tabular-nums text-muted">
                 {section.deals.length} flight
                 {section.deals.length === 1 ? "" : "s"}
               </span>

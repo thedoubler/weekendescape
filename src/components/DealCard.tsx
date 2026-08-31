@@ -84,12 +84,12 @@ function Leg(props: LegInput & { hideDirect?: boolean }) {
           >
             {arrTime}
             {props.plusOne && (
-              <span className="align-super text-[9px] font-normal text-black/50 dark:text-white/50">
+              <span className="align-super text-[10px] font-medium text-muted">
                 +1
               </span>
             )}
           </time>
-          <span className="text-xs text-black/50 dark:text-white/50">
+          <span className="text-xs text-muted">
             {props.arrCode}
           </span>
         </span>
@@ -383,7 +383,7 @@ export function DealCard({
       // desktop viewport, so viewport breakpoints (sm:) are the wrong axis for
       // anything inside it. Every width-adaptive style below keys off this
       // container instead.
-      className={`@container/card group relative scroll-mt-16 overflow-hidden rounded-xl border p-4 transition duration-200 motion-safe:hover:-translate-y-0.5 ${
+      className={`@container/card group relative scroll-mt-[calc(var(--list-sticky-top,4rem)+0.75rem)] overflow-hidden rounded-xl border p-4 transition duration-200 motion-safe:hover:-translate-y-0.5 ${
         open
           ? "border-black/15 bg-white dark:border-white/20 dark:bg-white/[0.04]"
           : "border-black/[0.14] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-black/25 hover:shadow-md dark:border-white/[0.14] dark:shadow-none dark:hover:border-white/25"
@@ -439,7 +439,7 @@ export function DealCard({
             <span className="text-lg font-semibold leading-tight [overflow-wrap:anywhere] line-clamp-2">
               {deal.cityTo}
               {deal.countryTo && (
-                <span className="ml-1.5 text-sm font-normal text-black/45 dark:text-white/45">
+                <span className="ml-1.5 text-sm font-normal text-muted">
                   {deal.countryTo}
                 </span>
               )}
@@ -471,7 +471,7 @@ export function DealCard({
                 <span
                   className={
                     direct
-                      ? "text-black/45 dark:text-white/45"
+                      ? "text-muted"
                       : "font-medium text-black/70 dark:text-white/70"
                   }
                 >
@@ -520,7 +520,7 @@ export function DealCard({
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={open ? `Hide details for ${deal.cityTo}` : `Show details for ${deal.cityTo}`}
-          className="-mr-1 flex h-11 w-8 shrink-0 items-center justify-center self-start rounded-lg text-black/45 transition hover:bg-black/[0.05] hover:text-black dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+          className="-mr-1 flex h-11 w-8 shrink-0 items-center justify-center self-start rounded-lg text-muted transition hover:bg-black/[0.05] hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
         >
           <ChevronIcon
             className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -798,7 +798,7 @@ export function DealCard({
                 {weather.mode === "forecast" &&
                   weather.precipChance != null &&
                   weather.precipChance >= 20 && (
-                    <span className="text-black/45 dark:text-white/45">
+                    <span className="text-muted">
                       {" · "}
                       {weather.precipChance}% rain
                     </span>

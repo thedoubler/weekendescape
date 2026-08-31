@@ -42,3 +42,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 assets/.next/
+
+# Impeccable: shared config and critique snapshots are checked in; per-machine
+# state is not.
+.impeccable/config.local.json
+.impeccable/hook.cache.json

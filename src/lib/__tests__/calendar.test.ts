@@ -86,13 +86,29 @@ describe("dealsByWeekend", () => {
 });
 
 describe("calendarMonths", () => {
-  it("emits only months that have a deal", () => {
+  it("keeps an empty month in the span instead of deleting it", () => {
+    // December has no flights. Dropping it left the calendar reading
+    // "November, January", which reads as a bug rather than as an empty month —
+    // so the month stays, flagged, and the view says so in words.
     const ms = calendarMonths([
       deal("Milan", "2026-11-20", 33),
       deal("Rome", "2027-01-15", 90),
     ]);
-    expect(ms.map((m) => m.key)).toEqual(["2026-11", "2027-01"]);
+    expect(ms.map((m) => m.key)).toEqual(["2026-11", "2026-12", "2027-01"]);
+    expect(ms.map((m) => m.hasDeals)).toEqual([true, false, true]);
     expect(ms[0].title).toBe("November 2026");
+    expect(ms[1].title).toBe("December 2026");
+  });
+
+  it("spans no further than the last month with a deal", () => {
+    // The span ends where the data ends: a sequence that stops reads as the end
+    // of the results, while a hole in the middle reads as something broken.
+    const ms = calendarMonths([deal("Milan", "2026-11-20", 33)]);
+    expect(ms.map((m) => m.key)).toEqual(["2026-11"]);
+  });
+
+  it("returns nothing when there are no deals at all", () => {
+    expect(calendarMonths([])).toEqual([]);
   });
 
   it("lays out Monday-first with every week exactly 7 cells", () => {

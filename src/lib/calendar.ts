@@ -80,13 +80,26 @@ export interface CalendarMonth {
   title: string;
   /** Always 7 wide. Pad cells carry date "". */
   weeks: CalendarDay[][];
+  /** False for a month inside the span that has no flights at all. */
+  hasDeals: boolean;
 }
 
 /**
- * One grid per month that has at least one deal. Weeks run Monday-first, which
- * is what the European audience this board serves reads — and it has the useful
- * side effect of putting Sat and Sun adjacent at the end of the row, so a
- * weekend never breaks across two lines.
+ * One grid per month across the span the results cover, Monday-first — which is
+ * what puts Sat and Sun adjacent at the end of every row, so a weekend never
+ * breaks across two lines.
+ *
+ * EVERY month between the first and last with deals is emitted, including the
+ * ones with none. Emitting only months that had deals silently deleted the
+ * others: a six-month board came back "September, October, November, January"
+ * and December was simply not there. Nothing on screen could tell you whether
+ * the month was empty or the calendar was broken, and the answer a reader most
+ * needs — "no, there is genuinely nothing that month" — was the one thing the
+ * grid could not say. A month with no flights now says so in its own words.
+ *
+ * The span stops at the last month WITH deals rather than running to the end of
+ * the search window: a sequence that ends is read as the end of the data, while
+ * a hole in the middle is read as a bug.
  */
 export function calendarMonths(deals: Deal[]): CalendarMonth[] {
   const present = new Set<string>();
@@ -94,8 +107,18 @@ export function calendarMonths(deals: Deal[]): CalendarMonth[] {
     const ms = utcOf(d.outDepart);
     if (ms !== null) present.add(isoOf(ms).slice(0, 7));
   }
-  return [...present]
-    .sort()
+  if (present.size === 0) return [];
+  const sorted = [...present].sort();
+  const span: string[] = [];
+  const [y0, m0] = sorted[0].split("-").map(Number);
+  const last = sorted[sorted.length - 1];
+  for (let i = 0; i < 240; i++) {
+    const d = new Date(Date.UTC(y0, m0 - 1 + i, 1));
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    span.push(key);
+    if (key === last) break;
+  }
+  return span
     .map((key) => {
       const [y, m] = key.split("-").map(Number);
       const first = Date.UTC(y, m - 1, 1);
@@ -111,6 +134,11 @@ export function calendarMonths(deals: Deal[]): CalendarMonth[] {
       while (cells.length % 7) cells.push({ date: "", day: 0, weekend: "" });
       const weeks: CalendarDay[][] = [];
       for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-      return { key, title: `${MO_FULL[m - 1]} ${y}`, weeks };
+      return {
+        key,
+        title: `${MO_FULL[m - 1]} ${y}`,
+        weeks,
+        hasDeals: present.has(key),
+      };
     });
 }

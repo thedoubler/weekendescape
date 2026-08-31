@@ -319,7 +319,7 @@ describe("Home page", () => {
     // alongside it. Like every facet, it commits when the popover closes.
     fireEvent.click(screen.getByRole("button", { name: /^Fri–Sun/ }));
     fireEvent.click(screen.getByRole("button", { name: /^Long weekends/ }));
-    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.mouseDown(document.body);
 
     await waitFor(() => expect(screen.getByText("Searching…")).toBeInTheDocument());
     // Scoped to the results heading — the switch itself says "Long weekends"
@@ -382,9 +382,36 @@ describe("Home page", () => {
     // Still nothing: the popover is open, so the edit is not finished.
     expect(weekends().length).toBe(before);
 
-    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.mouseDown(document.body);
     await waitFor(() => expect(weekends().length).toBe(before + 1));
     expect(String(weekends()[before][0])).toContain("adults=4");
+  });
+
+  it("Escape abandons a receipt edit instead of searching for it", async () => {
+    // Dismissal is the commit, but Escape is not a dismissal — everywhere else
+    // on the web it means "undo what I just did". It used to run the commit
+    // path, so backing out of "4 adults" fired the search for four adults and
+    // reloaded the board with the change the user had just cancelled.
+    grantGeolocation();
+    const fetchMock = mockFetch();
+    vi.spyOn(global, "fetch").mockImplementation(fetchMock as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+    const weekends = () =>
+      fetchMock.mock.calls.filter((c) => String(c[0]).includes("/api/weekends"));
+    const before = weekends().length;
+
+    fireEvent.click(screen.getByRole("button", { name: /^1 adult/ }));
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    // No search, and the label is back to what it was — a cancelled edit must
+    // leave no trace, not just skip the fetch.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^1 adult/ })).toBeInTheDocument()
+    );
+    expect(weekends().length).toBe(before);
   });
 
   it("shows the form when there is no airport yet", async () => {

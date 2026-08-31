@@ -69,6 +69,21 @@ export default function Home() {
   // that only need one (map centring, "cheapest weekend" lookups).
   const [origins, setOrigins] = useState<string[]>([]);
   const home = origins[0] ?? "";
+  // A synchronous mirror of `origins`, for one reader: the origin sheet's close
+  // handler. Done resolves the text field and then closes the dialog inside the
+  // same click, so the close handler runs with a render closure taken BEFORE
+  // that commit — it compared the airport list against its own stale copy, saw
+  // no change, and skipped the search. The receipt then named an airport the
+  // board had never searched. State stays the source of truth for rendering;
+  // this only answers "what is committed right now".
+  const originsRef = useRef(origins);
+  useEffect(() => {
+    originsRef.current = origins;
+  }, [origins]);
+  function applyOrigins(next: string[]) {
+    originsRef.current = next;
+    setOrigins(next);
+  }
   const [style, setStyle] = useState<WeekendStyle>("strict");
   // The search window is fixed at the widest tier. It was a 1/2/3/6 control
   // until it was measured: 6 months costs +45ms over 3 (same upstream call,
@@ -462,8 +477,15 @@ export default function Home() {
       // also what reduced-motion users always got, and what Google's own
       // grid-to-result jumps do.
       requestAnimationFrame(() => {
+        // "start", not "center". Centring a card taller than the viewport — any
+        // expanded one — puts its top ABOVE the top of the screen, so clicking a
+        // price on the map landed you in the middle of a card whose city and
+        // fare were scrolled off: the answer to "which one is this?" was the one
+        // part you could not see. Aligning to the top and letting the card's own
+        // scroll-margin clear the pinned bar (it reads the same measured height
+        // the bar publishes) puts the title exactly under the bar every time.
         document.getElementById(id)?.scrollIntoView({
-          block: "center",
+          block: "start",
           behavior: "auto",
         });
       });
@@ -615,14 +637,17 @@ export default function Home() {
     const before = originsAtOpen.current;
     originsAtOpen.current = null;
     if (!before) return;
-    if ([...before].sort().join() === [...origins].sort().join()) return;
-    if (origins.length === 0) {
+    // The ref, not the state: see the note where it is declared. Reading
+    // `origins` here missed anything the field committed on the way out.
+    const after = originsRef.current;
+    if ([...before].sort().join() === [...after].sort().join()) return;
+    if (after.length === 0) {
       // Emptied and dismissed: put back what was searched rather than leaving
       // the board showing results for an airport the receipt no longer names.
-      setOrigins(before);
+      applyOrigins(before);
       return;
     }
-    runSearch(origins);
+    runSearch(after);
   }
 
   // Widen the search window a tier and fold the wider results into the list in
@@ -695,7 +720,7 @@ export default function Home() {
             the reader's job and ours still separate. */}
         <p className="mt-0.5 text-[17px] leading-snug font-semibold tracking-[-0.01em] text-balance sm:text-[20px]">
           Pick your airport.{" "}
-          <span className="font-medium text-black/45 dark:text-white/45">
+          <span className="font-medium text-muted">
             We&rsquo;ll find the weekend.
           </span>
         </p>
@@ -1047,7 +1072,18 @@ export default function Home() {
               scrolled off, because every set filter lights its own trigger
               ("✓ Europe") in the bar that IS pinned. */}
           {searched && (
-            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <div
+              // The board replaces itself without moving focus, so for a screen
+              // reader nothing happened: "Searching…" → "14 flights" → "4 of 14
+              // flights" all landed silently, and a filter that emptied the list
+              // was indistinguishable from one that did nothing. This line is
+              // already the place that answers "did it work", so it is the right
+              // live region. Polite, not assertive — it reports a result the
+              // user asked for, it does not interrupt.
+              role="status"
+              aria-live="polite"
+              className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1"
+            >
               <span className="text-[15px] font-semibold tracking-tight tabular-nums">
               {loading
                 ? "Searching…"
@@ -1162,6 +1198,10 @@ export default function Home() {
               : (applied?.style ?? style)
           }
           onClearFilters={activeFilters > 0 ? clearAll : undefined}
+          // The same search again, with the settings that produced the error —
+          // runSearch reads the live form through refs, so there is nothing to
+          // reconstruct here.
+          onRetry={() => runSearch(originsRef.current)}
           // Only while the map is on screen: otherwise every card in a 60-row
           // list would set state on mouse-move for nothing to look at.
           onHover={showMap ? setHoveredTo : undefined}
@@ -1205,8 +1245,13 @@ export default function Home() {
           Every outbound booking link here is affiliate — Kiwi, Booking.com and
           GetYourGuide — so stating it once, where it can't be mistaken for part
           of a card, is both more honest and less noisy. */}
-      <footer className="mt-2 flex flex-col gap-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
-        <p>
+      <footer className="mt-2 flex flex-col gap-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-muted dark:border-white/10">
+        {/* Capped at a readable measure. The board is max-w-4xl, and this
+            paragraph took the whole of it: 141 characters a line at desktop
+            width, measured — roughly double the 65–75 a reader tracks without
+            losing the return sweep. It is the one paragraph on the page anybody
+            reads as prose, and the one that most needs to be believed. */}
+        <p className="max-w-prose">
           Flights, stays and activities are booked on Kiwi.com, Booking.com and
           GetYourGuide. We may earn a commission from those bookings, at no extra
           cost to you. Prices and availability are set by them, not by us.
@@ -1229,7 +1274,7 @@ export default function Home() {
       <OriginSheet
         open={sheetOpen}
         origins={origins}
-        onChange={setOrigins}
+        onChange={applyOrigins}
         onDetect={() => {
           setSheetOpen(false);
           originsAtOpen.current = null;

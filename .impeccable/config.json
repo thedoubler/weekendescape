@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "src/components/SearchReceipt.tsx"
+        ],
+        "createdAt": "2026-08-31T19:36:45.994Z",
+        "reason": "Claude, verified in source: the receipt's facet triggers are inline TEXT buttons whose 'border-b-2 border-dotted border-amber-700' is a dotted UNDERLINE marking an editable value, not a thick accent border on a rounded card. Scoped to this file only. (An earlier value-scoped entry was inert: this rule is not value-extractable.)"
+      }
+    ]
+  }
+}

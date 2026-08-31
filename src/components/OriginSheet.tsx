@@ -27,6 +27,15 @@ interface Props {
 export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Resolves text still sitting in the field. Only the explicit ways out call
+  // it: Done means "use what I typed", while Escape and the backdrop mean the
+  // opposite and must not turn a half-typed word into an airport.
+  const flushInput = useRef<(() => void) | null>(null);
+
+  function done() {
+    flushInput.current?.();
+    ref.current?.close();
+  }
 
   useEffect(() => {
     const d = ref.current;
@@ -101,7 +110,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close"
-            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-black/45 transition hover:bg-black/5 hover:text-black sm:hidden dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
           >
             <span aria-hidden>✕</span>
           </button>
@@ -121,6 +130,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
                 : "Add another…"
           }
           inputRef={inputRef}
+          flushRef={flushInput}
           autoFocus
         />
 
@@ -140,7 +150,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
           <button
             type="button"
             disabled={origins.length === 0}
-            onClick={() => ref.current?.close()}
+            onClick={done}
             // h-12 on a phone clears the 44px tap floor; h-10 from `sm` up.
             className="inline-flex h-12 w-full items-center justify-center rounded-full bg-neutral-900 px-6 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-40 sm:h-10 sm:w-auto dark:bg-white dark:text-black"
           >

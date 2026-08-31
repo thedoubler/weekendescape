@@ -11,11 +11,24 @@
   --foreground: #171717;
   /* Warm brand glow behind the header — subtle, theme-aware. */
   --glow: rgba(249, 115, 22, 0.08);
+
+  /* Secondary text, one token per theme.
+     The board used to tint every muted string with an alpha of the foreground
+     — black/40, /45, /50 — and the ramp was tuned on the dark ground, where
+     white/45 measures 4.52:1, then reused in light, where black/45 measures
+     3.36:1. Same class, opposite verdicts: ~27 informational strings failed
+     WCAG 1.4.3 in light mode only (day-strip labels, leg durations, "in N
+     days", the footer). An alpha cannot be the fix because the two grounds
+     need different distances from their background, so this is a real token
+     with a real value on each side. Measured against both the page ground and
+     the translucent card ground above it. */
+  --muted: #5f6368; /* 6.05:1 on #fff, 5.55:1 on the light card */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
   --font-sans: var(--font-space-grotesk);
   --font-serif: var(--font-instrument-serif);
 }
@@ -29,7 +42,17 @@
     --background: #14161c;
     --foreground: #e7e8ec;
     --glow: rgba(249, 115, 22, 0.06);
+    --muted: #a3a8b3; /* 7.59:1 on the base ground, 6.51:1 on the card */
   }
+}
+
+/* The explicit-choice branches the wordmark already needs, so a page with
+   data-theme set gets the matching muted value rather than the light default. */
+:root[data-theme="dark"] {
+  --muted: #a3a8b3;
+}
+:root[data-theme="light"] {
+  --muted: #5f6368;
 }
 
 /* The base colour lives on <html> so the fixed glow layer below can sit above

@@ -641,7 +641,7 @@ export default function DealsMapGL({
                 type="button"
                 onClick={() => setPicked(null)}
                 aria-label="Close destination details"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-black/50 transition hover:bg-black/[0.06] hover:text-black dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted transition hover:bg-black/[0.06] hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
               >
                 ✕
               </button>
