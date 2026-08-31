@@ -37,6 +37,12 @@ future timeline. Built with Next.js + the Kiwi Tequila API.
 
 `npm test` runs the Vitest suite.
 
+## Before launch
+
+See [`docs/pre-launch.md`](docs/pre-launch.md) — deploy tracking, rate limiting, and
+`NEXT_PUBLIC_SITE_URL` are the three that actually block, plus the rule that
+`NEXT_PUBLIC_*` variables are build-time and can never be runtime secrets.
+
 ## What's next
 
 Tracked work, roughly in the order it is worth doing. Detail and file:line
