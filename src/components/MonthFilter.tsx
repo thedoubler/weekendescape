@@ -4,10 +4,16 @@ import { pillClass } from "@/lib/pill";
 export function MonthFilter({
   months,
   selected,
+  counts,
   onToggle,
 }: {
   months: string[];
   selected: string[];
+  /** Deals this month would surface GIVEN the region/price already chosen.
+   *  NOT rendered — see the house rule in docs/ideas-and-research.md. It is
+   *  read only to decide which options are dead, so the pill can grey out
+   *  instead of promising a result it cannot deliver. */
+  counts?: Record<string, number>;
   onToggle: (m: string) => void;
 }) {
   if (months.length === 0) return null;
@@ -31,18 +37,26 @@ export function MonthFilter({
       aria-label="Month filter"
       className="flex flex-wrap gap-1"
     >
-      {months.map((m) => (
-        <button
-          key={m}
-          type="button"
-          aria-pressed={sel.has(m)}
-          onClick={() => onToggle(m)}
-          className={pillClass(sel.has(m))}
-        >
-          {sel.has(m) && <span aria-hidden>✓ </span>}
-          {monthShort(m)}
-        </button>
-      ))}
+      {months.map((m) => {
+        const on = sel.has(m);
+        const n = counts?.[m];
+        // A SELECTED pill is never disabled even at zero, or a filter that
+        // narrows to nothing could not be undone.
+        const dead = !on && n === 0;
+        return (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={on}
+            disabled={dead}
+            onClick={() => onToggle(m)}
+            className={pillClass(on, dead)}
+          >
+            {on && <span aria-hidden>✓ </span>}
+            {monthShort(m)}
+          </button>
+        );
+      })}
     </div>
   );
 }

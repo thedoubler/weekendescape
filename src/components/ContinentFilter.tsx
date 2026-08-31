@@ -8,6 +8,9 @@ export function ContinentFilter({
 }: {
   continents: string[];
   selected: string[];
+  /** Read to decide which options are dead, never rendered — see the house
+   *  rule in docs/ideas-and-research.md. This row DID print "Europe 13" until
+   *  the rule landed. */
   counts?: Record<string, number>;
   onToggle: (c: string) => void;
 }) {
@@ -20,23 +23,25 @@ export function ContinentFilter({
       aria-label="Continent filter"
       className="flex flex-wrap gap-1"
     >
-      {continents.map((c) => (
-        <button
-          key={c}
-          type="button"
-          aria-pressed={sel.has(c)}
-          onClick={() => onToggle(c)}
-          className={pillClass(sel.has(c))}
-        >
-          {sel.has(c) && <span aria-hidden>✓ </span>}
-          {c}
-          {counts?.[c] != null && (
-            <span aria-hidden className="ml-1.5 opacity-55">
-              {counts[c]}
-            </span>
-          )}
-        </button>
-      ))}
+      {continents.map((c) => {
+        const on = sel.has(c);
+        const n = counts?.[c];
+        // See MonthFilter: a selected pill stays live so it can be turned off.
+        const dead = !on && n === 0;
+        return (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={on}
+            disabled={dead}
+            onClick={() => onToggle(c)}
+            className={pillClass(on, dead)}
+          >
+            {on && <span aria-hidden>✓ </span>}
+            {c}
+          </button>
+        );
+      })}
     </div>
   );
 }

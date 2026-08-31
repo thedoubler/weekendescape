@@ -5,6 +5,42 @@ what's next and record research so we don't re-derive it.
 
 ---
 
+## House rules
+
+Decisions that apply everywhere, not just where they were first made.
+
+### Filter chips never print a result count
+
+A filter option shows its **value and nothing else** — `Sep`, not `Sep 1`;
+`Europe`, not `Europe 13`.
+
+**Why.** A number beside a value on this board is ambiguous by default: every
+other number on the page is a date or a price, so `Sep 1` reads as the 1st of
+September before it reads as "one flight". It is the same objection that
+removed `Month 6` from the facet triggers — the count answers a question nobody
+asked, in a notation already spoken for.
+
+**What replaces it.** The count is still *computed*, and it still does the work
+that matters: an option that would return nothing is **disabled** — dimmed, no
+hover, no pointer — so the board never walks you into an empty result. The
+signal survives; the noise does not.
+
+**The counting rule itself.** A facet's counts are computed over the set
+filtered by all the OTHER facets, never by itself. Excluding its own facet is
+what lets an OR-multi-select stay widenable, and what makes the number mean
+"how many more this would add". Both maps are seeded with every option at zero
+first — a missing key is `undefined`, which is not `0`, and an option that
+counts `undefined` stays wrongly enabled.
+
+*Observed before this landed:* with `Sep` selected the Region row still read
+`Europe 13 · Africa 1 · Asia 1` — the whole 15-deal board — while the list
+showed 2. Tapping `Asia 1` produced `0 of 15 flights`.
+
+Enforced by `counts a facet against the OTHER active facets, and disables dead
+options` in `src/app/__tests__/page.test.tsx`.
+
+---
+
 ## Roadmap — what else we could build
 
 Roughly ordered by leverage. Items marked ✅ shipped this session.
