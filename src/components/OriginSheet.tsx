@@ -58,20 +58,53 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
         // The backdrop is the dialog element itself; anything inside is a child.
         if (e.target === ref.current) ref.current?.close();
       }}
-      // Bottom sheet on a phone, where the bottom edge is where the thumb is.
+      // FULL SCREEN on a phone, centred modal from `sm` up.
+      //
+      // It was a bottom sheet on mobile, sized to its content. Choosing an
+      // airport is a search-and-pick task: the field wants the keyboard, the
+      // suggestion list wants room, and a sheet that owns only the lower third
+      // of the screen gives the list nowhere to go once the keyboard is up.
+      // Google's mobile flight search takes the whole screen for exactly this
+      // step, which is the reference this follows.
+      //
+      // `h-dvh`, not `h-screen`: on mobile Safari `100vh` is the viewport with
+      // the browser chrome hidden, so a full-height dialog is taller than what
+      // you can actually see and the footer sits below the fold.
+      //
       // CENTRED from `sm` up: `mt-auto` pinned it to the bottom of the desktop
       // window too, which put a 278px dialog 421px down a 723px viewport with
       // 24px under it — it read as something sliding off the screen rather than
       // as a modal. `sm:m-auto` restores the UA's own centring.
-      className="m-0 mt-auto w-full max-w-none rounded-t-2xl border-t border-black/10 bg-white p-0 text-black backdrop:bg-black/45 sm:m-auto sm:max-w-md sm:rounded-2xl sm:border dark:border-white/15 dark:bg-[#1b1e26] dark:text-white"
+      // Written DESKTOP-FIRST with max-sm: overrides, not mobile-first with sm:
+      // ones. Mobile-first put `h-dvh` in the base layer and `sm:h-auto` could
+      // not reliably take it back — the desktop dialog came out 690px tall with
+      // a field at the top and empty space under it. Scoping every full-screen
+      // rule to max-sm means the desktop dialog is simply never told to be tall.
+      className="m-auto max-w-md rounded-2xl border border-black/10 bg-white p-0 text-black backdrop:bg-black/45 max-sm:m-0 max-sm:h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0 dark:border-white/15 dark:bg-[#1b1e26] dark:text-white"
     >
-      <div className="flex flex-col gap-3.5 p-4">
-        <div aria-hidden className="mx-auto h-1 w-9 rounded-full bg-black/10 dark:bg-white/15" />
-        <div>
-          <h2 className="text-base font-semibold tracking-tight">Flying from</h2>
-          <p className="mt-0.5 text-[12.5px] text-black/55 dark:text-white/55">
-            Up to {MAX_ORIGINS} airports. Closing this reloads the board.
-          </p>
+      {/* h-full + flex-col so the footer can sit at the bottom of a full-screen
+          phone dialog while the middle scrolls. On desktop the dialog is
+          content-sized again, so this collapses to nothing. */}
+      <div className="flex flex-col gap-3.5 p-4 max-sm:h-full max-sm:overflow-y-auto">
+        {/* The drag handle is a bottom-sheet affordance and would be a lie on a
+            full-screen dialog, so below `sm` the way out is a real labelled
+            button instead. Escape and the backdrop still work everywhere. */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight">Flying from</h2>
+            <p className="mt-0.5 text-[12.5px] text-black/55 dark:text-white/55">
+              Up to {MAX_ORIGINS} airports. Closing this reloads the board.
+            </p>
+          </div>
+          {/* -m-2 p-2 keeps the visual size while giving it a 44px tap target. */}
+          <button
+            type="button"
+            onClick={() => ref.current?.close()}
+            aria-label="Close"
+            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-black/45 transition hover:bg-black/5 hover:text-black sm:hidden dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <span aria-hidden>✕</span>
+          </button>
         </div>
 
         <AirportInput
@@ -100,12 +133,16 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
           Find my airport
         </button>
 
-        <div className="flex items-center justify-end border-t border-black/[0.07] pt-3 dark:border-white/10">
+        {/* mt-auto pushes the footer to the bottom of the full-screen phone
+            dialog; with a content-sized desktop dialog there is no free space
+            for it to take, so it sits directly under the content as before. */}
+        <div className="flex items-center justify-end border-t border-black/[0.07] pt-3 max-sm:mt-auto dark:border-white/10">
           <button
             type="button"
             disabled={origins.length === 0}
             onClick={() => ref.current?.close()}
-            className="inline-flex h-10 items-center rounded-full bg-neutral-900 px-6 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-40 dark:bg-white dark:text-black"
+            // h-12 on a phone clears the 44px tap floor; h-10 from `sm` up.
+            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-neutral-900 px-6 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-40 sm:h-10 sm:w-auto dark:bg-white dark:text-black"
           >
             Done
           </button>

@@ -181,7 +181,14 @@ export function AirportInput({
         // White rather than a grey wash: on the panel's tinted card, a filled
         // field read as disabled. The accent is spent here, on focus, where it
         // means something — the board itself is deliberately neutral.
-        className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition focus-within:border-orange-400/70 dark:border-white/20 dark:bg-white/[0.07] dark:focus-within:border-orange-400/60"
+        // NO focus ring, by request — the accent halo that replaced the black
+        // rectangle was still too loud for a field that is autofocused inside
+        // a one-field dialog. The caret is the focus indicator here: the sheet
+        // has a single input, so "which field am I in" has only one answer.
+        // The suppression of the global outline (focus-visible:outline-none on
+        // the input + the @layer fix in globals.css) is what keeps this from
+        // regressing to the double ring it once had.
+        className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition dark:border-white/20 dark:bg-white/[0.07]"
       >
         <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-black/35 dark:text-white/50" />
         {chips.map((code) => (
@@ -261,6 +268,11 @@ export function AirportInput({
         // Scoped to a modal dialog the user just opened in order to type into,
         // which is the one place autofocus is correct.
         autoFocus={autoFocus}
+        // The attribute, not a class, is what turns the global focus outline
+        // off — see the rule in globals.css for why the class-based attempts
+        // lost. Without it the sheet opens with a hard black 2px rectangle
+        // drawn tight around this input.
+        data-no-focus-ring
         className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-black/40 disabled:cursor-not-allowed dark:placeholder:text-white/40"
       />
       </div>

@@ -64,15 +64,38 @@ body::before {
    through but not seen, which is WCAG 2.4.7 failed across the whole surface.
    Tailwind's preflight resets the UA outline and nothing put one back.
 
-   :where() so it lands at zero specificity — any component that wants its own
-   treatment overrides it with a plain class, no !important needed. The outline
-   uses --foreground (≈15:1 on either ground, and it stays visible on the solid
-   black/white fill of a selected chip because the 2px offset puts it on the
-   page rather than on the control). :focus-visible, so a mouse click never
-   draws it. Outlines follow border-radius automatically, so pills stay round. */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+   The outline uses --foreground (≈15:1 on either ground, and it stays visible
+   on the solid black/white fill of a selected chip because the 2px offset puts
+   it on the page rather than on the control). :focus-visible, so a mouse click
+   never draws it. Outlines follow border-radius automatically, so pills stay
+   round.
+
+   OPTING OUT of this rule takes the data-no-focus-ring attribute, not a class.
+   Two class-based routes were tried and both failed for cascade reasons a
+   component author cannot see. `focus-visible:outline-none` lost because this
+   rule was unlayered while Tailwind v4 puts every utility in @layer utilities,
+   and unlayered CSS beats layered CSS at any specificity. Wrapping this rule in
+   @layer base fixed that in the dev session that applied it — and then a
+   rebuild served the rule hoisted back to the top level (verified in the
+   emitted chunk), and the black rectangle returned. The attribute guard is
+   build-proof: the rule itself refuses the element, so no cascade contest ever
+   happens. The extra :not() sits inside :where() to keep zero specificity. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible:where(:not([data-no-focus-ring])) {
   outline: 2px solid var(--foreground);
   outline-offset: 2px;
+}
+
+/* While any dialog is open, the page behind it must not scroll. The top layer
+   gives a modal <dialog> everything EXCEPT this: wheel and touch input that
+   its own scrollable areas do not consume falls through and scrolls the board
+   underneath — observed as "scrolling in the calendar scrolls the list behind
+   it". Locking the html scroller (the actual viewport scroller; body would
+   become a scroll container again, see the body note in layout.tsx) closes
+   that hole for every dialog at once — Dates, the origin sheet, whatever
+   comes next. :has() keeps it declarative: no JS bookkeeping to forget when a
+   second dialog can be open. */
+html:has(dialog[open]) {
+  overflow: hidden;
 }
 
 /* Gentle reveal for content that replaces the first-load spinner. */
@@ -129,9 +152,9 @@ body::before {
   }
 }
 
-/* The wordmark is a portmanteau — s[ho]rt[liday] — and the orange letters
-   spell "holiday" hidden inside "short". They used to be coloured from the
-   first frame, which shows the result but not the trick. */
+/* The wordmark splits on the dot — weekend[.flights] — and the accent takes
+   the TLD. It used to be coloured from the first frame, which shows the
+   result but not the arrival. */
 @keyframes wordmarkReveal {
   from {
     color: inherit;
@@ -145,12 +168,6 @@ body::before {
   --wordmark-accent: #ea580c; /* orange-600 — 4.5:1 on white; #f97316 fails */
   color: var(--wordmark-accent);
   animation: wordmarkReveal 520ms cubic-bezier(0.2, 0.6, 0.2, 1) 260ms both;
-}
-
-/* The second run lands after the first, so it reads left to right as one word
-   surfacing rather than both halves lighting at once. */
-.wordmark-hi-2 {
-  animation-delay: 560ms;
 }
 
 @media (prefers-color-scheme: dark) {
