@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { siteUrl } from "@/app/layout";
+import { siteUrl } from "@/lib/site";
 
 // Preview deployments must not be indexed. Vercel gives every branch a public
 // URL, and without this they compete with production for the same queries and

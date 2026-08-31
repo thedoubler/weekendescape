@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SITE_NAME } from "@/app/layout";
+import { SITE_NAME } from "@/lib/site";
 
 // One page carrying About + how it works + affiliate disclosure + privacy +
 // contact. Deliberately NOT a marketing page: the board sells itself, and a

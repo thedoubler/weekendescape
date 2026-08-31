@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { siteUrl } from "@/app/layout";
+import { siteUrl } from "@/lib/site";
 
 // One entry, because there is exactly one indexable page. This stays honest
 // rather than padded: query-string variants (`?from=BCN`) are the SAME page

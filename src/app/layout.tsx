@@ -16,19 +16,7 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
 });
 
-// Absolute base for OG image URLs. Prefers an explicit env var, then Vercel's
-// stable production domain, else localhost in dev.
-export const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "http://localhost:3000");
-
-// The product is called weekend.flights — the name is the pitch and the
-// address at once. It has to match the header everywhere it is quoted back at
-// a reader: tab title, search result, link preview, share card. Keep the dot
-// lowercase and unspaced; it is part of the name, not punctuation around it.
-export const SITE_NAME = "weekend.flights";
+import { siteUrl, SITE_NAME } from "@/lib/site";
 const title = `${SITE_NAME} — cheapest weekend flights`;
 const description =
   "Find the cheapest weekend round-trips from your home airport.";

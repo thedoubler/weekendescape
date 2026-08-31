@@ -47,3 +47,7 @@ assets/.next/
 # state is not.
 .impeccable/config.local.json
 .impeccable/hook.cache.json
+
+# Cloudflare / OpenNext build output
+.open-next/
+.wrangler/
