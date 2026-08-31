@@ -76,9 +76,12 @@ export default function PlaceLinks({
   // themselves were 16px, which is below the size at which a brand mark is
   // recognisable at a glance.
   const base =
-    "flex h-11 w-11 items-center justify-center rounded-full text-black/40 transition hover:bg-black/[0.06] sm:h-9 sm:w-9 dark:text-white/45 dark:hover:bg-white/10";
+    // @2xl/card, not sm:: sized by the CARD these sit in, not the viewport.
+    // In the 420px Dates dialog on a desktop, sm: matched and dropped these to
+    // 36px targets inside what is effectively a phone-width panel.
+    "flex h-11 w-11 items-center justify-center rounded-full text-black/40 transition hover:bg-black/[0.06] @2xl/card:h-9 @2xl/card:w-9 dark:text-white/45 dark:hover:bg-white/10";
   return (
-    <div className="-my-2 flex items-center gap-0.5 sm:-my-1">
+    <div className="-my-2 flex items-center gap-0.5 @2xl/card:-my-1">
       <a
         href={YOUTUBE(city, country)}
         target="_blank"

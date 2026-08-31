@@ -63,6 +63,11 @@ export function styleLabelOf(v: StyleChoice): string {
 
 interface Props {
   origins: string[];
+  /** IATA → city in words ("CLJ" → "Cluj-Napoca"), harvested from the deals
+   *  the server sent back — cityFrom is resolved server-side, so no airport
+   *  table has to reach the client bundle. Codes are an aviation dialect;
+   *  people fly from cities. Falls back to the code until deals land. */
+  originCities?: Record<string, string>;
   values: ReceiptValues;
   /** Live edit — updates the label immediately, without searching. */
   onChange: (patch: Partial<ReceiptValues>) => void;
@@ -73,16 +78,22 @@ interface Props {
 
 export function SearchReceipt({
   origins,
+  originCities,
   values,
   onChange,
   onCommit,
   onEditOrigins,
 }: Props) {
   const [open, setOpen] = useState<FacetKey | null>(null);
-  // Where the popover's tail should point. Read from the button at click time
-  // rather than in a layout effect, so the tail never renders in the wrong
-  // place for a frame.
-  const [tailX, setTailX] = useState(0);
+  // Where the popover's tail should point, as a signed pixel offset from the
+  // ROW'S CENTRE. Read from the button at click time rather than in a layout
+  // effect, so the tail never renders in the wrong place for a frame.
+  //
+  // Measured from the centre rather than the left edge because the popover is
+  // now centred on the row (the whole masthead is centred). Storing the offset
+  // from the centre means the tail can be placed with `calc(50% + offset)` and
+  // never needs the popover's own width measured.
+  const [tailOffset, setTailOffset] = useState(0);
   const rowRef = useRef<HTMLDivElement>(null);
   // The values as they were when the popover opened. Closing compares against
   // this, so opening a facet and picking what was already selected costs
@@ -131,18 +142,21 @@ export function SearchReceipt({
     const row = rowRef.current;
     if (row) {
       const r = btn.getBoundingClientRect();
-      setTailX(r.left - row.getBoundingClientRect().left + r.width / 2);
+      const rowRect = row.getBoundingClientRect();
+      const btnCentre = r.left - rowRect.left + r.width / 2;
+      setTailOffset(btnCentre - rowRect.width / 2);
     }
     openedWith.current = { ...values };
     setOpen(key);
   }
 
+  const cityOf = (code: string) => originCities?.[code] ?? code;
   const originLabel =
     origins.length === 0
       ? "an airport"
       : origins.length === 1
-        ? origins[0]
-        : origins.join(" + ");
+        ? cityOf(origins[0])
+        : origins.map(cityOf).join(" + ");
 
   const facet = (key: FacetKey, label: string) => (
     <button
@@ -164,9 +178,20 @@ export function SearchReceipt({
   return (
     <div
       ref={rowRef}
-      className="relative flex flex-wrap items-baseline gap-x-1.5 gap-y-2 border-b border-black/[0.07] pb-3 text-[13px] dark:border-white/10"
+      // 15px, up from 13. This line is the only statement of what the board is
+      // currently showing — origin, trip shape, party size — and every value in
+      // it is a control. At 13px it read as fine print beside a 46px wordmark,
+      // which is the wrong signal for the most interactive row on the page.
+      // Centred to sit on the masthead's axis — see the header comment in
+      // page.tsx for why the whole block is centred. `justify-center` only
+      // moves the row; each value keeps its own popover anchored to itself.
+      className="relative flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 border-b border-black/[0.07] pb-3 text-center text-[15px] dark:border-white/10"
     >
-      <span className="text-black/45 dark:text-white/45">Searching</span>
+      {/* "From", not "Searching": the reference deals page says "from <city>",
+          it answers the headline's "Pick your airport" directly, and
+          "Searching" read as an activity still in progress over a board that
+          is already the answer. */}
+      <span className="text-black/45 dark:text-white/45">From</span>
 
       {/* Origin is not a picker — it needs autocomplete, up to three chips and
           a location prompt — so it opens the sheet instead of a popover. */}
@@ -187,7 +212,7 @@ export function SearchReceipt({
       {facet("adults", values.adults === 1 ? "1 adult" : `${values.adults} adults`)}
 
       {open && (
-        <Popover tailX={tailX}>
+        <Popover tailOffset={tailOffset}>
           {open === "style" && (
             <Options
               title="Trip length"
@@ -247,19 +272,32 @@ function reloadHint(label: string): string {
   return `${label} — changing this reloads results`;
 }
 
-function Popover({ tailX, children }: { tailX: number; children: React.ReactNode }) {
+function Popover({
+  tailOffset,
+  children,
+}: {
+  tailOffset: number;
+  children: React.ReactNode;
+}) {
   return (
     <div
       role="dialog"
-      // Anchored to the ROW, not to the button, so a facet near the right edge
-      // of a 390px phone cannot push its own popover off screen. The tail is
-      // what points at the button.
-      className="absolute top-full left-0 z-40 mt-2 flex min-w-[190px] max-w-full flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.35)] dark:border-white/15 dark:bg-[#1b1e26]"
+      // CENTRED ON THE ROW. Still anchored to the row and not to the button —
+      // that is what stops a facet near the right edge of a 390px phone from
+      // pushing its own popover off screen — but centred rather than flush
+      // left, because the row it hangs from is now centred itself. Left-0 under
+      // a centred row put the panel visibly off to one side.
+      className="absolute top-full left-1/2 z-40 mt-2 flex min-w-[190px] max-w-full -translate-x-1/2 flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.35)] dark:border-white/15 dark:bg-[#1b1e26]"
     >
       <span
         aria-hidden
         className="absolute -top-[5px] h-2 w-2 rotate-45 border-t border-l border-black/10 bg-white dark:border-white/15 dark:bg-[#1b1e26]"
-        style={{ left: Math.max(10, tailX - 4) }}
+        // `clamp` keeps the tail inside its own panel without measuring the
+        // panel: the middle term places it under the button, and the two bounds
+        // stop it escaping a rounded corner when the button is far off centre.
+        style={{
+          left: `clamp(10px, calc(50% + ${Math.round(tailOffset)}px - 4px), calc(100% - 18px))`,
+        }}
       />
       {children}
     </div>

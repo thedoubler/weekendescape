@@ -45,16 +45,23 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-function Leg(props: LegInput) {
+function Leg(props: LegInput & { hideDirect?: boolean }) {
   const { depTime, arrTime, meta, spoken } = legSummary(props);
+  // "2h 45m · direct" on every leg of a direct-only board says "direct"
+  // twice per card about a fact the search guarantees — stripped here, the
+  // right cell is just the duration and the row finally reads in one pass.
+  // The SPOKEN sentence keeps the word: a screen-reader user hears each leg
+  // without the board's context. Legs with stops always show them.
+  const shownMeta =
+    props.hideDirect && props.stops === 0 ? meta.replace(" · direct", "") : meta;
   return (
-    <li className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+    <li className="col-span-3 grid grid-cols-subgrid items-baseline gap-y-0.5">
       {/* One sentence for assistive tech, in decision order. The visual row is
           hidden from it: read literally it is a pile of orphan fragments with
           the duration wedged between the two times. */}
       <span className="sr-only">{spoken}</span>
       <span aria-hidden className="contents">
-        <span className="w-9 shrink-0 text-[10px] font-semibold tracking-[0.08em] text-black/55 uppercase dark:text-white/55">
+        <span className="text-[10px] font-semibold tracking-[0.08em] text-black/55 uppercase dark:text-white/55">
           {props.label}
         </span>
         <span className="flex items-baseline gap-1.5">
@@ -86,19 +93,19 @@ function Leg(props: LegInput) {
             {props.arrCode}
           </span>
         </span>
-        {/* Never truncated: on a multi-stop trip this run is the only text that
-            says the journey is complicated. It wraps instead. */}
-        <span className="text-[11px] text-black/60 dark:text-white/60">
-          {meta}
+        {/* Right column: duration and stops, right-aligned so both legs'
+            durations share an edge. Never truncated — on a multi-stop trip
+            this run is the only text that says the journey is complicated. */}
+        <span className="justify-self-end text-right text-[11px] text-black/60 tabular-nums dark:text-white/60">
+          {shownMeta}
         </span>
         {/* Logos live here, not on the collapsed card: a couple of requests per
             opened card rather than ~78 across a whole board, and at 16px beside
             15px times they finally sit at a size worth rendering. */}
         {props.carriers.length > 0 && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-black/60 dark:text-white/60">
-            <span aria-hidden className="text-black/30 dark:text-white/30">
-              ·
-            </span>
+          /* Second line, aligned under the times column — the carrier is meta,
+             not part of the time comparison. */
+          <span className="col-start-2 col-span-2 inline-flex items-center gap-1 text-[11px] text-black/60 dark:text-white/60">
             {props.carriers.map((c) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -205,6 +212,8 @@ export function DealCard({
   focusSeq,
   showOrigin = false,
   onHover,
+  idPrefix = "",
+  hideStops = false,
 }: {
   deal: Deal;
   cheapest?: { style: WeekendStyle; months: number; direct: boolean; adults: number };
@@ -216,6 +225,15 @@ export function DealCard({
   onHover?: (flyTo: string | null) => void;
   // True when the board is searching more than one home airport.
   showOrigin?: boolean;
+  /** Prefixes the card's DOM ids. The Dates dialog renders the SAME deal as
+   *  the board does, and ids must stay unique across the document — without
+   *  this, getElementById for a map jump could land on the dialog's copy. */
+  idPrefix?: string;
+  /** True when the SEARCH is direct-only: every card would say "Direct", and
+   *  a fact shared by all results belongs to the receipt line, not to each
+   *  card. A connecting trip still prints its stops even with this set —
+   *  that would be the one card where the word carries information. */
+  hideStops?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Real per-flight emissions, fetched on first expand. Null until it lands, or
@@ -299,7 +317,6 @@ export function DealCard({
   // Reserve the positive green for stays that actually earn it — a day and a
   // half or more at the destination. Shorter (red-eye) stays get a neutral pill
   // so the colour isn't a false "good" signal.
-  const goodStay = deal.stayMinutes >= 36 * 60;
   const adults = cheapest?.adults ?? 1;
   const bags = baggageInfo(deal, adults);
   // Astronomy, so it needs no caveat — but it only earns a row when daylight
@@ -308,7 +325,7 @@ export function DealCard({
     deal.destUtcOffsetMin != null
       ? daylightNote(deal.toCoords, deal.outArrive, deal.destUtcOffsetMin)
       : null;
-  const panelId = `deal-panel-${deal.flyTo}-${deal.outDepart.slice(0, 10)}`;
+  const panelId = `${idPrefix}deal-panel-${deal.flyTo}-${deal.outDepart.slice(0, 10)}`;
   const flags = layoverFlags(deal);
   const cost = costRows(deal, adults);
   const arrival = {
@@ -337,7 +354,7 @@ export function DealCard({
 
   return (
     <div
-      id={dealDomId(deal)}
+      id={idPrefix + dealDomId(deal)}
       style={
         open
           ? { boxShadow: "0 12px 28px -12px rgba(0,0,0,0.28)" }
@@ -361,7 +378,12 @@ export function DealCard({
       // background with its neighbours and reads as more list, not as a layer.
       // Deliberately restrained: too much and the 60 collapsed cards around it
       // look sunken by comparison.
-      className={`group relative scroll-mt-16 overflow-hidden rounded-xl border p-4 transition duration-200 motion-safe:hover:-translate-y-0.5 ${
+      // @container/card: the card renders at two real widths — ~816px on the
+      // board, ~396px inside the Dates dialog — and both can occur on the SAME
+      // desktop viewport, so viewport breakpoints (sm:) are the wrong axis for
+      // anything inside it. Every width-adaptive style below keys off this
+      // container instead.
+      className={`@container/card group relative scroll-mt-16 overflow-hidden rounded-xl border p-4 transition duration-200 motion-safe:hover:-translate-y-0.5 ${
         open
           ? "border-black/15 bg-white dark:border-white/20 dark:bg-white/[0.04]"
           : "border-black/[0.14] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-black/25 hover:shadow-md dark:border-white/[0.14] dark:shadow-none dark:hover:border-white/25"
@@ -443,16 +465,20 @@ export function DealCard({
                 , {weekendRange(deal.outDepart, deal.backArrive)}
               </span>
             </span>
-            <span className="text-black/35 dark:text-white/35"> · </span>
-            <span
-              className={
-                direct
-                  ? "text-black/45 dark:text-white/45"
-                  : "font-medium text-black/70 dark:text-white/70"
-              }
-            >
-              {stops}
-            </span>
+            {!(hideStops && direct) && (
+              <>
+                <span className="text-black/35 dark:text-white/35"> · </span>
+                <span
+                  className={
+                    direct
+                      ? "text-black/45 dark:text-white/45"
+                      : "font-medium text-black/70 dark:text-white/70"
+                  }
+                >
+                  {stops}
+                </span>
+              </>
+            )}
             {/* With several home airports a bare price is ambiguous — which one
                 does this leave from? Only shown when it's actually in question. */}
             {showOrigin && (
@@ -464,27 +490,6 @@ export function DealCard({
               </>
             )}
           </div>
-          {/* Only when the airport is genuinely far. It used to render on
-              nearly every card, which made it wallpaper in the most valuable
-              slot; and at 5 km nobody cares that Nuremberg's airport calls
-              itself Nürnberg. Names the PLACE, not just the distance — "you
-              land in Charleroi" is actionable where "44 km from Brussels" is
-              only a complaint. */}
-          {deal.airportKmFromCity != null &&
-            deal.airportKmFromCity >= FAR_AIRPORT_KM && (
-              // Neutral, not amber. Amber is spent on the bridge-day rows,
-              // where it means GOOD news ("you're off"), so the same ink on a
-              // warning made one card say two opposite things. The sentence is
-              // specific enough to land on its own — it names the town.
-              <div className="mt-1 inline-flex items-start gap-1 text-xs text-black/60 dark:text-white/60">
-                <span aria-hidden>✈</span>
-                <span>
-                  {deal.airportCity
-                    ? `You land in ${deal.airportCity} — ${deal.airportKmFromCity} km from ${deal.cityTo}`
-                    : `Airport ${deal.airportKmFromCity} km from ${deal.cityTo}`}
-                </span>
-              </div>
-            )}
         </button>
         <div className="shrink-0 text-right">
           {/* tabular-nums: Space Grotesk's proportional digits make a 60-row
@@ -545,38 +550,44 @@ export function DealCard({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`text-sm ${
-              goodStay
-                ? "text-green-800 dark:text-green-200"
-                : "text-black/60 dark:text-white/60"
-            }`}
-          >
+          {/* Neutral ink, by request — this was green when the stay cleared
+              36h, but over the flag wash a green sentence read as belonging
+              to the flag, not to the card. One colour regardless of stay
+              length; the duration itself still carries the judgement.
+              /55 in light mode: at /70 it was the blackest small text on a
+              pastel-washed card and read as odd emphasis. Dark stays white. */}
+          <span className="text-sm text-black/55 dark:text-white">
             <span className="font-medium">{stay}</span> to explore
           </span>
         </div>
+        {/* Visible in BOTH card states — restored by request after a
+            collapsed-only version shipped briefly. Yes, "Book flight" here
+            and "Book on Kiwi" in the open panel are the same action twice;
+            the counter-argument that won is consistency — these two links
+            live at this spot on every card on the board, and links that
+            vanish when a card opens read as taken away. */}
         <div className="flex items-center gap-3">
-          <a
-            href={hotelUrl(deal, adults)}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            aria-label={`Find a hotel in ${deal.cityTo} on Booking.com (opens a new tab)`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-black transition duration-200 dark:text-white"
-          >
-            <span className="underline underline-offset-2">Hotels</span>
-            <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
-          </a>
-          <a
-            href={deal.deepLink}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
-            className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 dark:text-white"
-          >
-            <span className="underline underline-offset-2">Book flight</span>
-            <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
-          </a>
-        </div>
+            <a
+              href={hotelUrl(deal, adults)}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              aria-label={`Find a hotel in ${deal.cityTo} on Booking.com (opens a new tab)`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-black transition duration-200 dark:text-white"
+            >
+              <span className="underline underline-offset-2">Hotels</span>
+              <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
+            </a>
+            <a
+              href={deal.deepLink}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
+              className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 dark:text-white"
+            >
+              <span className="underline underline-offset-2">Book flight</span>
+              <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
+            </a>
+          </div>
       </div>
 
       {isBridge(deal) && deal.homeHoliday && (
@@ -631,12 +642,23 @@ export function DealCard({
       {open && (
         <div
           id={panelId}
-          className="mt-3 flex flex-col gap-4 border-t border-black/10 pt-3 text-sm dark:border-white/10"
+          // One column at every width, costs underneath the itinerary — by
+          // request. A two-column split (itinerary left, cost rail right, per
+          // Google Flights) shipped briefly and was rolled back: the vertical
+          // read — trip first, then money, then the button — is the order the
+          // decision actually happens in. The receipt cap and self-sizing CTA
+          // below are what keep the costs section from sprawling at full
+          // panel width.
+          //
+          // Hairline discipline stands: the panel's top rule and the cost
+          // section's own rule are the only internal separators; labels and
+          // whitespace do the rest.
+          className="mt-3 flex flex-col gap-4 border-t border-black/[0.07] pt-3 text-sm dark:border-white/10"
         >
           {/* The panel answers three unrelated questions — how do I get there,
-              what is it like there, what does it cost. They used to be one
-              undifferentiated column of same-weight sentences, which reads as
-              texture rather than information. Three labelled zones instead. */}
+              what is it like there, what does it cost — in that order, top to
+              bottom. */}
+          <div className="flex min-w-0 flex-col gap-5">
           <section className="flex flex-col gap-2.5">
             <div className="flex items-baseline justify-between gap-3">
               <SectionLabel>The flights</SectionLabel>
@@ -646,7 +668,11 @@ export function DealCard({
                 </span>
               )}
             </div>
-            <ul className="flex flex-col gap-2">
+            {/* A grid, not a wrap: Out and Back share column edges, so the
+                eye can drop vertically to compare times — which is the actual
+                task here. Wrapped flex put the duration and carrier at
+                arbitrary x positions on every card. */}
+            <ul className="grid grid-cols-[2.25rem_1fr_auto] gap-x-2 gap-y-2">
             <Leg
               label="Out"
               depIso={deal.outDepart}
@@ -663,6 +689,7 @@ export function DealCard({
               )}
               stops={deal.outStops}
               layovers={deal.outLayovers}
+              hideDirect={hideStops}
               carriers={(deal.outAirlines ?? []).map((code) => ({
                 code,
                 name: airlineName(code),
@@ -684,6 +711,7 @@ export function DealCard({
               )}
               stops={deal.backStops}
               layovers={deal.backLayovers}
+              hideDirect={hideStops}
               carriers={(deal.backAirlines ?? []).map((code) => ({
                 code,
                 name: airlineName(code),
@@ -710,12 +738,34 @@ export function DealCard({
               </p>
             ))}
 
+            {/* Moved from the collapsed header, by request — it is a detail
+                about the flight, so it lives with the flights. Still only
+                when the airport is genuinely far (>= FAR_AIRPORT_KM): at 5 km
+                nobody cares that Nuremberg's airport calls itself Nürnberg.
+                Names the PLACE, not just the distance — "you land in
+                Charleroi" is actionable where "44 km from Brussels" is only a
+                complaint. Neutral, not amber: amber is spent on warnings with
+                a decision attached. */}
+            {deal.airportKmFromCity != null &&
+              deal.airportKmFromCity >= FAR_AIRPORT_KM && (
+                <p className="inline-flex items-start gap-1.5 text-[13px] text-black/60 dark:text-white/60">
+                  <span aria-hidden>✈</span>
+                  <span>
+                    {deal.airportCity
+                      ? `You land in ${deal.airportCity} — ${deal.airportKmFromCity} km from ${deal.cityTo}`
+                      : `Airport ${deal.airportKmFromCity} km from ${deal.cityTo}`}
+                  </span>
+                </p>
+              )}
           </section>
 
-          <section className="flex flex-col gap-2 border-t border-black/10 pt-3 dark:border-white/10">
+          <section className="flex flex-col gap-2">
             {/* The heading row carries the see-the-place links: the section is
                 already "what is it like there", and the icons sit in the dead
-                space at its trailing edge rather than costing a row. */}
+                space at its trailing edge rather than costing a row. Hotels
+                briefly lived here too and went back to the card footer — by
+                request; the footer is where every card offers it, open or
+                not, and muscle memory beats taxonomy. */}
             <div className="-my-1 flex items-center justify-between gap-2">
               <SectionLabel>In {deal.cityTo}</SectionLabel>
               <PlaceLinks city={deal.cityTo} country={deal.countryTo} />
@@ -808,37 +858,51 @@ export function DealCard({
             </div>
           )}
           </section>
-          <section className="flex flex-col gap-2 border-t border-black/10 pt-3 dark:border-white/10">
+          </div>
+
+          <section className="flex min-w-0 flex-col gap-2 border-t border-black/[0.07] pt-3 dark:border-white/10">
             <SectionLabel>What it costs</SectionLabel>
             {/* A table, not a sentence. The bag fee runs ~85% of the fare at the
                 median on this board, so the headline price is roughly half the
                 real number — that comparison has to be legible at a glance. */}
+            {/* Full width, label left and number hard right — by request. A
+                19rem cap shipped briefly (the dialog's stretched receipt) and
+                was rolled back in favour of the classic receipt read across
+                the whole panel. */}
             <dl className="flex flex-col gap-1">
               {cost.map((row) => (
                 <div
                   key={row.label}
                   className={`flex items-baseline justify-between gap-3 ${
                     row.total
-                      ? "mt-1 border-t border-black/10 pt-1.5 dark:border-white/10"
+                      ? "mt-1 border-t border-black/[0.07] pt-1.5 dark:border-white/10"
                       : ""
                   }`}
                 >
+                  {/* No bold, no amber, by request. The total row used to be
+                      15px semibold and a severe bag fee turned its value
+                      amber; both shouted inside a three-row table. What marks
+                      the total now is what receipts actually use: the rule
+                      above it and full-ink text against the muted rows. The
+                      bag fee's size relative to the fare is legible from the
+                      numbers themselves. */}
                   <dt
                     className={
                       row.total
-                        ? "text-[15px] font-semibold"
+                        ? "text-black dark:text-white"
                         : "text-black/65 dark:text-white/65"
                     }
                   >
                     {row.label}
                   </dt>
                   <dd
-                    className={`tabular-nums ${
+                    // nowrap: in the 15rem rail the long total label ("With
+                    // one checked bag") squeezed "114 EUR" onto two lines.
+                    // Numbers never break; labels may.
+                    className={`whitespace-nowrap tabular-nums ${
                       row.total
-                        ? "text-[15px] font-semibold"
-                        : bags.severe && row.value.startsWith("+")
-                          ? "text-amber-700 dark:text-amber-400"
-                          : "text-black/65 dark:text-white/65"
+                        ? "text-black dark:text-white"
+                        : "text-black/65 dark:text-white/65"
                     }`}
                   >
                     {row.value}
@@ -863,10 +927,13 @@ export function DealCard({
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
-              // Full-bleed on a phone, where it's the thumb target at the foot
-              // of a long panel; on wider screens it sizes to its label instead
-              // of stretching a 700px bar across the card.
-              className="mt-1 inline-flex min-h-11 w-full items-center justify-center gap-1.5 self-start rounded-full bg-neutral-900 px-5 text-sm font-medium text-white transition hover:bg-neutral-800 sm:w-auto dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+              // Full-bleed only on a TRUE phone-width card (content < 336px —
+              // see the receipt cap above for why that number), where it is
+              // the thumb target at the foot of a long panel. Above it — the
+              // 420px dialog included — it sizes to its label: a full-width
+              // black bar in a desktop dialog read as stretched, and a
+              // pointer does not need the width a thumb does.
+              className="mt-1 inline-flex min-h-11 w-full items-center justify-center gap-1.5 self-start rounded-full bg-neutral-900 px-5 text-sm font-medium text-white transition hover:bg-neutral-800 @min-[336px]/card:w-auto dark:bg-white dark:text-black dark:hover:bg-neutral-200"
             >
               Book on Kiwi
               <ExternalLinkIcon className="h-3.5 w-3.5" />

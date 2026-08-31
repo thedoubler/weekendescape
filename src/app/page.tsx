@@ -22,7 +22,7 @@ import {
   continentsOf,
   filterByContinents,
 } from "@/lib/continents";
-import { monthShort } from "@/lib/format";
+import { monthShort, monthKey } from "@/lib/format";
 import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -39,9 +39,7 @@ import { ContinentFilter } from "@/components/ContinentFilter";
 import { PriceFilter } from "@/components/PriceFilter";
 import { DealList, SkeletonCard } from "@/components/DealList";
 import { DealsMap } from "@/components/DealsMap";
-import { CalendarView } from "@/components/CalendarView";
-import { weekendKey } from "@/lib/calendar";
-import { RotatingWord } from "@/components/RotatingWord";
+import { CalendarDialog } from "@/components/CalendarDialog";
 import OverflowDebug from "@/components/OverflowDebug";
 
 // Fetch that aborts after `ms` so a stalled request (slow upstream, a dropped
@@ -99,7 +97,6 @@ export default function Home() {
   // closes the other: both answer "which of these do I want" and stacking them
   // would push the board off a phone entirely.
   const [showCalendar, setShowCalendar] = useState(false);
-  const [pickedWeekend, setPickedWeekend] = useState<string | null>(null);
   // Destination the pointer is over in the list; the map lifts its arc out of
   // the fan. Only meaningful while the map is open, and only on pointer/focus
   // devices — a tap never sets it.
@@ -122,7 +119,6 @@ export default function Home() {
   const loadingMore = false;
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
-  const [showHidden, setShowHidden] = useState(false);
   // First load only: while we detect location + run the initial search, show a
   // quiet spinner instead of the empty form.
   const [booting, setBooting] = useState(true);
@@ -131,6 +127,32 @@ export default function Home() {
   const [openFacet, setOpenFacet] = useState<"month" | "region" | "price" | null>(
     null
   );
+
+  // Escape closes the open facet and hands focus back to its trigger.
+  //
+  // SearchReceipt already did this for its own popover; the bar's three facets
+  // did not, so the same gesture worked on one disclosure and silently failed
+  // on the neighbouring one. Verified before the fix: opening Month and
+  // pressing Escape left the panel open.
+  //
+  // Focus has to come back deliberately. The panel that was open is about to
+  // unmount, and if focus sat inside it the browser drops focus on <body> —
+  // which sends the next Tab to the top of the document rather than to the
+  // next control, and leaves a keyboard user with no idea where they are.
+  const facetTriggerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!openFacet) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const trigger = facetTriggerRef.current?.querySelector<HTMLButtonElement>(
+        `[aria-controls="refine-${openFacet}"]`
+      );
+      setOpenFacet(null);
+      trigger?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [openFacet]);
   // The origin sheet, and the airports it held when it opened — dismissal is
   // the commit, so it needs a before-image to compare against.
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -389,33 +411,29 @@ export default function Home() {
     out = filterByMaxPrice(out, cap);
     return sortDeals(out, sort);
   }, [rawDeals, selectedMonths, selectedContinents, cap, sort]);
-  // Layover trips with under a day at the destination are hidden by default.
-  const hiddenCount = useMemo(
-    () => filtered.filter(isShortStay).length,
+  // Trips with under a day at the destination are not trips — more travel than
+  // time there — so they are simply not shown. This was a default with a
+  // checkbox to override it ("Hide N trips with under a day…"); the checkbox
+  // was the only control on the page phrased as a sentence, it moved the
+  // layout when it appeared, and in practice unchecking it surfaced flights
+  // nobody should book. A rule you would never turn off is not a setting.
+  //
+  // Memoised: these arrays are dependencies of the map's marker/framing
+  // effects, so a new identity on every render made opening Refine (or
+  // crossing the scroll threshold) re-frame the map.
+  // Weekend selection no longer filters `visible` — Dates is a dialog now,
+  // and its selection lives inside it (see CalendarDialog).
+  const visible = useMemo(
+    () => filtered.filter((d) => !isShortStay(d)),
     [filtered]
   );
-  // Memoised: this array is a dependency of the map's marker/framing effects, so
-  // a new identity on every render made opening Refine (or crossing the scroll
-  // threshold) re-frame the map.
-  const visible = useMemo(() => {
-    const base = showHidden ? filtered : filtered.filter((d) => !isShortStay(d));
-    // Picking a weekend in the calendar narrows the list under it. It is a
-    // filter like any other, so it feeds `visible` rather than being a separate
-    // display mode — the count, the map and the board all follow it for free.
-    return pickedWeekend
-      ? base.filter((d) => weekendKey(d.outDepart) === pickedWeekend)
-      : base;
-  }, [showHidden, filtered, pickedWeekend]);
-  const calendarDeals = useMemo(
-    () => (showHidden ? filtered : filtered.filter((d) => !isShortStay(d))),
-    [showHidden, filtered]
-  );
+  const calendarDeals = visible;
   // The denominator for "N of M": the board before month/region/price, but
   // after the short-stay rule — otherwise a filtered count could exceed a
   // total the user was never shown.
   const total = useMemo(
-    () => (showHidden ? rawDeals : rawDeals.filter((d) => !isShortStay(d))).length,
-    [showHidden, rawDeals]
+    () => rawDeals.filter((d) => !isShortStay(d)).length,
+    [rawDeals]
   );
 
   // Tapping a pin jumps the list to that destination's cheapest weekend and
@@ -436,43 +454,97 @@ export default function Home() {
       setFocusDeal((prev) => ({ id, seq: (prev?.seq ?? 0) + 1 }));
       // The card is already rendered, so this can run immediately; rAF just lets
       // the expand commit first so we centre on the final height.
+      //
+      // behavior "auto", never "smooth". Verified in the running app: every
+      // smooth scroll on this page dies within ~8px — window.scrollTo({top:
+      // 2000, behavior:"smooth"}) landed at 8 while the instant form landed
+      // exactly — so a smooth jump reads as "nothing happened". Instant is
+      // also what reduced-motion users always got, and what Google's own
+      // grid-to-result jumps do.
       requestAnimationFrame(() => {
         document.getElementById(id)?.scrollIntoView({
           block: "center",
-          behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")
-            .matches
-            ? "auto"
-            : "smooth",
+          behavior: "auto",
         });
       });
     },
     [visible]
   );
 
-  // Per-option counts for the Refine pills, over the base universe the user can
-  // actually see (respecting the short-stay toggle) but ignoring month/region/
-  // price selections — so each pill shows how many trips it would surface.
+  // The base universe for every facet count: what the user can actually see,
+  // respecting the short-stay toggle.
   const countable = useMemo(
-    () =>
-      showHidden ? rawDeals : rawDeals.filter((d) => !isShortStay(d)),
-    [rawDeals, showHidden]
+    () => rawDeals.filter((d) => !isShortStay(d)),
+    [rawDeals]
   );
-  const continentCounts = useMemo(() => {
+
+  // FACET COUNTS EXCLUDE THEIR OWN FACET AND HONOUR EVERY OTHER ONE.
+  //
+  // These used to be computed over `countable` flat, ignoring all three
+  // selections, and the comment claimed each pill showed "how many trips it
+  // would surface". That is only true on an unfiltered board. Observed on the
+  // live app: with Sep selected the Region row still read "Europe 13 · Africa
+  // 1 · Asia 1" — the whole 15-deal board — while the list showed 2. Tapping
+  // "Asia 1" produced "0 of 15 flights". The count promised a result the month
+  // filter had already excluded, and the UI walked the user into a dead end.
+  //
+  // The rule that fixes it is the standard one for faceted search: a facet's
+  // counts are computed over the set filtered by all the OTHER facets, never
+  // by itself. Excluding its own facet is what makes the number mean "how many
+  // MORE this adds" for an OR-multi-select — with Sep on, Asia genuinely adds
+  // nothing, so it reads 0 and is disabled rather than clickable.
+  //
+  // Own-facet exclusion also keeps a selected pill honest: if Region counted
+  // itself, selecting Europe would drop every other region to 0 and you could
+  // never widen the selection.
+  // Both maps are SEEDED with every option at zero before counting. A missing
+  // key is `undefined`, which renders as no number at all and reads as "not
+  // counted" rather than "none" — so the option stayed enabled and stayed a
+  // dead end, which is the whole bug this is here to fix.
+  const monthCounts = useMemo(() => {
+    const base = filterByMaxPrice(
+      filterByContinents(countable, selectedContinents),
+      cap
+    );
     const m: Record<string, number> = {};
-    for (const d of countable) {
-      const c = continentOf(d.countryToCode);
-      if (c) m[c] = (m[c] ?? 0) + 1;
+    for (const k of available) m[k] = 0;
+    for (const d of base) {
+      const k = monthKey(d.outDepart);
+      if (k in m) m[k] += 1;
     }
     return m;
-  }, [countable]);
+  }, [countable, available, selectedContinents, cap]);
+
+  const continentCounts = useMemo(() => {
+    const base = filterByMaxPrice(
+      filterByMonths(countable, selectedMonths),
+      cap
+    );
+    const m: Record<string, number> = {};
+    for (const c of availableContinents) m[c] = 0;
+    for (const d of base) {
+      const c = continentOf(d.countryToCode);
+      if (c in m) m[c] += 1;
+    }
+    return m;
+  }, [countable, availableContinents, selectedMonths, cap]);
+  // "CLJ" is an aviation dialect; the receipt should say "Cluj-Napoca". Every
+  // deal already names its departure city (cityFrom, resolved server-side), so
+  // the map costs one pass over data the client holds anyway — no airport
+  // lookup table crosses the wire, which client-bundle.test.ts would forbid.
+  const originCities = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const d of rawDeals) {
+      if (d.flyFrom && d.cityFrom) m[d.flyFrom] = d.cityFrom;
+    }
+    return m;
+  }, [rawDeals]);
   const currency = rawDeals[0]?.currency ?? "EUR";
 
   function clearAll() {
-    setPickedWeekend(null);
     setSelectedMonths([]);
     setSelectedContinents([]);
     setMaxPrice(bounds.max);
-    setShowHidden(false);
   }
 
   function toggleMonth(m: string) {
@@ -487,22 +559,30 @@ export default function Home() {
     );
   }
 
+  // Same rule, applied to price: the bands come from the prices still reachable
+  // under the current month/region choice, excluding price itself. Derived this
+  // way a band can never be empty — it is cut from the very set it filters — so
+  // this needs no disabled state, unlike Month and Region.
   const priceBucketList = useMemo(
-    () => priceBuckets(countable.map((d) => d.price)),
-    [countable]
+    () =>
+      priceBuckets(
+        filterByContinents(
+          filterByMonths(countable, selectedMonths),
+          selectedContinents
+        ).map((d) => d.price)
+      ),
+    [countable, selectedMonths, selectedContinents]
   );
 
   const hasRefinements =
     available.length > 0 ||
     availableContinents.length > 1 ||
-    priceBucketList.length > 0 ||
-    hiddenCount > 0;
+    priceBucketList.length > 0;
 
   const activeFilters =
     selectedMonths.length +
     selectedContinents.length +
-    (cap < bounds.max ? 1 : 0) +
-    (pickedWeekend ? 1 : 0);
+    (cap < bounds.max ? 1 : 0);
   // Commit-on-dismiss for the receipt facets. `patch` carries the value the
   // popover was closed on, because state set moments ago has not reached the
   // refs runSearch would otherwise read.
@@ -551,7 +631,7 @@ export default function Home() {
 
   return (
     <main
-      className="max-w-3xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-4"
+      className="max-w-4xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-4"
       // The list's month dividers are sticky at the top as well. This is what
       // keeps the two from stacking on the same line: they pin below the bar
       // while it exists, and at the viewport top when it doesn't.
@@ -561,81 +641,67 @@ export default function Home() {
         } as React.CSSProperties
       }
     >
-      <header className="border-b border-black/[0.07] pb-4 dark:border-white/10">
-        {/* One line: wordmark and descriptor share a baseline, so the header is
-            a single object rather than a stacked block. Wraps only if there is
-            genuinely no room. */}
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 leading-tight">
-          <h1 className="text-[26px] leading-[0.95] tracking-[-0.02em] sm:text-[32px]">
-            {/* The wordmark IS the trip: a dotted flight path runs the whole
-                width of the name and lands on a solid dot — the motif draws the
-                product's own meaning instead of decorating around it. */}
-            <span className="relative inline-block font-semibold">
-              {/* The name is a portmanteau — s[ho]rt[liday] — where the
-                  coloured letters spell "holiday" and "ho" is shared by both
-                  words. Deliberately orange-600, not the brand #f97316: that
-                  hue is 2.8:1 on white and fails even the 3:1 large-text bar,
-                  whereas orange-600 clears it while still reading as the accent.
-                  Dark mode flips to orange-400, which needs the lighter value
-                  against a near-black ground. */}
-              {/* The reveal: both orange runs start at the body colour and
-                  warm into the accent a beat apart, so "ho…liday" surfaces out
-                  of "short" rather than being coloured from the first frame.
-                  Colour only — no movement, no reflow, so the CLS budget stays
-                  zero and reduced-motion simply gets the finished state. */}
-              <span aria-hidden>
-                s
-                <span className="wordmark-hi">ho</span>
-                rt
-                <span className="wordmark-hi wordmark-hi-2">liday</span>
-              </span>
-              {/* The word intact for assistive tech and for copy-paste. */}
-              <span className="sr-only">shortliday</span>
-            </span>
-          </h1>
-          {/* A hairline rule instead of a bullet: it sets on the baseline and
-              reads as a lockup, not as punctuation. */}
-          <p className="flex items-baseline gap-3 text-sm whitespace-nowrap text-black/65 dark:text-white/60">
-            <span
-              aria-hidden
-              className="hidden h-3 w-px translate-y-[2px] bg-black/15 sm:block dark:bg-white/20"
-            />
-            <span className="italic">for the{" "}
-            <RotatingWord
-              words={[
-                "spontaneous",
-                "weekenders",
-                "restless",
-                "last-minute",
-                "curious",
-                "escape artists",
-              ]}
-              className="font-medium text-black/85 not-italic dark:text-white/90"
-            />
-            </span>
-          </p>
-        </div>
-      </header>
+      {/* CENTRED, on the evidence of the two references this was measured
+          against. weekendflights.app centres a two-line hero over its search
+          bar; Google Flights Deals centres an eyebrow, then the product name,
+          then "from <city>", then the search. Both put the masthead on the
+          page's axis and let the content below it start the grid. Left-aligned,
+          this stack read as four things stacked in a corner.
 
-      {/* Outside the panel on purpose. Inside it, this disappeared the moment
-          the panel began collapsing by default — and it is the only sentence
-          on the page that says what the product is. One line is the whole cost
-          to a returning visitor. */}
-      {!booting && (
-        <p className="-mt-1 max-w-[72ch] text-[15px] leading-snug text-black/55 dark:text-white/55">
-          {/* Two sentences, not one em-dashed run-on: the first is the claim,
-              the second is what to do about it. The claim carries the weight —
-              it is the only line on the page that says what this is, and it was
-              set in the same muted grey as the instruction after it. */}
-          <span className="font-medium text-black dark:text-white">
-            The cheapest weekend you can fly to
-          </span>{" "}
-          — round-trips from your home airport, ranked by price.{" "}
-          <span className="whitespace-nowrap">
-            Tap a deal for the full cost.
+          The order is the reference order: eyebrow, name, promise. The rotating
+          descriptor moves ABOVE the wordmark and becomes that eyebrow — it kept
+          its meaning and lost the fight it was picking with a 46px wordmark for
+          the right-hand baseline. */}
+      {/* pb-3 on top of the column's gap-4: the masthead is display type and
+          the receipt is a control row — ~28px between them lets them read as
+          two things instead of one block. */}
+      <header className="flex flex-col items-center gap-1 pt-2 pb-3 text-center">
+        {/* No eyebrow. Its whole lineage went: a rotating list of six
+            audiences, then one frozen word, then gone — each cut asked for
+            after seeing the previous one. The masthead survives it fine: the
+            headline right below already names the reader ("Pick your
+            airport"), which is what "for the spontaneous" was gesturing at. */}
+        <h1 className="text-[38px] font-bold leading-[0.9] tracking-[-0.035em] sm:text-[54px]">
+          {/* Split on the dot, because the dot is the joke: read as a domain
+              it is an address, read as a lockup it is "weekend" and the thing
+              you do about it. The accent takes the TLD and the dot with it, so
+              the break lands where the meaning does.
+
+              orange-600, not the brand #f97316: that hue is 2.8:1 on white and
+              fails even the 3:1 large-text bar, while orange-600 clears it and
+              still reads as the accent. Dark mode flips to orange-400, the
+              lighter value a near-black ground needs. */}
+          {/* The reveal: the accent run starts at the body colour and warms in,
+              so ".flights" surfaces a beat after "weekend" rather than being
+              coloured from the first frame. Colour only — no movement, no
+              reflow, so the CLS budget stays zero and reduced-motion gets the
+              finished state. */}
+          <span aria-hidden>
+            weekend<span className="wordmark-hi">.flights</span>
+          </span>
+          {/* The word intact for assistive tech and for copy-paste. */}
+          <span className="sr-only">weekend.flights</span>
+        </h1>
+        {/* The headline says the MECHANIC, which is the one thing the rest of
+            the page cannot say for itself. Three earlier versions were cut
+            because each only restated the screen below it — the wordmark
+            already says weekend.flights, the Searching line already says the
+            origin and the trip shape, the Cheapest toggle already says the
+            ranking. This is the deal being offered, not a description of the
+            board.
+
+            One line, not two: centred, a hard break mid-sentence made a
+            deliberate stack look like a wrap. The second half stays muted, so
+            the reader's job and ours still separate. */}
+        <p className="mt-0.5 text-[17px] leading-snug font-semibold tracking-[-0.01em] text-balance sm:text-[20px]">
+          Pick your airport.{" "}
+          <span className="font-medium text-black/45 dark:text-white/45">
+            We&rsquo;ll find the weekend.
           </span>
         </p>
-      )}
+      </header>
+
+
 
       {booting ? (
         /* First load: explain the tool + what's happening (we're detecting the
@@ -648,10 +714,15 @@ export default function Home() {
               <span className="font-medium">weekend flights</span> from your home
               airport — tap a deal to book on Kiwi. Prices are live estimates.
             </p>
+            {/* Three sentences became one. It used to explain the permission,
+                reassure about the permission, and then offer the way out —
+                which is a lot of prose to read while a browser dialog is
+                already sitting on top of it. The reassurance survives as four
+                words, because that is the part a reader actually weighs; the
+                full privacy answer lives on /about. */}
             <p className="mt-1.5 text-black/55 dark:text-white/60">
-              📍 Finding your nearest airport… we only use your location for
-              this. Prefer not to share it? Decline and you can type it in
-              instead.
+              📍 Finding your nearest airport — used only for this. Decline and
+              type it in.
             </p>
           </div>
           <div
@@ -676,6 +747,7 @@ export default function Home() {
           the window is pinned at six, so choosing a month never re-searches. */}
       <SearchReceipt
         origins={origins}
+        originCities={originCities}
         values={{ style, stopMode, adults, bridges }}
         onChange={(patch) => {
           if (patch.style !== undefined) setStyle(patch.style);
@@ -692,7 +764,8 @@ export default function Home() {
           on a line of their own. That left 414px of dead space to the right of
           "Price 4" and a half-empty row above it — two ragged lines where the
           content fits comfortably on one. Measured: triggers 306px + Sort/Map
-          267px = 573px in a 720px box. */}
+          267px = 573px, which fit even the old 720px box and now sit inside
+          848px with room to spare. */}
       {searched && (
         /* A Fragment, not a wrapper div. `position: sticky` pins only within
            its own PARENT's box, so while the bar sat inside a short wrapper it
@@ -728,7 +801,7 @@ export default function Home() {
           <div
             id="refine-panel"
             ref={barRef}
-            // Full-bleed. At 1280 the column is 768px, so a bar that stopped
+            // Full-bleed. At 1280 the column is 896px, so a bar that stopped
             // at its edge read as a floating strip with a hard vertical cut
             // and the page showing past it.
             //
@@ -739,14 +812,17 @@ export default function Home() {
             className="sticky top-0 z-30 border-b border-black/[0.07] bg-background/70 backdrop-blur-xl dark:border-white/10"
           >
             {/* The bar bleeds; its CONTENTS stay on the column. */}
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 py-2 sm:px-6">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-2 sm:px-6">
               {/* `sm:flex-nowrap` is load-bearing. This row's width is not
                   fixed: the count runs from "14 flights" (66px) to "23 long
                   weekends" (125px), and "Clear all" appears with a filter.
-                  Measured, a bridge-mode board needed 770px of a 768px box and
-                  broke the Sort/Map cluster onto a second line — over by two
-                  pixels, and by ~57 once a filter is on. Trimming pixels could
-                  not hold that.
+                  Measured, a bridge-mode board needed 770px, which overflowed
+                  the old 768px box and broke the Sort/Map cluster onto a
+                  second line — over by two pixels, and by ~57 once a filter
+                  was on. Trimming pixels could not hold that. The column is
+                  896px now and that particular overflow is gone, but the rule
+                  stays: the row's width is content-driven, so it must not be
+                  left to wrap.
 
                   So above `sm` the row never wraps and the trigger group, the
                   only shrinkable child, scrolls instead. Below `sm` it still
@@ -797,7 +873,22 @@ export default function Home() {
                  wrapping. A grid track cannot do that — the width is declared,
                  not negotiated. From `sm` up it is an inline flex row again,
                  where all three fit with room to spare. */
-              <div className="grid w-full basis-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:basis-auto sm:gap-1.5 sm:overflow-x-auto">
+              <div
+                ref={facetTriggerRef}
+                className="grid w-full basis-full grid-cols-3 gap-1 max-sm:order-3 sm:flex sm:w-auto sm:basis-auto sm:gap-1.5 sm:overflow-x-auto"
+              >
+                {priceBucketList.length > 0 && (
+                  <FacetTrigger
+                    label="Price"
+                    placeholder="Price"
+                    controls="refine-price"
+                    value={cap < bounds.max ? `≤ ${cap}` : null}
+                    open={openFacet === "price"}
+                    onClick={() =>
+                      setOpenFacet((f) => (f === "price" ? null : "price"))
+                    }
+                  />
+                )}
                 {available.length > 0 && (
                   <FacetTrigger
                     label="Month"
@@ -834,18 +925,6 @@ export default function Home() {
                     }
                   />
                 )}
-                {priceBucketList.length > 0 && (
-                  <FacetTrigger
-                    label="Price"
-                    placeholder="Price"
-                    controls="refine-price"
-                    value={cap < bounds.max ? `≤ ${cap}` : null}
-                    open={openFacet === "price"}
-                    onClick={() =>
-                      setOpenFacet((f) => (f === "price" ? null : "price"))
-                    }
-                  />
-                )}
               </div>
             )}
 
@@ -861,7 +940,17 @@ export default function Home() {
                 beside it — the gap you see above the count on a phone. It fits
                 here only because the triggers dropped their "Any " prefixes:
                 350px of labels became 235, and Map is 72. */}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {/* w-full below `sm`, so on a phone this cluster owns its row and
+                the sort control inside it can stretch to fill it.
+
+                max-sm:order-2 lifts this row ABOVE the filter triggers on a
+                phone. The open facet's chips render after the whole controls
+                block, so with sort at the bottom the chips appeared under
+                Soonest/Cheapest — a Region panel visually attached to the
+                sort control instead of to the Region button that opened it.
+                Sort above, triggers below (max-sm:order-3), chips directly
+                beneath the triggers. DOM order is unchanged. */}
+            <div className="flex w-full shrink-0 items-center gap-1.5 max-sm:order-2 sm:ml-auto sm:w-auto">
               <SegmentedControl
                 options={[
                   { value: "soonest" as SortKey, label: "Soonest" },
@@ -874,16 +963,14 @@ export default function Home() {
               {!loading && !error && calendarDeals.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCalendar((v) => !v);
-                    setShowMap(false);
-                  }}
-                  aria-expanded={showCalendar}
-                  aria-controls="results-calendar"
+                  onClick={() => setShowCalendar(true)}
+                  // A dialog now, not a disclosure: haspopup replaces the
+                  // expanded/controls pair, and the chevron — which promised
+                  // an inline reveal — goes with them.
+                  aria-haspopup="dialog"
                   className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-black/15 px-3 text-sm text-black/70 transition duration-200 before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-black/5 sm:h-9 sm:px-3.5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/10"
                 >
-                  Dates
-                  <span aria-hidden>{showCalendar ? "▴" : "▾"}</span>
+                  Calendar
                 </button>
               )}
               {!loading && !error && visible.length > 0 && (
@@ -916,6 +1003,7 @@ export default function Home() {
                 <MonthFilter
                   months={available}
                   selected={selectedMonths}
+                  counts={monthCounts}
                   onToggle={toggleMonth}
                 />
               </div>
@@ -944,22 +1032,6 @@ export default function Home() {
             </div>
           </div>
 
-          {hiddenCount > 0 && (
-            /* Not a facet — a rule about what counts as a trip. It reads as a
-               sentence you agree with rather than a value you pick. */
-            <label className="flex cursor-pointer items-start gap-2 text-[13px]">
-              <input
-                type="checkbox"
-                checked={!showHidden}
-                onChange={() => setShowHidden((v) => !v)}
-                className="mt-0.5 accent-black dark:accent-white"
-              />
-              <span className="text-black/55 dark:text-white/55">
-                Hide {hiddenCount} trip{hiddenCount === 1 ? "" : "s"} with under
-                a day at the destination — more travel than time there.
-              </span>
-            </label>
-          )}
         </>
       )}
 
@@ -1020,15 +1092,18 @@ export default function Home() {
             </div>
           )}
 
+      {/* Mounted only while open: a closed <dialog> still keeps its children
+          in the DOM, which meant every deal existed twice on the page — once
+          on the board, once inside the hidden calendar panel. Screen readers
+          walking the document and anything matching by text saw doubles. */}
       {searched && showCalendar && (
-        <div id="results-calendar" className="animate-fade-in flex flex-col gap-2">
-          <CalendarView
-            deals={calendarDeals}
-            currency={currency}
-            selected={pickedWeekend}
-            onSelect={setPickedWeekend}
-          />
-        </div>
+        <CalendarDialog
+          open={showCalendar}
+          deals={calendarDeals}
+          currency={currency}
+          hideStops={applied?.direct === true}
+          onClose={() => setShowCalendar(false)}
+        />
       )}
 
       {/* Renders `visible` — the same array DealList gets — so every filter
@@ -1049,6 +1124,7 @@ export default function Home() {
                 <MonthFilter
                   months={available}
                   selected={selectedMonths}
+                  counts={monthCounts}
                   onToggle={toggleMonth}
                 />
               ) : undefined
@@ -1066,6 +1142,7 @@ export default function Home() {
           focusId={focusDeal?.id}
           focusSeq={focusDeal?.seq}
           showOrigin={origins.length > 1}
+          hideStops={applied?.direct === true}
           loading={loading}
           error={error}
           groupByMonth={sort === "soonest"}

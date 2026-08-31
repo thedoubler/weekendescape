@@ -172,7 +172,7 @@ describe("Home page", () => {
     expect(
       screen.getByRole("button", { name: "Month. Change" })
     ).toBeInTheDocument();
-    // Closed, so the values themselves are not on the page yet...
+    // Closed, so the values themselves are not on the page yet.
     expect(screen.queryByRole("button", { name: "Aug" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /refine/i })
@@ -208,7 +208,54 @@ describe("Home page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides short-layover trips by default and reveals them on demand", async () => {
+  // REGRESSION. Facet counts used to be computed over the whole board, ignoring
+  // the other facets. Observed on the live app: with Sep selected the Region row
+  // still read "Europe 13 · Africa 1 · Asia 1" while the list showed 2 of 15,
+  // and tapping "Asia 1" produced "0 of 15 flights" — the count promised a
+  // result the month filter had already excluded.
+  it("counts a facet against the OTHER active facets, and disables dead options", async () => {
+    grantGeolocation();
+    // Tokyo is the only non-European deal and it is the only one in September.
+    const tokyo = {
+      ...rome,
+      cityTo: "Tokyo",
+      flyTo: "HND",
+      countryTo: "Japan",
+      countryToCode: "JP",
+      deepLink: "https://kiwi.com/deep/tokyo",
+    };
+    vi.spyOn(global, "fetch").mockImplementation((async (url: string) => {
+      if (String(url).includes("/api/airports")) {
+        return { ok: true, json: async () => ({ airports: [{ code: "BCN" }] }) } as Response;
+      }
+      return { ok: true, json: async () => ({ deals: [ibiza, tokyo] }) } as Response;
+    }) as unknown as typeof fetch);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+
+    // Unfiltered, Asia really does hold a deal and is selectable.
+    fireEvent.click(screen.getByRole("button", { name: "Region. Change" }));
+    expect(screen.getByRole("button", { name: "Asia" })).toBeEnabled();
+
+    // Narrow to August, which holds only Ibiza — a European deal.
+    fireEvent.click(screen.getByRole("button", { name: "Month. Change" }));
+    fireEvent.click(screen.getByRole("button", { name: "Aug" }));
+
+    // Asia yields nothing against that choice, so it must not be clickable.
+    // The count itself is never rendered (house rule) — the disabled state is
+    // the whole of what the user sees, so it is what this pins.
+    fireEvent.click(screen.getByRole("button", { name: "Region. Change" }));
+    expect(screen.getByRole("button", { name: "Asia" })).toBeDisabled();
+    // Europe still holds the one August deal, so it stays live.
+    expect(screen.getByRole("button", { name: "Europe" })).toBeEnabled();
+  });
+
+  // The rule used to be a default with a checkbox to override it; the override
+  // was removed on request — a trip with under a day at the destination is not
+  // shown, full stop — so the test now pins both the hiding and the absence of
+  // any control to reveal it.
+  it("never shows short-layover trips, and offers no toggle to reveal them", async () => {
     grantGeolocation();
     const doha = {
       ...rome,
@@ -225,17 +272,14 @@ describe("Home page", () => {
         return { ok: true, json: async () => ({ airports: [{ code: "BCN" }] }) } as Response;
       }
       return { ok: true, json: async () => ({ deals: [ibiza, doha] }) } as Response;
-    }) as any);
+    }) as unknown as typeof fetch);
 
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
     expect(screen.queryByText("Doha")).not.toBeInTheDocument();
-
-    // No Refine to open — the toggle is simply on the page.
-    fireEvent.click(
-      screen.getByRole("checkbox", { name: /under a day at the destination/i })
-    );
-    expect(screen.getByText("Doha")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /under a day at the destination/i })
+    ).not.toBeInTheDocument();
   });
 
   // Second occurrence of this bug class: form state changing the LABELS on
@@ -289,8 +333,10 @@ describe("Home page", () => {
     );
   });
 
-  // The search is a line of prose now, not a panel: "Searching BCN · Fri–Sun ·
-  // direct · 1 adult", every value editable in place. Nothing about it is
+  // The search is a line of prose now, not a panel: "From Barcelona ·
+  // Fri–Sun · direct · 1 adult", every value editable in place. The origin
+  // reads as the CITY, taken from the deals' server-resolved cityFrom, because
+  // codes are an aviation dialect. Nothing about it is
   // hidden behind a disclosure, but the airport field — which needs
   // autocomplete, chips and a location prompt — is a form, so it lives in a
   // sheet that only exists while you are editing it.
@@ -301,7 +347,7 @@ describe("Home page", () => {
     render(<Home />);
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
 
-    expect(screen.getByRole("button", { name: /^BCN/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Barcelona/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Fri–Sun/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^1 adult/ })).toBeInTheDocument();
     // No inline field, and no Edit button to reveal one.
@@ -310,7 +356,7 @@ describe("Home page", () => {
       screen.queryByRole("button", { name: /^edit$/i })
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /^BCN/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Barcelona/ }));
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 

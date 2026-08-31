@@ -80,6 +80,7 @@ export function DealList({
   splitShape,
   onClearFilters,
   onHover,
+  hideStops,
 }: {
   deals: Deal[];
   // When the map asks for a specific card, that card opens.
@@ -99,6 +100,8 @@ export function DealList({
   splitShape?: WeekendStyle;
   onClearFilters?: () => void;
   onHover?: (flyTo: string | null) => void;
+  /** See DealCard.hideStops. */
+  hideStops?: boolean;
 }) {
   if (loading)
     return (
@@ -141,6 +144,7 @@ export function DealList({
       // Only the targeted card gets a seq, so only it reacts.
       focusSeq={dealDomId(deal) === focusId ? focusSeq : undefined}
       onHover={onHover}
+      hideStops={hideStops}
     />
   );
 

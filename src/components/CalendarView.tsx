@@ -35,7 +35,12 @@ export function CalendarView({
   if (months.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-5">
+    // Up to three months per row. Stacked single-file the six-month window ran
+    // ~2,000px tall and answering "what about November" meant scrolling past
+    // September and October; three abreast puts half a year in one screenful,
+    // which is the whole argument for a calendar over a list. One column on a
+    // phone, where a seven-column month needs the full width to stay legible.
+    <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
       {months.map((m) => (
         <section key={m.key} className="flex flex-col gap-1.5">
           <h3 className="text-sm font-semibold tracking-tight">{m.title}</h3>
@@ -86,7 +91,16 @@ export function CalendarView({
                   }
                   const cheapest = trips[0];
                   const on = selected === key;
-                  const days = real.map((x) => x.day).join("–");
+                  // A RANGE, not an enumeration: "12–14", never "12–13–14".
+                  // The F/S/S column headers already name the days, so the
+                  // middle number was pure noise — three numerals and two
+                  // dashes in an 11px line that only has to say where the
+                  // weekend starts and ends. A one-day sliver (a straddling
+                  // weekend's orphan) still prints the bare day.
+                  const days =
+                    real.length > 1
+                      ? `${real[0].day}–${real[real.length - 1].day}`
+                      : `${real[0].day}`;
                   out.push(
                     <button
                       key={`${wi}-4`}
@@ -141,7 +155,7 @@ export function CalendarView({
           </div>
         </section>
       ))}
-      <p className="text-[11px] text-black/50 dark:text-white/50">
+      <p className="col-span-full text-[11px] text-black/50 dark:text-white/50">
         Each block is a weekend you could fly, showing the cheapest destination
         and its fare in {currency}. Tap one to see only those trips.
       </p>
