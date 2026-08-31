@@ -40,6 +40,7 @@ import { PriceFilter } from "@/components/PriceFilter";
 import { DealList, SkeletonCard } from "@/components/DealList";
 import { DealsMap } from "@/components/DealsMap";
 import { CalendarDialog } from "@/components/CalendarDialog";
+import { AboutDialog } from "@/components/AboutDialog";
 // Dev-only. The runtime cost was already nil without ?debug=overflow, but the
 // component still shipped in every visitor's JS; the constant lets the bundler
 // drop it from the production build entirely.
@@ -1264,13 +1265,11 @@ export default function Home() {
           cost to you. Prices and availability are set by them, not by us.
         </p>
         {/* Its own row: inline at the end of a four-line paragraph, the one
-            navigable thing in the footer was the hardest part of it to find. */}
-        <a
-          href="/about"
-          className="w-fit underline underline-offset-2 transition hover:text-black/70 dark:hover:text-white/70"
-        >
-          About, privacy &amp; contact
-        </a>
+            navigable thing in the footer was the hardest part of it to find.
+            Opens in a dialog so reading the small print does not cost you the
+            board you were reading — but it is still a real link to a real
+            page. */}
+        <AboutDialog className="w-fit underline underline-offset-2 transition hover:text-black/70 dark:hover:text-white/70" />
       </footer>
 
       {/* Inert unless ?debug=overflow is in the URL. */}

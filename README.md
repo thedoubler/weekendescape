@@ -17,7 +17,7 @@ future timeline. Built with Next.js + the Kiwi Tequila API.
 | Variable | Effect if unset |
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URLs, OG images, `robots.txt` and the sitemap fall back to the Vercel production domain, then `localhost`. Set it on the real deploy. |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | `/about` shows a developer note where the address should be. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Falls back to `hello@weekend.flights`. Set it to point contact somewhere else. |
 | `NEXT_PUBLIC_COFFEE_URL` | The "buy me a coffee" paragraph on `/about` does not render at all. |
 | `NEXT_PUBLIC_GYG_PARTNER_ID` | Falls back to the built-in GetYourGuide partner ID. Set to disable or re-point the activities panel. |
 | `NEXT_PUBLIC_BOOKING_AID` | Booking.com links go out without an affiliate ID. |
