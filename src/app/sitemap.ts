@@ -1,10 +1,15 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/site";
 
-// One entry, because there is exactly one indexable page. This stays honest
-// rather than padded: query-string variants (`?from=BCN`) are the SAME page
-// with client-fetched results, so listing them would claim content that isn't
-// served. If per-city routes are ever added, they belong here.
+// Honest rather than padded. Query-string variants (`?from=BCN`) are the SAME
+// page with client-fetched results, so they are still not listed — a crawler
+// gets identical HTML from every one of them. The /from/[iata] routes ARE
+// listed, because they are server-rendered and each carries different content.
+// The origins that get a server-rendered page. Kept in step with
+// generateStaticParams in from/[iata]/page.tsx — a sitemap that lists a URL
+// nothing renders is worse than one that lists fewer.
+const ORIGIN_PAGES = ["BCN", "MAD", "LON", "CLJ", "BER"];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
@@ -18,5 +23,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.5,
     },
+    // One per origin airport. These carry the real content — city, dates,
+    // fares — and are rebuilt daily, which is what changeFrequency claims.
+    ...ORIGIN_PAGES.map((iata) => ({
+      url: `${siteUrl}/from/${iata.toLowerCase()}`,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+    })),
   ];
 }

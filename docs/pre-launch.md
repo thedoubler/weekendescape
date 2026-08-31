@@ -66,8 +66,12 @@ and belong in the second group. Every `NEXT_PUBLIC_` one belongs in the first.
 
 ## Not blockers, but they are the growth plan
 
-- [ ] **Server-rendered origin pages** (`/from/[iata]`, see
-      `docs/seo-origin-pages.md`). A crawler currently sees 656 characters of the
+- [x] ~~**Server-rendered origin pages**~~ Shipped. `/from/bcn` serves 5,270
+      characters of real content against the board's 656, opening with a
+      sentence an assistant can quote. Five origins are prerendered and in the
+      sitemap; the rest render lazily. To add more, extend SEEDED in
+      `from/[iata]/page.tsx` and ORIGIN_PAGES in `sitemap.ts` together.
+      Previously: **origin pages** (see `docs/seo-origin-pages.md`). A crawler currently sees 656 characters of the
       board and `?from=BCN` changes none of them; `/about` is the only page on
       the site that can be read in full. Until this ships there is no organic
       acquisition path, and the same fix serves LLM crawlers, which do not run
