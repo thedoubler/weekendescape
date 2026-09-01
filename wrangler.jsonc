@@ -26,18 +26,26 @@
       "simple": { "limit": 120, "period": 60 }
     }
   ],
-  // Shared cache for upstream API responses. The in-memory tier in
-  // src/lib/api-cache.ts is per-isolate and dies on cold start, so on Workers it
-  // catches far less than it appears to locally — and every miss is a paid Kiwi
-  // call. Create the namespace and paste its id here:
+  // Shared cache for upstream API responses — NOT bound yet, on purpose.
+  //
+  // The in-memory tier in src/lib/api-cache.ts is per-isolate and dies on cold
+  // start, so on Workers it catches far less than it appears to locally, and
+  // every miss is a paid Kiwi call. KV fixes that. To turn it on:
   //
   //   npx wrangler kv namespace create API_CACHE
   //
-  // Until then the binding is simply absent and the cache falls back to memory
-  // only, exactly as before. Nothing breaks; it is just less effective.
-  "kv_namespaces": [
-    { "binding": "API_CACHE", "id": "REPLACE_WITH_NAMESPACE_ID" }
-  ],
+  // then paste the returned id and uncomment:
+  //
+  //   "kv_namespaces": [
+  //     { "binding": "API_CACHE", "id": "<the id it printed>" }
+  //   ],
+  //
+  // It ships commented out because a placeholder id is not inert: wrangler
+  // validates namespace ids at deploy time and refuses the whole deploy with
+  // "KV namespace 'REPLACE_WITH_NAMESPACE_ID' is not valid". A config that
+  // blocks deploys until someone runs a command is worse than no config. The
+  // code already treats an absent binding as an absent tier, so nothing breaks
+  // while this is off.
   "observability": {
     "enabled": true
   }

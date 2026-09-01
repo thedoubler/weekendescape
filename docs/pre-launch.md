@@ -53,7 +53,10 @@ cache before suspecting the ref.
 
 ## Worth doing before the first real traffic
 
-- [ ] **Create the KV namespace.** The code and binding are done; it needs an id:
+- [ ] **Create the KV namespace.** The code is done; the BINDING is commented out
+      in wrangler.jsonc because a placeholder id is not inert — wrangler
+      validates ids at deploy time and refuses the whole deploy. Run the command,
+      paste the id, uncomment the block. Previously:
       `npx wrangler kv namespace create API_CACHE`, then paste it over
       REPLACE_WITH_NAMESPACE_ID in wrangler.jsonc. Until then the binding is
       absent and the cache is memory-only — nothing breaks, it is just less
