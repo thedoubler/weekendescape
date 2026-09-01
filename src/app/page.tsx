@@ -691,26 +691,41 @@ export default function Home() {
 
 
       {booting ? (
-        /* First load: explain the tool + what's happening (we're detecting the
-           nearest airport, which may prompt for location), then the same
-           skeletons as a search for one consistent loading state. */
+        /* First load: a spinner and the one line that earns its place, then the
+           same skeletons as a search for one consistent loading state.
+
+           The value-prop paragraph that used to open this block is gone — the
+           masthead above already makes the promise, so the explainer was
+           restating the screen it sat on, at the exact moment a permission
+           dialog was competing for attention. What stays is the geolocation
+           line, because the browser's location prompt appears with no context
+           of its own, and an unexplained permission ask reads as a reason to
+           decline.
+
+           The spinner is inline SVG on currentColor, muted. Under
+           prefers-reduced-motion it stops spinning and the text alone carries
+           the state — a frozen ring next to a sentence still reads as
+           "working", while a spinning one violates the setting. */
         <div className="flex flex-col gap-3">
-          <div className="rounded-2xl border border-black/[0.07] bg-black/[0.015] p-4 text-sm dark:border-white/10 dark:bg-white/[0.02]">
-            <p className="text-black/70 dark:text-white/70">
-              The cheapest round-trip{" "}
-              <span className="font-medium">weekend flights</span> from your home
-              airport — tap a deal to book on Kiwi. Prices are live estimates.
-            </p>
-            {/* Three sentences became one. It used to explain the permission,
-                reassure about the permission, and then offer the way out —
-                which is a lot of prose to read while a browser dialog is
-                already sitting on top of it. The reassurance survives as four
-                words, because that is the part a reader actually weighs; the
-                full privacy answer lives on /about. */}
-            <p className="mt-1.5 text-muted">
-              📍 Finding your nearest airport — used only for this. Decline and
+          <div
+            className="flex items-center justify-center gap-2.5 py-2 text-sm text-muted"
+            role="status"
+          >
+            <svg
+              className="h-4 w-4 shrink-0 motion-safe:animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <path d="M12 3a9 9 0 1 1-6.36 2.64" />
+            </svg>
+            <span>
+              Finding your nearest airport — used only for this. Decline and
               type it in.
-            </p>
+            </span>
           </div>
           <div
             className="flex flex-col gap-3"
