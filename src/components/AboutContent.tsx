@@ -33,8 +33,17 @@ function Section({
 export function AboutContent() {
   return (
     <>
-      <header>
-        <p className="text-[15px] leading-relaxed text-black/70 dark:text-white/70">
+      <header className="flex flex-col gap-2.5">
+        {/* The thesis, in the fewest words that carry it. Everything on the
+            board is organised around the one unit of free time everyone
+            already has — the weekend — so the pitch leads with that reversal
+            rather than with what the site technically is. */}
+        <p className="text-[15px] leading-relaxed text-black dark:text-white">
+          Most trips start with where. This one starts with when: you already
+          have the weekends, and the board shows where each of them can take
+          you, cheapest first.
+        </p>
+        <p className="text-sm leading-relaxed text-black/70 dark:text-white/70">
           A board of the cheapest round-trip weekend flights from your home
           airport. Not a booking site — it finds the trips and hands you to the
           people who sell them.
@@ -53,6 +62,16 @@ export function AboutContent() {
           airport really is from the city it is sold as, the typical weather for
           those dates, and whether a public holiday falls nearby — so one day of
           leave can buy you four.
+        </p>
+        <p className="text-sm leading-relaxed text-black/70 dark:text-white/70">
+          <span className="font-medium text-black dark:text-white">
+            Long weekends
+          </span>{" "}
+          — a choice under trip length. Instead of fixed Fri–Sun trips, the
+          board reads your country&rsquo;s public holidays and searches around
+          them: out on the holiday&rsquo;s edge, back after the weekend it
+          touches. It counts national holidays only — a day off that only one
+          region has is never assumed for you.
         </p>
       </Section>
 
