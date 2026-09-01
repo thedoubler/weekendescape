@@ -100,7 +100,9 @@ export function CalendarDialog({
       <div className="flex h-full flex-col">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/[0.07] px-4 py-3 sm:px-6 dark:border-white/10">
           <div>
-            <h2 className="text-base font-semibold tracking-tight">Calendar</h2>
+            <h2 className="text-[17px] leading-tight font-bold tracking-tight">
+              Calendar
+            </h2>
             <p className="text-[12.5px] text-muted">
               Every weekend you could fly. Tap one to see all its flights.
             </p>
@@ -146,8 +148,11 @@ export function CalendarDialog({
           >
             {first ? (
               <>
-                <div className="shrink-0 border-b border-black/[0.07] px-4 py-3 dark:border-white/10">
-                  <h3 className="text-sm font-semibold tracking-tight">
+                {/* The pane header wears the block's amber, faintly — the
+                    selected weekend and the list that answers it are one
+                    thing, and the shared material says so without an arrow. */}
+                <div className="shrink-0 border-b border-black/[0.07] bg-amber-400/[0.08] px-4 py-3 dark:border-white/10 dark:bg-amber-300/[0.06]">
+                  <h3 className="text-[15px] leading-tight font-bold tracking-tight">
                     {weekendRange(first.outDepart, first.backDepart)}
                   </h3>
                   <p className="text-[12.5px] text-muted">

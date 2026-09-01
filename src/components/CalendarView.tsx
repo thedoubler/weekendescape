@@ -18,6 +18,22 @@ import { calendarMonths, dealsByWeekend } from "@/lib/calendar";
 const WD = ["M", "T", "W", "T", "F", "S", "S"];
 const SPAN = ["", "col-span-1", "col-span-2", "col-span-3"];
 
+// The weekend block's amber, as one vocabulary. The wash is the material
+// ("this is a weekend you could fly"), the inset hairline is what makes it an
+// object rather than a highlighter smear, and both step up together on hover.
+// Dark mode keys off amber-300 rather than amber-400: the same alpha of the
+// deeper hue over #14161c curdles into olive, while the lighter one stays warm.
+const BLOCK_OFF =
+  "bg-amber-400/15 ring-1 ring-inset ring-amber-500/25 hover:bg-amber-400/25 hover:ring-amber-500/40 dark:bg-amber-300/10 dark:ring-amber-300/20 dark:hover:bg-amber-300/15 dark:hover:ring-amber-300/35";
+// Selected spends the brand orange — the only orange in the whole grid, so it
+// can only mean "you are here". A 2px inset ring on a deepened wash, not a
+// solid slab: the slab hid the block's own anatomy (dates went white-on-black,
+// the amber material vanished) precisely on the one block the reader is
+// working with. Text stays foreground on a light wash, so contrast never
+// depends on the accent.
+const BLOCK_ON =
+  "bg-amber-400/25 ring-2 ring-inset ring-orange-600 dark:bg-amber-300/15 dark:ring-orange-400";
+
 export function CalendarView({
   deals,
   currency,
@@ -40,139 +56,163 @@ export function CalendarView({
     // September and October; three abreast puts half a year in one screenful,
     // which is the whole argument for a calendar over a list. One column on a
     // phone, where a seven-column month needs the full width to stay legible.
-    <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
-      {months.map((m) =>
-        !m.hasDeals ? (
+    <div className="grid grid-cols-1 gap-x-10 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
+      {months.map((m) => {
+        // "September 2026" → the month carries the weight, the year is the
+        // qualifier. Six titles at one size and one colour read as six labels;
+        // splitting the pair makes them read as structure.
+        const sp = m.title.lastIndexOf(" ");
+        const monthName = m.title.slice(0, sp);
+        const year = m.title.slice(sp + 1);
+        const title = (
+          <h3 className="text-[17px] leading-tight font-semibold tracking-tight">
+            {monthName}{" "}
+            <span className="font-normal text-muted">{year}</span>
+          </h3>
+        );
+        return !m.hasDeals ? (
           // A month inside the span with nothing in it. It keeps its heading and
           // its place in the sequence, because the confusing version was the one
           // where December was missing between November and January and the
           // reader had to guess whether that meant "empty" or "broken".
           // Deliberately not a ghost grid of thirty greyed numerals: drawing a
           // whole month to say nothing is there gives the emptiest column the
-          // most ink.
-          <section key={m.key} className="flex flex-col gap-1.5">
-            <h3 className="text-sm font-semibold tracking-tight text-muted">
-              {m.title}
-            </h3>
-            <p className="flex min-h-[104px] items-center justify-center rounded-lg border border-dashed border-black/12 px-3 text-center text-[12px] text-muted dark:border-white/15">
+          // most ink. The one serif-italic line in the dialog — the display
+          // voice used the way the brand uses it, as a single quiet aside.
+          <section key={m.key} className="flex flex-col gap-2">
+            {title}
+            <p className="flex min-h-[112px] items-center justify-center rounded-[10px] border border-dashed border-black/12 px-3 text-center font-serif text-[15px] italic text-muted dark:border-white/15">
               No weekend flights this month.
             </p>
           </section>
         ) : (
-        <section key={m.key} className="flex flex-col gap-1.5">
-          <h3 className="text-sm font-semibold tracking-tight">{m.title}</h3>
-          <div className="grid grid-cols-7 gap-1">
-            {WD.map((d, i) => (
-              <div
-                key={i}
-                aria-hidden
-                className="pb-0.5 text-center text-[10px] font-medium tracking-wider text-black/35 uppercase dark:text-white/35"
-              >
-                {d}
-              </div>
-            ))}
-            {m.weeks.flatMap((week, wi) => {
-              const out = [];
-              for (let i = 0; i < 7; i++) {
-                const c = week[i];
-                // Mon–Thu are always plain day cells.
-                if (i < 4) {
-                  out.push(
-                    <div
-                      key={`${wi}-${i}`}
-                      className="py-2 text-center text-[13px] text-black/25 tabular-nums dark:text-white/25"
-                    >
-                      {c.day || ""}
-                    </div>
-                  );
-                  continue;
-                }
-                // Fri: decide the whole weekend here, then skip Sat and Sun.
-                if (i === 4) {
-                  const trio = [week[4], week[5], week[6]];
-                  const real = trio.filter((x) => x.date);
-                  const key = real.find((x) => x.weekend)?.weekend ?? "";
-                  const trips = key ? byWeekend.get(key) : undefined;
-                  if (!trips || real.length === 0) {
-                    for (const [j, x] of trio.entries())
-                      out.push(
-                        <div
-                          key={`${wi}-${4 + j}`}
-                          className="py-2 text-center text-[13px] text-black/25 tabular-nums dark:text-white/25"
-                        >
-                          {x.day || ""}
-                        </div>
-                      );
-                    i = 6;
+          <section key={m.key} className="flex flex-col gap-2">
+            {title}
+            <div className="grid grid-cols-7 gap-x-1 gap-y-1.5">
+              {WD.map((d, i) => (
+                <div
+                  key={i}
+                  aria-hidden
+                  className={`pb-0.5 text-center text-[10px] tracking-[0.08em] text-muted uppercase ${
+                    // The three columns every block lives in, marked by weight
+                    // alone — the header names the days, the bold end of the
+                    // row says which of them this calendar is about.
+                    i >= 4 ? "font-bold" : "font-medium"
+                  }`}
+                >
+                  {d}
+                </div>
+              ))}
+              {m.weeks.flatMap((week, wi) => {
+                const out = [];
+                for (let i = 0; i < 7; i++) {
+                  const c = week[i];
+                  // Mon–Thu are always plain day cells. Flex-centred so the
+                  // numerals sit on the optical middle of the row their
+                  // weekend block sets the height of, not at its top edge.
+                  if (i < 4) {
+                    out.push(
+                      <div
+                        key={`${wi}-${i}`}
+                        className="flex items-center justify-center text-[13px] text-black/25 tabular-nums dark:text-white/25"
+                      >
+                        {c.day || ""}
+                      </div>
+                    );
                     continue;
                   }
-                  const cheapest = trips[0];
-                  const on = selected === key;
-                  // A RANGE, not an enumeration: "12–14", never "12–13–14".
-                  // The F/S/S column headers already name the days, so the
-                  // middle number was pure noise — three numerals and two
-                  // dashes in an 11px line that only has to say where the
-                  // weekend starts and ends. A one-day sliver (a straddling
-                  // weekend's orphan) still prints the bare day.
-                  const days =
-                    real.length > 1
-                      ? `${real[0].day}–${real[real.length - 1].day}`
-                      : `${real[0].day}`;
-                  out.push(
-                    <button
-                      key={`${wi}-4`}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onSelect(on ? null : key)}
-                      // A weekend that straddles a month shows only the days
-                      // this grid actually contains — Fri 30 + Sat 31 here, Sun
-                      // 1 in the next month's first row.
-                      className={`${SPAN[real.length]} flex flex-col items-start gap-0.5 rounded-lg px-2 py-1.5 text-left transition ${
-                        on
-                          ? "bg-neutral-900 text-white dark:bg-white dark:text-black"
-                          : "bg-amber-400/15 hover:bg-amber-400/30 dark:hover:bg-amber-300/25"
-                      }`}
-                    >
-                      <span
-                        className={`text-[11px] leading-none tabular-nums ${
-                          on
-                            ? "opacity-70"
-                            : "text-muted"
+                  // Fri: decide the whole weekend here, then skip Sat and Sun.
+                  if (i === 4) {
+                    const trio = [week[4], week[5], week[6]];
+                    const real = trio.filter((x) => x.date);
+                    const key = real.find((x) => x.weekend)?.weekend ?? "";
+                    const trips = key ? byWeekend.get(key) : undefined;
+                    if (!trips || real.length === 0) {
+                      for (const [j, x] of trio.entries())
+                        out.push(
+                          <div
+                            key={`${wi}-${4 + j}`}
+                            className="flex items-center justify-center text-[13px] text-black/25 tabular-nums dark:text-white/25"
+                          >
+                            {x.day || ""}
+                          </div>
+                        );
+                      i = 6;
+                      continue;
+                    }
+                    const cheapest = trips[0];
+                    const on = selected === key;
+                    // A RANGE, not an enumeration: "12–14", never "12–13–14".
+                    // The F/S/S column headers already name the days, so the
+                    // middle number was pure noise — three numerals and two
+                    // dashes in an 11px line that only has to say where the
+                    // weekend starts and ends. A one-day sliver (a straddling
+                    // weekend's orphan) still prints the bare day.
+                    const days =
+                      real.length > 1
+                        ? `${real[0].day}–${real[real.length - 1].day}`
+                        : `${real[0].day}`;
+                    out.push(
+                      <button
+                        key={`${wi}-4`}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => onSelect(on ? null : key)}
+                        // A weekend that straddles a month shows only the days
+                        // this grid actually contains — Fri 30 + Sat 31 here,
+                        // Sun 1 in the next month's first row.
+                        className={`${SPAN[real.length]} flex flex-col items-start gap-1 rounded-[10px] px-2.5 py-2 text-left transition ${
+                          on ? BLOCK_ON : BLOCK_OFF
                         }`}
                       >
-                        {days}
-                      </span>
-                      <span className="flex w-full min-w-0 items-baseline gap-1">
-                        <span aria-hidden className="text-[11px] leading-none">
-                          {cheapest.flag}
+                        <span
+                          className={`text-[11px] leading-none tabular-nums ${
+                            on
+                              ? "font-semibold text-orange-700 dark:text-orange-300"
+                              : "text-muted"
+                          }`}
+                        >
+                          {days}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-[12px] leading-none font-semibold">
-                          {cheapest.cityTo}
+                        <span className="flex w-full min-w-0 items-baseline gap-1">
+                          {/* A one-column sliver (~44px of writable width) can
+                              hold a number or a flag, not both — and the fare
+                              is the one that cannot truncate honestly. The
+                              full block, flag included, lives in the previous
+                              month's grid. */}
+                          {real.length > 1 && (
+                            <span
+                              aria-hidden
+                              className="text-[12px] leading-none"
+                            >
+                              {cheapest.flag}
+                            </span>
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-[13px] leading-none font-semibold tracking-tight">
+                            {cheapest.cityTo}
+                          </span>
+                          <span className="shrink-0 text-[12.5px] leading-none font-semibold tabular-nums">
+                            {cheapest.price}
+                          </span>
                         </span>
-                        <span className="shrink-0 text-[11px] leading-none font-semibold tabular-nums">
-                          {cheapest.price}
+                        {/* What the one named city is hiding. Without it the
+                            calendar looks like one destination per weekend. */}
+                        <span className="text-[10.5px] leading-none text-muted">
+                          {trips.length > 1
+                            ? `+${trips.length - 1} more`
+                            : " "}
                         </span>
-                      </span>
-                      {/* What the one named city is hiding. Without it the
-                          calendar looks like one destination per weekend. */}
-                      <span
-                        className={`text-[10px] leading-none ${
-                          on ? "opacity-70" : "text-muted"
-                        }`}
-                      >
-                        {trips.length > 1 ? `+${trips.length - 1} more` : " "}
-                      </span>
-                    </button>
-                  );
-                  i = 6;
+                      </button>
+                    );
+                    i = 6;
+                  }
                 }
-              }
-              return out;
-            })}
-          </div>
-        </section>
-        )
-      )}
+                return out;
+              })}
+            </div>
+          </section>
+        );
+      })}
       {/* Says the ONE thing the dialog header does not. The header already
           carries "Every weekend you could fly. Tap one to see all its flights",
           so the old version of this line repeated both halves and then closed
@@ -181,8 +221,13 @@ export function CalendarView({
           the panel on the right since this became a dialog, so that sentence
           described behaviour the product no longer has. What is left is the
           only fact neither the header nor the blocks state: what the number on
-          each block means. */}
-      <p className="col-span-full text-[11px] text-muted">
+          each block means. The swatch ties the sentence to the thing it
+          explains — a key of meaning, not of counts. */}
+      <p className="col-span-full flex items-center gap-2 text-[11.5px] text-muted">
+        <span
+          aria-hidden
+          className="h-3 w-5 shrink-0 rounded-[5px] bg-amber-400/25 ring-1 ring-amber-500/40 ring-inset dark:bg-amber-300/15 dark:ring-amber-300/30"
+        />
         Each block shows that weekend’s cheapest destination and its fare in{" "}
         {currency}.
       </p>
