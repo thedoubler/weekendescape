@@ -34,6 +34,47 @@ function evict(now: number): void {
   }
 }
 
+// A SECOND tier, shared across isolates.
+//
+// The Map above is per-isolate and dies on cold start. On a long-lived Node
+// server that is merely imperfect; on Cloudflare Workers, where isolates are
+// many and short-lived, it means the hit rate in production is far below what
+// local testing suggests — and every miss is a paid upstream call. KV is the
+// shared layer: slower than memory, enormously cheaper than Kiwi.
+//
+// Absent binding = absent tier. In `next dev`, in vitest, on any non-Workers
+// host, every one of these returns null or no-ops and the cache behaves exactly
+// as it did before. That is deliberate: a cache must never be the reason the
+// product breaks.
+type Kv = {
+  get: (k: string, t: "json") => Promise<unknown>;
+  put: (k: string, v: string, o?: { expirationTtl?: number }) => Promise<void>;
+};
+
+// Resolved once per isolate, not once per cache miss: the dynamic import and
+// the context lookup are the same answer every time, and paying for them on
+// every upstream miss would be a cost the cache exists to avoid.
+let kvOnce: Promise<Kv | null> | null = null;
+function kv(): Promise<Kv | null> {
+  return (kvOnce ??= resolveKv());
+}
+
+async function resolveKv(): Promise<Kv | null> {
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const ctx = await getCloudflareContext({ async: true });
+    const b = (ctx?.env as Record<string, unknown> | undefined)?.API_CACHE;
+    if (b && typeof (b as Kv).get === "function") return b as Kv;
+  } catch {
+    // Not on Workers, or no namespace bound.
+  }
+  return null;
+}
+
+// KV keys must be safe and bounded; our cache keys are long and contain
+// characters KV tolerates but that are unpleasant to debug in the dashboard.
+const kvKey = (k: string) => `v1:${k}`.slice(0, 512);
+
 // Return a cached value if fresh; otherwise run `fn`, caching its result for
 // `ttlMs`. Concurrent callers with the same key share one in-flight promise, so
 // N simultaneous requests trigger a single upstream call. Failures are never
@@ -52,6 +93,25 @@ export async function cached<T>(
 
   const p = (async () => {
     try {
+      // L2 before the upstream call. A hit is promoted into memory so the rest
+      // of this isolate's life is served locally, and so cacheFetchedAt() —
+      // which the "checked X ago" stamp reads — keeps working unchanged.
+      const shared = await kv();
+      if (shared) {
+        try {
+          const raw = (await shared.get(kvKey(key), "json")) as
+            | { v: T; t: number; e: number }
+            | null;
+          if (raw && raw.e > Date.now()) {
+            store.delete(key);
+            store.set(key, { value: raw.v, expires: raw.e, fetchedAt: raw.t });
+            evict(Date.now());
+            return raw.v;
+          }
+        } catch {
+          // A KV read that fails is a miss, never an error.
+        }
+      }
       const value = await fn();
       const t = Date.now();
       // Delete-then-set so insertion order tracks write recency: re-setting an
@@ -60,6 +120,18 @@ export async function cached<T>(
       store.delete(key);
       store.set(key, { value, expires: t + ttlMs, fetchedAt: t });
       evict(t);
+      if (shared) {
+        // Not awaited on the request path: the caller already has its answer,
+        // and a slow KV write should not slow the response down. KV requires a
+        // whole number of seconds, minimum 60.
+        void shared
+          .put(
+            kvKey(key),
+            JSON.stringify({ v: value, t, e: t + ttlMs }),
+            { expirationTtl: Math.max(60, Math.round(ttlMs / 1000)) }
+          )
+          .catch(() => {});
+      }
       return value;
     } finally {
       inflight.delete(key);

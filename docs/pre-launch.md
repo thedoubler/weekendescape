@@ -41,7 +41,11 @@ and belong in the second group. Every `NEXT_PUBLIC_` one belongs in the first.
 
 ## Worth doing before the first real traffic
 
-- [ ] **Move the API cache to Workers KV.** `src/lib/api-cache.ts` is per-isolate
+- [ ] **Create the KV namespace.** The code and binding are done; it needs an id:
+      `npx wrangler kv namespace create API_CACHE`, then paste it over
+      REPLACE_WITH_NAMESPACE_ID in wrangler.jsonc. Until then the binding is
+      absent and the cache is memory-only — nothing breaks, it is just less
+      effective. Previously: **move the API cache to Workers KV.** `src/lib/api-cache.ts` is per-isolate
       and dies on cold start. On Workers that is far more aggressive than on a
       long-lived Node server, so the real hit rate will be well below what local
       testing suggests and quota burn will exceed expectations even with no

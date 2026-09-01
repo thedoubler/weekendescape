@@ -26,6 +26,18 @@
       "simple": { "limit": 120, "period": 60 }
     }
   ],
+  // Shared cache for upstream API responses. The in-memory tier in
+  // src/lib/api-cache.ts is per-isolate and dies on cold start, so on Workers it
+  // catches far less than it appears to locally — and every miss is a paid Kiwi
+  // call. Create the namespace and paste its id here:
+  //
+  //   npx wrangler kv namespace create API_CACHE
+  //
+  // Until then the binding is simply absent and the cache falls back to memory
+  // only, exactly as before. Nothing breaks; it is just less effective.
+  "kv_namespaces": [
+    { "binding": "API_CACHE", "id": "REPLACE_WITH_NAMESPACE_ID" }
+  ],
   "observability": {
     "enabled": true
   }

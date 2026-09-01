@@ -18,6 +18,11 @@ describe("cached", () => {
     const fn = vi.fn(() => new Promise<string>((r) => (resolve = r)));
     const p1 = cached("k", 1000, fn);
     const p2 = cached("k", 1000, fn);
+    // `cached` consults the shared KV tier before calling `fn`, so the upstream
+    // call starts a tick later than it used to. Coalescing is unaffected — the
+    // in-flight promise is registered synchronously, which is what this test is
+    // really about — but we have to wait for `fn` to hand us its resolver.
+    await vi.waitFor(() => expect(fn).toHaveBeenCalled());
     resolve("shared");
     expect(await p1).toBe("shared");
     expect(await p2).toBe("shared");
