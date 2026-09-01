@@ -13,7 +13,12 @@ import { join, dirname, resolve } from "node:path";
 // response (see `toCoords` in the /api/weekends route).
 
 const SRC = resolve(__dirname, "../..");
-const FORBIDDEN = ["airports.json", "cities.json"];
+const FORBIDDEN = [
+  "airports.json",
+  "cities.json",
+  "airport-regions.json",
+  "region-names.json",
+];
 
 function walk(dir: string): string[] {
   const out: string[] = [];

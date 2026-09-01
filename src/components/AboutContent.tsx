@@ -70,8 +70,9 @@ export function AboutContent() {
           — a choice under trip length. Instead of fixed Fri–Sun trips, the
           board reads your country&rsquo;s public holidays and searches around
           them: out on the holiday&rsquo;s edge, back after the weekend it
-          touches. It counts national holidays only — a day off that only one
-          region has is never assumed for you.
+          touches. National holidays always count; a regional one counts only
+          when it is yours — the board says which region it assumed from your
+          airport, and you can correct it right there.
         </p>
       </Section>
 

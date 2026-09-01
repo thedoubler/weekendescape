@@ -89,12 +89,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { deals: responseDeals, fetchedAt, origins: originList } =
+    // Which regional holidays count as the traveller's own, bridge mode only.
+    // Shape-validated for the same reason as flyTo: it must never become an
+    // unbounded upstream passthrough or cache-key dimension. It never reaches
+    // Kiwi — it only filters the Nager holiday calendar — and the search
+    // resolves an out-of-country code back to inference, so the value space
+    // that DOES anything is the home country's own region list.
+    const regionRaw = searchParams.get("region");
+    if (regionRaw && regionRaw !== "national" && !/^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(regionRaw)) {
+      return NextResponse.json(
+        {
+          error:
+            'Invalid region. Use an ISO-3166-2 code (e.g. ES-CT) or "national".',
+        },
+        { status: 400 }
+      );
+    }
+    const homeRegion = bridgeMode ? regionRaw : null;
+
+    const { deals: responseDeals, fetchedAt, origins: originList, homeRegion: homeRegionInfo } =
       await searchWeekends({
         origins,
         flyTo,
         direct,
         bridgeMode,
+        homeRegion,
         style,
         months,
         adults,
@@ -108,6 +127,7 @@ export async function GET(request: NextRequest) {
         // `origin` stays for the single-origin case; `origins` is the full list.
         origin: originList[0],
         origins: originList,
+        ...(homeRegionInfo ? { homeRegion: homeRegionInfo } : {}),
       },
       // Let the CDN/browser reuse a result briefly; matches the server cache.
       { headers: { "Cache-Control": "private, max-age=300" } }

@@ -25,7 +25,7 @@ import {
 import { monthShort, monthKey } from "@/lib/format";
 import { timelineRange } from "@/lib/timeline";
 import { priceBuckets } from "@/lib/price";
-import { loadHomes, saveHomes } from "@/lib/home-storage";
+import { loadHomes, saveHomes, loadRegion, saveRegion } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import {
   BRIDGE_HELP,
@@ -103,6 +103,19 @@ export default function Home() {
   // Opt-in "bridge days" mode — off by default (a plain search). When on, the
   // API runs the holiday-anchored searches and returns only long-weekend escapes.
   const [bridges, setBridges] = useState(false);
+  // Which regional public holidays count as the traveller's own (bridge mode).
+  // null = let the server infer from the home airports; "national" = national
+  // only, explicitly; an ISO-3166-2 code = that region. Hydrated from
+  // localStorage in the bootstrap effect — never in the initializer, because
+  // `/` prerenders on the server.
+  const [region, setRegion] = useState<string | null>(null);
+  // What the server actually used and what it offers — drives the receipt's
+  // region control. Comes back on every bridge-mode response.
+  const [homeRegionInfo, setHomeRegionInfo] = useState<{
+    used: string | null;
+    usedName: string | null;
+    options: { code: string; name: string }[];
+  } | null>(null);
   const [sort, setSort] = useState<SortKey>("cheapest");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
@@ -136,6 +149,7 @@ export default function Home() {
     direct: boolean;
     adults: number;
     bridges: boolean;
+    region: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const loadingMore = false;
@@ -230,12 +244,14 @@ export default function Home() {
   const stopModeRef = useRef(stopMode);
   const adultsRef = useRef(adults);
   const bridgesRef = useRef(bridges);
+  const regionRef = useRef(region);
   useEffect(() => {
     styleRef.current = style;
     monthsRef.current = months;
     stopModeRef.current = stopMode;
     adultsRef.current = adults;
     bridgesRef.current = bridges;
+    regionRef.current = region;
   });
 
   // `overrides` exists for callers that set state and search in the SAME
@@ -253,6 +269,7 @@ export default function Home() {
       direct: boolean;
       adults: number;
       bridges: boolean;
+      region: string | null;
     }>
   ) {
     const list = parseOrigins(
@@ -265,6 +282,12 @@ export default function Home() {
       direct: overrides?.direct ?? stopModeRef.current === "direct",
       adults: overrides?.adults ?? adultsRef.current,
       bridges: overrides?.bridges ?? bridgesRef.current,
+      // `undefined` means the caller didn't touch it; null is a real value
+      // ("back to automatic"), so ?? would erase it.
+      region:
+        overrides && "region" in overrides
+          ? (overrides.region ?? null)
+          : regionRef.current,
     };
     setOrigins(list);
     saveHomes(list);
@@ -281,12 +304,14 @@ export default function Home() {
       });
       if (params.direct) qs.set("direct", "1");
       if (params.bridges) qs.set("bridges", "1");
+      if (params.bridges && params.region) qs.set("region", params.region);
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
       setRawDeals(body.deals ?? []);
       setFetchedAt(body.fetchedAt ?? Date.now());
       setOriginPoints(body.origins ?? []);
+      setHomeRegionInfo(body.homeRegion ?? null);
       setApplied({ origins: list, ...params });
       setSelectedMonths([]);
     } catch (e) {
@@ -357,6 +382,13 @@ export default function Home() {
       const a = Number(p.get("adults"));
       const adults0 = [1, 2, 3, 4].includes(a) ? a : 1;
       const bridges0 = p.get("bridges") === "1";
+      // The shared URL's region wins over the stored choice — the link should
+      // reproduce the board it described.
+      const regionParam = p.get("region");
+      const region0 =
+        regionParam && /^(national|[A-Z]{2}-[A-Z0-9]{1,3})$/.test(regionParam)
+          ? regionParam
+          : loadRegion();
       // Seed refs synchronously so the immediate search uses the URL values
       // (state setters haven't flushed yet). Only guard the param-change effect
       // if a non-default value actually changed.
@@ -365,6 +397,7 @@ export default function Home() {
       stopModeRef.current = stop0;
       adultsRef.current = adults0;
       bridgesRef.current = bridges0;
+      regionRef.current = region0;
       // Deliberately an effect. `/` is prerendered as static content, so this
       // component renders on the server at build time — reading
       // window.location from a render-phase state initialiser would throw
@@ -375,8 +408,14 @@ export default function Home() {
       setStopMode(stop0);
       setAdults(adults0);
       setBridges(bridges0);
+      setRegion(region0);
       runSearch(from);
     } else {
+      // No URL to honour — the stored explicit region (if any) still applies.
+      const stored = loadRegion();
+      regionRef.current = stored;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRegion(stored);
       detectLocation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -400,6 +439,7 @@ export default function Home() {
     if (!applied.direct) p.set("direct", "0");
     if (applied.adults !== 1) p.set("adults", String(applied.adults));
     if (applied.bridges) p.set("bridges", "1");
+    if (applied.bridges && applied.region) p.set("region", applied.region);
     const qs = p.toString();
     // Preserve history.state rather than passing null: Next keeps router
     // internals in there, and wiping them on every filter change breaks
@@ -629,6 +669,7 @@ export default function Home() {
     stopMode?: StopMode;
     adults?: number;
     bridges?: boolean;
+    region?: string | null;
   }) {
     if (!home.trim()) return;
     runSearch(origins, {
@@ -636,6 +677,7 @@ export default function Home() {
       direct: patch.stopMode ? patch.stopMode === "direct" : undefined,
       adults: patch.adults,
       bridges: patch.bridges,
+      ...("region" in patch ? { region: patch.region } : {}),
     });
   }
 
@@ -760,12 +802,19 @@ export default function Home() {
       <SearchReceipt
         origins={origins}
         originCities={originCities}
-        values={{ style, stopMode, adults, bridges }}
+        values={{ style, stopMode, adults, bridges, region }}
+        homeRegion={applied?.bridges ? homeRegionInfo : null}
         onChange={(patch) => {
           if (patch.style !== undefined) setStyle(patch.style);
           if (patch.stopMode !== undefined) setStopMode(patch.stopMode);
           if (patch.adults !== undefined) setAdults(patch.adults);
           if (patch.bridges !== undefined) setBridges(patch.bridges);
+          if (patch.region !== undefined) {
+            setRegion(patch.region);
+            // Only the explicit choice persists; "back to automatic" (null)
+            // clears the stored value rather than storing it.
+            saveRegion(patch.region);
+          }
         }}
         onCommit={commitReceipt}
         onEditOrigins={openOriginSheet}

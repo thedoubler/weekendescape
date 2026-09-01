@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchHolidays, tripWorkdays, annotate } from "@/lib/holidays";
+import {
+  fetchHolidays,
+  forRegion,
+  regionsIn,
+  tripWorkdays,
+  annotate,
+} from "@/lib/holidays";
 
 describe("fetchHolidays", () => {
   beforeEach(() => vi.restoreAllMocks());
@@ -16,11 +22,53 @@ describe("fetchHolidays", () => {
     ]);
   });
 
+  it("keeps a regional holiday's counties so forRegion can match it", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { date: "2026-09-11", name: "Diada", global: false, counties: ["ES-CT"] },
+        { date: "2026-10-12", name: "Fiesta Nacional", global: true },
+      ],
+    } as Response);
+    const all = await fetchHolidays("es", 2026);
+    expect(all).toEqual([
+      { date: "2026-09-11", name: "Diada", national: false, counties: ["ES-CT"] },
+      { date: "2026-10-12", name: "Fiesta Nacional", national: true },
+    ]);
+    // nationalOnly still drops the regional entry entirely.
+    const national = await fetchHolidays("es", 2026, { nationalOnly: true });
+    expect(national.map((h) => h.name)).toEqual(["Fiesta Nacional"]);
+  });
+
   it("returns [] on a 404 or error", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({ ok: false, status: 404 } as Response);
     expect(await fetchHolidays("zz", 2026)).toEqual([]);
     vi.spyOn(global, "fetch").mockRejectedValue(new Error("network"));
     expect(await fetchHolidays("es", 2026)).toEqual([]);
+  });
+});
+
+describe("forRegion / regionsIn", () => {
+  const cal = [
+    { date: "2026-10-12", name: "Fiesta Nacional", national: true },
+    { date: "2026-09-11", name: "Diada", national: false, counties: ["ES-CT"] },
+    { date: "2026-02-28", name: "Día de Andalucía", national: false, counties: ["ES-AN"] },
+  ];
+
+  it("null region keeps national holidays only", () => {
+    expect(forRegion(cal, null).map((h) => h.name)).toEqual(["Fiesta Nacional"]);
+  });
+
+  it("a region keeps national plus that region's — never a neighbour's", () => {
+    expect(forRegion(cal, "ES-CT").map((h) => h.name)).toEqual([
+      "Fiesta Nacional",
+      "Diada",
+    ]);
+  });
+
+  it("regionsIn lists the regions that actually have holidays, sorted", () => {
+    expect(regionsIn(cal)).toEqual(["ES-AN", "ES-CT"]);
+    expect(regionsIn([cal[0]])).toEqual([]);
   });
 });
 

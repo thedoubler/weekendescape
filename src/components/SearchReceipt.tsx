@@ -13,6 +13,17 @@ export interface ReceiptValues {
    *  control because to a user it is not a mode running alongside "Fri–Sun" —
    *  it is another answer to the same question, "how long is the trip". */
   bridges: boolean;
+  /** Which regional holidays count as the traveller's own, bridge mode only.
+   *  null = automatic (the server infers from the home airports); "national"
+   *  = explicitly none; an ISO-3166-2 code = that region. */
+  region: string | null;
+}
+
+/** What the server used and what it offers — see WeekendSearchResult. */
+export interface HomeRegionInfo {
+  used: string | null;
+  usedName: string | null;
+  options: { code: string; name: string }[];
 }
 
 // One line of prose that IS the control surface: "Searching CLJ · Fri–Sun ·
@@ -55,7 +66,12 @@ const ADULT_OPTS = [1, 2, 3, 4];
 export const BRIDGE_HELP =
   "Only weekends a public holiday stretches, so one day off can buy three or four.";
 
-type FacetKey = "style" | "stops" | "adults";
+// The region picker's why, in one sentence. The mechanism (regional holidays
+// exist and only count if they're yours) is invisible from the label alone.
+export const REGION_HELP =
+  "National holidays always count. Set the region you live in and its own holidays count too.";
+
+type FacetKey = "style" | "stops" | "adults" | "region";
 
 export function styleLabelOf(v: StyleChoice): string {
   return STYLE_OPTS.find((o) => o.value === v)?.label ?? v;
@@ -69,6 +85,9 @@ interface Props {
    *  people fly from cities. Falls back to the code until deals land. */
   originCities?: Record<string, string>;
   values: ReceiptValues;
+  /** Region facts from the last bridge-mode response; null hides the region
+   *  control (bridges off, or a home country with no regional holidays). */
+  homeRegion?: HomeRegionInfo | null;
   /** Live edit — updates the label immediately, without searching. */
   onChange: (patch: Partial<ReceiptValues>) => void;
   /** Commit — one search, on dismiss. Tapping 1→2→3→4 adults must not fire three. */
@@ -80,6 +99,7 @@ export function SearchReceipt({
   origins,
   originCities,
   values,
+  homeRegion,
   onChange,
   onCommit,
   onEditOrigins,
@@ -122,6 +142,8 @@ export function SearchReceipt({
         diff.adults = commit ? values.adults : before.adults;
       if (before.bridges !== values.bridges)
         diff.bridges = commit ? values.bridges : before.bridges;
+      if (before.region !== values.region)
+        diff.region = commit ? values.region : before.region;
       if (Object.keys(diff).length === 0) return;
       // onChange rewrites the label without searching; onCommit reloads.
       if (commit) onCommit(diff);
@@ -229,6 +251,12 @@ export function SearchReceipt({
           deliberately not shrunk); what goes away is the dangling mark. */}
       {[
         facet("style", styleLabelOf(values.bridges ? "bridges" : values.style)),
+        // The region only exists as a fact once a bridge search has answered
+        // (that answer carries which regions the home country even has), and
+        // only matters while bridges is on. Everyone else never sees it.
+        ...(values.bridges && homeRegion && homeRegion.options.length > 0
+          ? [facet("region", regionLabel(values.region, homeRegion))]
+          : []),
         facet("stops", values.stopMode === "direct" ? "direct" : "any stops"),
         facet("adults", values.adults === 1 ? "1 adult" : `${values.adults} adults`),
       ].map((control, i) => (
@@ -255,6 +283,23 @@ export function SearchReceipt({
               hint={{ value: "bridges", text: BRIDGE_HELP }}
             />
           )}
+          {open === "region" && homeRegion && (
+            <Options
+              title="Whose holidays count"
+              options={[
+                { value: "national", label: "National only" },
+                ...homeRegion.options.map((o) => ({
+                  value: o.code,
+                  label: o.name,
+                })),
+              ]}
+              // While the user hasn't chosen (region null), highlight what the
+              // server actually used — the inferred region, or national.
+              value={values.region ?? homeRegion.used ?? "national"}
+              onPick={(v) => onChange({ region: v })}
+              hint={{ value: "national", text: REGION_HELP }}
+            />
+          )}
           {open === "stops" && (
             <Options
               title="Stops"
@@ -278,6 +323,23 @@ export function SearchReceipt({
       )}
     </div>
   );
+}
+
+// The printed assumption: whose holidays the search counted. Live edits win
+// (the label updates as you pick, like every facet); before any choice the
+// label states what the server inferred, which is the point — a guess said
+// out loud is correctable, a silent one is not.
+function regionLabel(
+  chosen: string | null,
+  info: HomeRegionInfo
+): string {
+  const code = chosen ?? info.used;
+  if (!code || code === "national") return "national holidays";
+  const name =
+    info.options.find((o) => o.code === code)?.name ??
+    (code === info.used ? info.usedName : null) ??
+    code;
+  return `holidays for ${name}`;
 }
 
 function Sep() {

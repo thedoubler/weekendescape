@@ -60,6 +60,17 @@ describe("GET /api/weekends", () => {
     expect(body.error).toBe("Invalid maxPrice");
   });
 
+  it("returns 400 on a malformed region", async () => {
+    const res = await GET(req("flyFrom=BCN&bridges=1&region=catalonia"));
+    expect(res.status).toBe(400);
+    // The two valid shapes pass validation (the search itself is mocked
+    // elsewhere; this test only guards the input contract).
+    for (const ok of ["ES-CT", "national"]) {
+      const r = await GET(req(`flyFrom=BCN&bridges=1&region=${ok}`));
+      expect(r.status).not.toBe(400);
+    }
+  });
+
   it("calls Tequila with mapped params and returns normalized deals", async () => {
     (axios.get as any).mockResolvedValue({
       status: 200,

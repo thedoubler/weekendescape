@@ -2,7 +2,8 @@ import axios from "axios";
 import { weekendStyleToParams, WeekendStyle } from "@/lib/weekend";
 import { timelineRange } from "@/lib/timeline";
 import { normalizeDeals, isBridge, type Deal } from "@/lib/deals";
-import { fetchHolidays, annotate } from "@/lib/holidays";
+import { fetchHolidays, forRegion, regionsIn, annotate } from "@/lib/holidays";
+import { inferHomeRegion, regionName } from "@/lib/airport-region";
 import { computeBridges } from "@/lib/bridges";
 import { airportCityKm } from "@/lib/cities";
 import { distinctAirportCity } from "@/lib/airport-city";
@@ -46,6 +47,12 @@ export interface WeekendSearchOptions {
   direct?: boolean;
   /** Holiday-anchored long weekends only. */
   bridgeMode?: boolean;
+  /** Which regional holidays count as the traveller's own, bridge mode only.
+   *  undefined → infer from the home airports (see inferHomeRegion);
+   *  "national" → national holidays only, explicitly;
+   *  an ISO-3166-2 code → that region's, when it belongs to the home country
+   *  (a stale code from another country falls back to inference). */
+  homeRegion?: string | null;
   style: WeekendStyle;
   months: number;
   adults: number;
@@ -59,6 +66,15 @@ export interface WeekendSearchResult {
   fetchedAt: number;
   origins: { code: string; coords: [number, number] | null }[];
   currency: string;
+  /** Bridge mode only: which region's holidays were counted as the
+   *  traveller's own, and which regions the home country offers. The receipt
+   *  prints `used` and the picker lists `options`; an empty options list
+   *  means the country has no regional holidays and no control is shown. */
+  homeRegion?: {
+    used: string | null;
+    usedName: string | null;
+    options: { code: string; name: string }[];
+  };
 }
 
 export async function searchWeekends({
@@ -66,6 +82,7 @@ export async function searchWeekends({
   flyTo = null,
   direct = false,
   bridgeMode = false,
+  homeRegion = null,
   style,
   months,
   adults,
@@ -138,6 +155,8 @@ export async function searchWeekends({
   const mainDeals = await searchDeals({}, "main");
   const deals = flyTo ? mainDeals.slice(0, 1) : mainDeals;
 
+  let homeRegionInfo: WeekendSearchResult["homeRegion"];
+
   if (deals.length > 0) {
     const homeCC = deals[0].countryFromCode;
 
@@ -154,17 +173,38 @@ export async function searchWeekends({
       ]),
     ];
 
-    // Home-country holidays (national only, for honest PTO math) drive the
-    // bridge logic — fetched only when the user opted into bridge mode.
-    const homeCal = bridgeMode
+    // Home-country holidays drive the bridge logic — fetched only when the
+    // user opted into bridge mode, and fetched UNFILTERED: the same response
+    // yields both the traveller's calendar (national + their region, via
+    // forRegion) and the region option list the receipt's picker offers.
+    const homeAll = bridgeMode
       ? (
-          await Promise.all(
-            yearList.map((y) =>
-              fetchHolidays(homeCC, y, { nationalOnly: true })
-            )
-          )
+          await Promise.all(yearList.map((y) => fetchHolidays(homeCC, y)))
         ).flat()
       : [];
+    // Which region is "the traveller's own": an explicit choice wins when it
+    // belongs to the home country; "national" declines regions outright; a
+    // stale code from a previous home country falls back to inference, which
+    // itself answers only when every home airport agrees (see
+    // inferHomeRegion). null everywhere else — the app must never claim a
+    // day off the traveller doesn't actually have.
+    const usedRegion =
+      homeRegion === "national"
+        ? null
+        : homeRegion && homeRegion.startsWith(`${homeCC}-`)
+          ? homeRegion
+          : inferHomeRegion(origins, homeCC);
+    const homeCal = forRegion(homeAll, usedRegion);
+    if (bridgeMode) {
+      homeRegionInfo = {
+        used: usedRegion,
+        usedName: usedRegion ? regionName(usedRegion) : null,
+        options: regionsIn(homeAll).map((code) => ({
+          code,
+          name: regionName(code),
+        })),
+      };
+    }
 
     // Bridge mode: run the holiday-anchored windows the fixed weekend windows
     // miss (Tue/Wed/Thu). Each is its own cached Kiwi search; they run in
@@ -264,5 +304,11 @@ export async function searchWeekends({
   // "checked X ago" stamp) — falls back to now for a fresh miss.
   const fetchedAt = cacheFetchedAt(`${cacheKeyBase}:main`) ?? Date.now();
 
-  return { deals: responseDeals, fetchedAt, origins: originList, currency };
+  return {
+    deals: responseDeals,
+    fetchedAt,
+    origins: originList,
+    currency,
+    ...(homeRegionInfo ? { homeRegion: homeRegionInfo } : {}),
+  };
 }

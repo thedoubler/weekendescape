@@ -6,6 +6,11 @@ export interface Holiday {
   // "a public holiday in {city}" is simply false for most cities in the
   // country, so callers must hedge or suppress.
   national?: boolean;
+  // The ISO-3166-2 regions a non-national holiday applies to, straight from
+  // Nager's `counties` (e.g. Día de Andalucía → ["ES-AN"]). Absent on
+  // national holidays. Lets the search include the home REGION's holidays
+  // once the region is known — see inferHomeRegion in airport-region.ts.
+  counties?: string[];
 }
 
 export interface DealHolidayInfo {
@@ -35,29 +40,58 @@ export async function fetchHolidays(
     if (!Array.isArray(data)) return [];
     const nationalOnly = opts?.nationalOnly ?? false;
     return data
-      // For the *home* country we count national holidays only (Nager marks
-      // these global: true). Regional ones (e.g. Catalonia's Diada, Day of
-      // Extremadura) don't apply to every resident, so counting them would claim
-      // days off the traveller may not actually have. Destinations keep every
-      // official holiday so "there's a public holiday there" stays accurate.
-      // TODO (blocked on data, checked 2026-07-27): map the home airport → ISO
-      // region to re-include a resident's own regional holidays. Not doable with
-      // what's bundled — `airports.json` is IATA → [lat, lon] only and
-      // `cities.json` is "<CC>:<city>" → [lat, lon]; neither carries a region /
-      // subdivision field. Needs a new airport → ISO-3166-2 dataset before the
-      // filter below can be relaxed. Until then national-only stays: it
-      // undercounts days off for some residents, but never claims a day off the
-      // traveller doesn't actually have.
+      // nationalOnly keeps holidays every resident of the country has (Nager
+      // marks these global: true). For "national plus the traveller's own
+      // region" — the home-country case once the region is known — callers
+      // fetch unfiltered and apply forRegion() below, so one fetch also
+      // yields the list of regions that exist. Destinations pass no opts and
+      // keep every official holiday, so "there's a public holiday there"
+      // stays accurate.
       .filter((h: { global?: boolean }) => !nationalOnly || h.global !== false)
-      .map((h: { date?: string; localName?: string; name?: string; global?: boolean }) => ({
-        date: h.date ?? "",
-        name: h.name || h.localName || "",
-        national: h.global !== false,
-      }))
+      .map(
+        (h: {
+          date?: string;
+          localName?: string;
+          name?: string;
+          global?: boolean;
+          counties?: string[] | null;
+        }) => ({
+          date: h.date ?? "",
+          name: h.name || h.localName || "",
+          national: h.global !== false,
+          ...(h.global === false && Array.isArray(h.counties)
+            ? { counties: h.counties }
+            : {}),
+        })
+      )
       .filter((h: Holiday) => /^\d{4}-\d{2}-\d{2}$/.test(h.date));
   } catch {
     return [];
   }
+}
+
+/** National holidays plus the given region's — the honest home calendar once
+ *  the traveller's region is known. A null region means national only, which
+ *  is also the safe answer whenever inference declined to guess. */
+export function forRegion(
+  holidays: Holiday[],
+  region: string | null
+): Holiday[] {
+  return holidays.filter(
+    (h) =>
+      h.national !== false ||
+      (region !== null && (h.counties ?? []).includes(region))
+  );
+}
+
+/** The distinct regions an unfiltered country calendar mentions — the option
+ *  list for the region picker. Only regions that actually have holidays are
+ *  worth offering; for everyone else the choice changes nothing. */
+export function regionsIn(holidays: Holiday[]): string[] {
+  const out = new Set<string>();
+  for (const h of holidays)
+    if (h.national === false) for (const c of h.counties ?? []) out.add(c);
+  return [...out].sort();
 }
 
 function allDates(outArrive: string, backDepart: string): string[] {

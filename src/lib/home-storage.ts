@@ -45,3 +45,33 @@ export function loadHome(): string | null {
 export function saveHome(code: string): void {
   saveHomes([code]);
 }
+
+// The traveller's region for public-holiday purposes — an ISO-3166-2 code
+// ("ES-CT") or the literal "national". Only an EXPLICIT choice is stored;
+// while unset the server infers from the home airports on every search, so a
+// changed home keeps working without a stale guess. A stored code from a
+// previous home country is harmless: the server resolves an out-of-country
+// code back to inference. Same guarded access as loadHomes above.
+export const REGION_KEY = "weekendescape:region";
+const REGION_RE = /^(national|[A-Z]{2}-[A-Z0-9]{1,3})$/;
+
+export function loadRegion(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REGION_KEY);
+    return raw && REGION_RE.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveRegion(value: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (value && REGION_RE.test(value))
+      window.localStorage.setItem(REGION_KEY, value);
+    else window.localStorage.removeItem(REGION_KEY);
+  } catch {
+    // Storage blocked or full — the choice still applies for this session.
+  }
+}
