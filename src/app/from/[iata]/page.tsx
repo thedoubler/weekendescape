@@ -32,26 +32,23 @@ import { AboutDialog } from "@/components/AboutDialog";
 export const revalidate = 86400;
 export const dynamicParams = true;
 
-// A handful, not all 200: returning every origin would fire 200 Kiwi searches in
-// a burst at deploy time — exactly where a rate limit bites, and what makes
-// every deploy slow. The rest render on first visit and are cached from then on.
-const SEEDED = ["BCN", "MAD", "LON", "CLJ", "BER"];
-
-// ...and NONE at all when the key is absent, which is the normal case on
-// Cloudflare. TEQUILA_API_KEY is a runtime Secret on the Worker; the Workers
-// Builds environment that runs `next build` has never seen it. Prerendering
-// unconditionally therefore threw MissingApiKeyError on /from/bcn and took the
-// whole build down with it — a page that cannot be built must not be able to
-// stop the site from shipping.
+// NOTHING is prerendered, deliberately, and this is the second attempt at it.
 //
-// Returning [] is not a downgrade: `dynamicParams` is on, so every origin still
-// renders on first request — where the secret does exist — and is then cached
-// for `revalidate`. Where the key IS present at build time (a local build, or a
-// host that exposes it), the seeds are prerendered as before.
-export function generateStaticParams() {
-  if (!process.env.TEQUILA_API_KEY) return [];
-  return SEEDED.map((iata) => ({ iata: iata.toLowerCase() }));
-}
+// Every /from/* path renders on first request and is then cached for
+// `revalidate`. There is no generateStaticParams at all, so Next has no list of
+// paths to build ahead of time and cannot try.
+//
+// The first attempt returned [] only when TEQUILA_API_KEY was absent. That was
+// too clever: prerendering a page here runs a real Kiwi search, the key is a
+// RUNTIME Secret the build environment has never seen, and the whole deploy died
+// on `Error occurred prerendering page "/from/bcn"`. A conditional still leaves
+// the failure reachable — it only asks that an environment variable be exactly
+// right — whereas having no build-time path list removes the failure mode
+// itself. The cost is one visitor per origin per day paying ~2.5s. That is a
+// fine price for a build that cannot break this way.
+//
+// The general rule: a page that needs a runtime secret must not be built at
+// build time.
 
 const IATA_RE = /^[A-Za-z]{3}$/;
 
