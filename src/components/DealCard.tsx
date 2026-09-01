@@ -659,7 +659,12 @@ export function DealCard({
           )}
           {together && (
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-black/10 pb-2 dark:border-white/10">
-              <span className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+                {/* Names the orange in the lanes above. */}
+                <span
+                  aria-hidden
+                  className="h-1 w-4 rounded-full bg-orange-600 dark:bg-orange-400"
+                />
                 Together
               </span>
               <span className="text-sm">

@@ -96,13 +96,12 @@ export function MeetupLanes({
     const idx = Math.round((Date.parse(dateOf(iso)) - startMs) / DAY);
     return Math.min(1, Math.max(0, (idx + frac(iso)) / n));
   };
-  const track = (
-    from: string,
-    to: string,
-    fill: string,
-    key: string,
-    label: string
-  ) => (
+  // One line per traveller, no third row: their whole stay in the strip's
+  // grey, and the stretch everyone shares repainted orange ON the lane
+  // itself (the together window is inside every lane by construction). The
+  // orange swatch on the TOGETHER text line beside this chart names the
+  // colour.
+  const track = (from: string, to: string, key: string, label: string) => (
     <div key={key} className="flex items-center gap-2">
       <span className="w-8 shrink-0 text-right text-[9px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
         {label}
@@ -117,10 +116,17 @@ export function MeetupLanes({
           />
         ))}
         <div
-          className={`absolute inset-y-0 rounded-full ${fill}`}
+          className="absolute inset-y-0 rounded-full bg-black/35 dark:bg-white/45"
           style={{
             left: `${pos(from) * 100}%`,
             width: `${Math.max(0, pos(to) - pos(from)) * 100}%`,
+          }}
+        />
+        <div
+          className="absolute inset-y-0 rounded-full bg-orange-600 dark:bg-orange-400"
+          style={{
+            left: `${pos(together.arrive) * 100}%`,
+            width: `${Math.max(0, pos(together.depart) - pos(together.arrive)) * 100}%`,
           }}
         />
       </div>
@@ -151,22 +157,7 @@ export function MeetupLanes({
           ))}
         </div>
       </div>
-      {lanes.map((l) =>
-        track(
-          l.outArrive,
-          l.backDepart,
-          "bg-black/35 dark:bg-white/45",
-          l.code,
-          l.code
-        )
-      )}
-      {track(
-        together.arrive,
-        together.depart,
-        "bg-orange-600 dark:bg-orange-400",
-        "__together",
-        "all"
-      )}
+      {lanes.map((l) => track(l.outArrive, l.backDepart, l.code, l.code))}
     </div>
   );
 }
