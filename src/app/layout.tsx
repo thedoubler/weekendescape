@@ -75,12 +75,6 @@ export default function RootLayout({
           worked, which is what made it look intermittent). `clip` clips the
           same sideways overflow without creating a scroll container. */}
       <body className="min-h-full flex flex-col overflow-x-clip">
-        <script
-          type="application/ld+json"
-          // Local literal, no user input — nothing here can be injected.
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-        {children}
         {/* GA4, as Google's literal snippet rendered into the SERVER HTML.
             The next/script version (strategy="afterInteractive") injected the
             tag after hydration, which kept it out of the initial document —
@@ -88,6 +82,12 @@ export default function RootLayout({
             Google tag wasn't detected" while analytics half-worked. A tag that
             exists to be found has to be in the HTML. Measurement id is a
             public identifier, so it is inline rather than an env var.
+
+            FIRST in <body>, not last. React 19 hoists the src half into
+            <head> on its own, but an inline script renders exactly where it
+            is — at the end of the body it sat ~20 KB into the document,
+            beyond where Google's static scanner pairs it with the loader.
+            Here it lands within the first ~3 KB, immediately after </head>.
 
             Production only. Without the guard every `npm run dev` session and
             every preview deploy writes into the same property as real
@@ -111,6 +111,12 @@ gtag('config', 'G-BVSSW686DH');`,
             />
           </>
         )}
+        <script
+          type="application/ld+json"
+          // Local literal, no user input — nothing here can be injected.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        {children}
       </body>
     </html>
   );
