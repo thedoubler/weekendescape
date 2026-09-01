@@ -36,28 +36,20 @@ export function Masthead() {
           {/* The word intact for assistive tech and for copy-paste. */}
           <span className="sr-only">weekend.flights</span>
         </h1>
-        {/* The headline says the MECHANIC, which is the one thing the rest of
-            the page cannot say for itself. Three earlier versions were cut
-            because each only restated the screen below it — the wordmark
-            already says weekend.flights, the Searching line already says the
-            origin and the trip shape, the Cheapest toggle already says the
-            ranking. This is the deal being offered, not a description of the
-            board.
+        {/* The promise, and only the promise.
+            "Pick your airport." was an instruction, and it was the half doing
+            the least work: the board below already opens with an airport field,
+            so the line spent its first three words telling the reader to do
+            something the screen was already asking for. What it could not say
+            for itself is what it gives back — when you can go, and where.
+            Present tense, not "we'll": the board is already showing it.
 
-            The two halves split at the SENTENCE, not mid-clause, and only
-            where they have to. The promise now names what the product actually
-            answers — when you can go, and where — which at 17px is 490px of
-            text against 358px of phone. It has to break somewhere, and the
-            original rule ("one line, not two") was really about the KIND of
-            break: a hard wrap mid-clause read as an accident. Breaking between
-            "your job" and "our job" reads as a deliberate stack, and it lands on
-            the boundary the muted colour already marks. One line again from
-            `sm`, where the whole sentence fits. */}
+            One sentence now, so the old two-tone split (your job bold, our job
+            muted) has nothing to separate and is gone. At 17px it is 322px
+            against the 358px a 390px phone gives, so it holds one line
+            everywhere and the original "one line, not two" rule is intact. */}
         <p className="mt-0.5 text-[17px] leading-snug font-semibold tracking-[-0.01em] text-balance sm:text-[20px]">
-          Pick your airport.{" "}
-          <span className="block font-medium text-muted sm:inline">
-            We&rsquo;ll tell you when and where you can go.
-          </span>
+          We tell you when and where you can go.
         </p>
     </header>
   );
