@@ -314,12 +314,21 @@ export function DealCard({
   // actually sells: it opens when the last person lands and closes when the
   // first person flies home. Individual times stay on the per-person rows.
   // All legs share the destination's timezone, so ISO sort is a time sort.
-  const together = deal.meetup
-    ? {
-        arrive: deal.meetup.map((l) => l.outArrive).sort().at(-1)!,
-        depart: deal.meetup.map((l) => l.backDepart).sort()[0],
-      }
-    : null;
+  // Guarded, not assumed: /api responses are browser-cached for 5 minutes,
+  // so right after a deploy this component can be handed a meet-up payload
+  // from the PREVIOUS server version (observed live: legs without outArrive
+  // → NaN window → "0m together" on every card for one cache window). If the
+  // legs can't produce a real window, fall back to the primary itinerary's
+  // timeline rather than printing arithmetic on undefined.
+  const together = (() => {
+    if (!deal.meetup?.length) return null;
+    const arr = deal.meetup.map((l) => l.outArrive);
+    const dep = deal.meetup.map((l) => l.backDepart);
+    if (arr.some((v) => !v) || dep.some((v) => !v)) return null;
+    const arrive = [...arr].sort().at(-1)!;
+    const depart = [...dep].sort()[0];
+    return Date.parse(depart) > Date.parse(arrive) ? { arrive, depart } : null;
+  })();
   const cells = dayBlocks(
     together?.arrive ?? deal.outArrive,
     together?.depart ?? deal.backDepart
@@ -562,7 +571,7 @@ export function DealCard({
               pastel-washed card and read as odd emphasis. Dark stays white. */}
           <span className="text-sm text-black/55 dark:text-white">
             <span className="font-medium">{stay}</span>{" "}
-            {deal.meetup ? "together" : "to explore"}
+            {together ? "together" : "to explore"}
           </span>
         </div>
         {/* Visible in BOTH card states — restored by request after a
