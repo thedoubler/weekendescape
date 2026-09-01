@@ -27,7 +27,7 @@ export default function AboutPage() {
       <header className="flex flex-col gap-3">
         <Link
           href="/"
-          className="w-fit text-sm text-muted underline underline-offset-4 transition hover:text-black dark:hover:text-white"
+          className="w-fit text-sm text-muted-foreground underline underline-offset-4 transition hover:text-black dark:hover:text-white"
         >
           ← Back to the board
         </Link>

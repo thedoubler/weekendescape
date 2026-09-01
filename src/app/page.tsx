@@ -718,7 +718,7 @@ export default function Home() {
            "working", while a spinning one violates the setting. */
         <div className="flex flex-col gap-3">
           <div
-            className="flex items-center justify-center gap-2.5 py-2 text-sm text-muted"
+            className="flex items-center justify-center gap-2.5 py-2 text-sm text-muted-foreground"
             role="status"
           >
             <svg
@@ -1098,7 +1098,7 @@ export default function Home() {
                     })()}
               </span>
               {!loading && !error && fetchedAt && visible.length > 0 && (
-                <span className="text-[11px] text-muted">
+                <span className="text-[11px] text-muted-foreground">
                   Checked {agoLabel(fetchedAt)}
                 </span>
               )}
@@ -1106,7 +1106,7 @@ export default function Home() {
                   is called; this says what it did. Only while it is on — off,
                   it would be explaining something that is not happening. */}
               {!loading && !error && (applied ? applied.bridges : bridges) && (
-                <span className="basis-full text-[11px] text-muted sm:basis-auto">
+                <span className="basis-full text-[11px] text-muted-foreground sm:basis-auto">
                   {BRIDGE_HELP}
                 </span>
               )}
@@ -1114,7 +1114,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="relative text-[11px] text-muted underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:hover:text-white"
+                  className="relative text-[11px] text-muted-foreground underline underline-offset-2 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:text-black dark:hover:text-white"
                 >
                   Clear all
                 </button>
@@ -1164,7 +1164,7 @@ export default function Home() {
               ) : undefined
             }
           />
-          <p className="text-[11px] text-muted">
+          <p className="text-[11px] text-muted-foreground">
             Pins mark the arrival airport, which isn’t always the city centre.
           </p>
         </div>
@@ -1232,7 +1232,7 @@ export default function Home() {
       )}
       {/* Terminal state at the widest window, so the list has a definite bottom. */}
       {searched && !loading && !error && !loadingMore && visible.length > 0 && (
-        <p className="pt-1 pb-2 text-center text-xs text-muted">
+        <p className="pt-1 pb-2 text-center text-xs text-muted-foreground">
           That’s every weekend in the next {applied?.months ?? months} months.
         </p>
       )}
@@ -1246,7 +1246,7 @@ export default function Home() {
       {/* Centred, on the masthead's axis — the wordmark, the promise line and
           the receipt row all sit on it, so a left-aligned block at the very
           bottom was the one thing hanging off the page's centre line. */}
-      <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted dark:border-white/10">
+      <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted-foreground dark:border-white/10">
         {/* Capped at a readable measure. The board is max-w-4xl, and this
             paragraph took the whole of it: 141 characters a line at desktop
             width, measured — roughly double the 65–75 a reader tracks without

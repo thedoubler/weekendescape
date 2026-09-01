@@ -510,7 +510,7 @@ export default function DealsMapGL({
       // decoration; the city saves you cross-referencing a dot against the list.
       const city = document.createElement("span");
       city.textContent = p.city;
-      city.className = "text-muted";
+      city.className = "text-muted-foreground";
       const price = document.createElement("span");
       price.textContent = `${p.price} ${p.currency}`;
       el.append(city, document.createTextNode(" "), price);
@@ -580,7 +580,7 @@ export default function DealsMapGL({
 
   if (failed) {
     return (
-      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-black/10 text-sm text-muted dark:border-white/10">
+      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-black/10 text-sm text-muted-foreground dark:border-white/10">
         Map unavailable — the list below is unaffected.
       </div>
     );
@@ -641,7 +641,7 @@ export default function DealsMapGL({
                 type="button"
                 onClick={() => setPicked(null)}
                 aria-label="Close destination details"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted transition hover:bg-black/[0.06] hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-black/[0.06] hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
               >
                 ✕
               </button>

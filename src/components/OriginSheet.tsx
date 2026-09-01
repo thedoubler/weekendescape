@@ -101,7 +101,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold tracking-tight">Flying from</h2>
-            <p className="mt-0.5 text-[12.5px] text-muted">
+            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
               Up to {MAX_ORIGINS} airports. Closing this reloads the board.
             </p>
           </div>
@@ -110,7 +110,7 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close"
-            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
+            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
           >
             <span aria-hidden>✕</span>
           </button>

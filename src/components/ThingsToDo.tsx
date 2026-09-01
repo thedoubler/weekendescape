@@ -131,7 +131,7 @@ function ThingsToDoWidget({ city }: { city: string }) {
 
   if (state === "empty") {
     return (
-      <p className="border-t border-black/10 pt-3 text-sm text-muted dark:border-white/10">
+      <p className="border-t border-black/10 pt-3 text-sm text-muted-foreground dark:border-white/10">
         No activities listed for {city}.
       </p>
     );
@@ -156,7 +156,7 @@ function ThingsToDoWidget({ city }: { city: string }) {
         <span>{open && state === "pending" ? "Loading…" : label}</span>
         <span
           aria-hidden
-          className="text-base leading-none text-muted"
+          className="text-base leading-none text-muted-foreground"
         >
           {open ? "−" : "+"}
         </span>

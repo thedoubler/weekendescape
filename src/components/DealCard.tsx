@@ -34,7 +34,7 @@ import { DayBlocks } from "@/components/DayBlocks";
 const FAR_AIRPORT_KM = 30;
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <h4 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+    <h4 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
       {children}
     </h4>
   );
@@ -56,7 +56,7 @@ function Leg(props: LegInput & { hideDirect?: boolean }) {
           the duration wedged between the two times. */}
       <span className="sr-only">{spoken}</span>
       <span aria-hidden className="contents">
-        <span className="text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
+        <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
           {props.label}
         </span>
         <span className="flex items-baseline gap-1.5">
@@ -79,19 +79,19 @@ function Leg(props: LegInput & { hideDirect?: boolean }) {
           >
             {arrTime}
             {props.plusOne && (
-              <span className="align-super text-[10px] font-medium text-muted">
+              <span className="align-super text-[10px] font-medium text-muted-foreground">
                 +1
               </span>
             )}
           </time>
-          <span className="text-xs text-muted">
+          <span className="text-xs text-muted-foreground">
             {props.arrCode}
           </span>
         </span>
         {/* Right column: duration and stops, right-aligned so both legs'
             durations share an edge. Never truncated — on a multi-stop trip
             this run is the only text that says the journey is complicated. */}
-        <span className="justify-self-end text-right text-[11px] text-muted tabular-nums">
+        <span className="justify-self-end text-right text-[11px] text-muted-foreground tabular-nums">
           {shownMeta}
         </span>
         {/* Logos live here, not on the collapsed card: a couple of requests per
@@ -100,7 +100,7 @@ function Leg(props: LegInput & { hideDirect?: boolean }) {
         {props.carriers.length > 0 && (
           /* Second line, aligned under the times column — the carrier is meta,
              not part of the time comparison. */
-          <span className="col-start-2 col-span-2 inline-flex items-center gap-1 text-[11px] text-muted">
+          <span className="col-start-2 col-span-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
             {props.carriers.map((c) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -381,7 +381,7 @@ export function DealCard({
             <span className="text-lg font-semibold leading-tight [overflow-wrap:anywhere] line-clamp-2">
               {deal.cityTo}
               {deal.countryTo && (
-                <span className="ml-1.5 text-sm font-normal text-muted">
+                <span className="ml-1.5 text-sm font-normal text-muted-foreground">
                   {deal.countryTo}
                 </span>
               )}
@@ -413,7 +413,7 @@ export function DealCard({
                 <span
                   className={
                     direct
-                      ? "text-muted"
+                      ? "text-muted-foreground"
                       : "font-medium text-black/70 dark:text-white/70"
                   }
                 >
@@ -443,7 +443,7 @@ export function DealCard({
           {/* Kiwi prices the whole party — flag it for groups so the total
               isn't read as per-person (the CO₂ line in details is per-person). */}
           {adults > 1 && (
-            <div className="text-[11px] text-muted">
+            <div className="text-[11px] text-muted-foreground">
               {adults} travellers
             </div>
           )}
@@ -462,7 +462,7 @@ export function DealCard({
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={open ? `Hide details for ${deal.cityTo}` : `Show details for ${deal.cityTo}`}
-          className="-mr-1 flex h-11 w-8 shrink-0 items-center justify-center self-start rounded-lg text-muted transition hover:bg-black/[0.05] hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+          className="-mr-1 flex h-11 w-8 shrink-0 items-center justify-center self-start rounded-lg text-muted-foreground transition hover:bg-black/[0.05] hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
         >
           <ChevronIcon
             className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -607,7 +607,7 @@ export function DealCard({
             <div className="flex items-baseline justify-between gap-3">
               <SectionLabel>The flights</SectionLabel>
               {showOrigin && deal.cityFrom && (
-                <span className="text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
+                <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                   From {deal.cityFrom} ({deal.flyFrom})
                 </span>
               )}
@@ -692,7 +692,7 @@ export function DealCard({
                 a decision attached. */}
             {deal.airportKmFromCity != null &&
               deal.airportKmFromCity >= FAR_AIRPORT_KM && (
-                <p className="inline-flex items-start gap-1.5 text-[13px] text-muted">
+                <p className="inline-flex items-start gap-1.5 text-[13px] text-muted-foreground">
                   <span aria-hidden>✈</span>
                   <span>
                     {deal.airportCity
@@ -723,12 +723,12 @@ export function DealCard({
             </div>
           )}
           {weather && (
-            <div className="flex items-center gap-2 text-muted">
+            <div className="flex items-center gap-2 text-muted-foreground">
               {/* Full-strength ink for the glyph. This started as a fix for a
                   specific bug — the row's colour was `text-black/60`, and an
                   alpha sets a 60% -webkit-text-fill-color that browsers apply
                   to the colour glyph itself, washing the emoji out. The row now
-                  takes the solid `text-muted` token, which has no alpha to
+                  takes the solid `text-muted-foreground` token, which has no alpha to
                   bleed, so that bug is gone; the override stays because a
                   weather glyph should read at full strength regardless of what
                   colour the line around it happens to be. */}
@@ -747,20 +747,20 @@ export function DealCard({
                 {weather.mode === "forecast" &&
                   weather.precipChance != null &&
                   weather.precipChance >= 20 && (
-                    <span className="text-muted">
+                    <span className="text-muted-foreground">
                       {" · "}
                       {weather.precipChance}% rain
                     </span>
                   )}
                 {packingCue(weather) && (
-                  <span className="text-muted">
+                  <span className="text-muted-foreground">
                     {" — "}
                     {packingCue(weather)}
                   </span>
                 )}
                 {/* The methodology caveat is demoted to its own quiet line
                     rather than interrupting the primary statement mid-sentence. */}
-                <span className="mt-0.5 block text-[11px] text-muted">
+                <span className="mt-0.5 block text-[11px] text-muted-foreground">
                   {weather.mode === "forecast"
                     ? "Forecast for these dates"
                     : `Typical for these dates · ${weather.years ?? 5}-year average`}
@@ -863,7 +863,7 @@ export function DealCard({
                 real information (unknown price, two airlines, a party). When
                 there IS a total row it just repeats the number above it. */}
             {!cost.some((r) => r.total) && (
-              <p className="text-[11px] text-muted">
+              <p className="text-[11px] text-muted-foreground">
                 {bags.full}
               </p>
             )}
@@ -914,7 +914,7 @@ export function DealCard({
                 adults={cheapest.adults}
               />
             )}
-            <div className="flex flex-col gap-0.5 text-[11px] text-muted">
+            <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
               <p>Final price, bags and cabin rules are set on Kiwi.</p>
               {/* Google's Travel Impact Model when it knows the aircraft, our
                   own distance estimate otherwise. The two are not close: on a

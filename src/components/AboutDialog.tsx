@@ -83,7 +83,7 @@ export function AboutDialog({ className }: { className?: string }) {
               type="button"
               onClick={() => ref.current?.close()}
               aria-label="Close"
-              className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted transition hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+              className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
             >
               <span aria-hidden>✕</span>
             </button>

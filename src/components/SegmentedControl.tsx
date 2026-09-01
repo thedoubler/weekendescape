@@ -39,7 +39,7 @@ export function SegmentedControl<T extends string | number>({
             className={`flex-1 rounded-full px-2.5 py-3 text-sm transition-colors sm:flex-none sm:px-3.5 sm:py-1.5 ${
               active
                 ? "bg-white text-black shadow-sm dark:bg-neutral-700 dark:text-white"
-                : "text-muted hover:text-black dark:hover:text-white"
+                : "text-muted-foreground hover:text-black dark:hover:text-white"
             }`}
           >
             {o.label}

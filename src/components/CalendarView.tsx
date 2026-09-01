@@ -71,7 +71,7 @@ export function CalendarView({
         const title = (
           <h3 className="text-[17px] leading-tight font-semibold tracking-tight">
             {monthName}{" "}
-            <span className="font-normal text-muted">{year}</span>
+            <span className="font-normal text-muted-foreground">{year}</span>
           </h3>
         );
         return !m.hasDeals ? (
@@ -88,7 +88,7 @@ export function CalendarView({
           // month's place in the grid without asking to be looked at.
           <section key={m.key} className="flex flex-col gap-2">
             {title}
-            <p className="flex min-h-[112px] items-center justify-center rounded-[10px] bg-black/[0.03] px-3 text-center text-[12.5px] text-muted dark:bg-white/[0.04]">
+            <p className="flex min-h-[112px] items-center justify-center rounded-[10px] bg-black/[0.03] px-3 text-center text-[12.5px] text-muted-foreground dark:bg-white/[0.04]">
               No weekend flights this month.
             </p>
           </section>
@@ -100,7 +100,7 @@ export function CalendarView({
                 <div
                   key={i}
                   aria-hidden
-                  className={`pb-0.5 text-center text-[10px] tracking-[0.08em] text-muted uppercase ${
+                  className={`pb-0.5 text-center text-[10px] tracking-[0.08em] text-muted-foreground uppercase ${
                     // The three columns every block lives in, marked by weight
                     // alone — the header names the days, the bold end of the
                     // row says which of them this calendar is about.
@@ -192,7 +192,7 @@ export function CalendarView({
                           className={`text-[11px] leading-none tabular-nums ${
                             on
                               ? "font-semibold text-orange-700 dark:text-orange-300"
-                              : "text-muted"
+                              : "text-muted-foreground"
                           }`}
                         >
                           {days}
@@ -220,7 +220,7 @@ export function CalendarView({
                         </span>
                         {/* What the one named city is hiding. Without it the
                             calendar looks like one destination per weekend. */}
-                        <span className="text-[10.5px] leading-none text-muted">
+                        <span className="text-[10.5px] leading-none text-muted-foreground">
                           {trips.length > 1
                             ? `+${trips.length - 1} more`
                             : " "}
@@ -246,7 +246,7 @@ export function CalendarView({
           only fact neither the header nor the blocks state: what the number on
           each block means. The swatch ties the sentence to the thing it
           explains — a key of meaning, not of counts. */}
-      <p className="col-span-full flex items-center gap-2 text-[11.5px] text-muted">
+      <p className="col-span-full flex items-center gap-2 text-[11.5px] text-muted-foreground">
         <span
           aria-hidden
           className="h-3 w-5 shrink-0 rounded-[5px] bg-amber-400/25 ring-1 ring-amber-500/40 ring-inset dark:bg-amber-300/15 dark:ring-amber-300/30"

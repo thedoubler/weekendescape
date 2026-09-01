@@ -238,7 +238,7 @@ export function AirportInput({
         // regressing to the double ring it once had.
         className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-black/[0.12] bg-white px-3 py-2.5 transition dark:border-white/20 dark:bg-white/[0.07]"
       >
-        <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-muted" />
+        <TakeoffIcon className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         {chips.map((code) => (
           <span
             key={code}
@@ -253,7 +253,7 @@ export function AirportInput({
                   onRemoveChip(code);
                 }}
                 aria-label={`Remove ${code}`}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-muted transition hover:bg-black/10 hover:text-black dark:hover:bg-white/15 dark:hover:text-white"
+                className="flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-muted-foreground transition hover:bg-black/10 hover:text-black dark:hover:bg-white/15 dark:hover:text-white"
               >
                 ×
               </button>
@@ -357,7 +357,7 @@ export function AirportInput({
         // board slightly magnified with sideways pan. Reported as "it zooms a
         // bit in the field" and, earlier, as phantom horizontal scroll on
         // mobile. 15px returns from `sm` up, where no browser pulls this trick.
-        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-base outline-none placeholder:text-muted disabled:cursor-not-allowed sm:text-[15px]"
+        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed sm:text-[15px]"
       />
       </div>
       {showList && (
@@ -392,7 +392,7 @@ export function AirportInput({
         <div
           id="airport-suggestions"
           role="status"
-          className="absolute inset-x-0 z-20 mt-1 rounded-lg border border-black/15 bg-white px-3 py-2.5 text-sm text-muted shadow-lg sm:inset-x-auto sm:w-72 dark:border-white/15 dark:bg-neutral-900"
+          className="absolute inset-x-0 z-20 mt-1 rounded-lg border border-black/15 bg-white px-3 py-2.5 text-sm text-muted-foreground shadow-lg sm:inset-x-auto sm:w-72 dark:border-white/15 dark:bg-neutral-900"
         >
           No airports match “{query.trim()}” — try a city or 3-letter code.
         </div>

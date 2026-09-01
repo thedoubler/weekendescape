@@ -206,7 +206,7 @@ export function SearchReceipt({
           it answers the headline's "Pick your airport" directly, and
           "Searching" read as an activity still in progress over a board that
           is already the answer. */}
-      <span className="text-muted">From</span>
+      <span className="text-muted-foreground">From</span>
 
       {/* Origin is not a picker — it needs autocomplete, up to three chips and
           a location prompt — so it opens the sheet instead of a popover. */}
@@ -357,7 +357,7 @@ function Options<T extends string | number>({
   const hintId = hint ? `receipt-hint-${String(hint.value)}` : undefined;
   return (
     <>
-      <h5 className="text-[11px] font-bold tracking-[0.08em] text-muted uppercase">
+      <h5 className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
         {title}
       </h5>
       <div className="flex flex-wrap gap-1.5">
@@ -381,7 +381,7 @@ function Options<T extends string | number>({
         ))}
       </div>
       {hint && (
-        <p id={hintId} className="text-[11px] leading-snug text-muted">
+        <p id={hintId} className="text-[11px] leading-snug text-muted-foreground">
           {hint.text}
         </p>
       )}

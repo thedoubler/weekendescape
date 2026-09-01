@@ -163,7 +163,7 @@ export default async function OriginPage({
           about to land on. The values are fixed because this page IS one
           search; the live version is a click away. */}
       <p className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 border-b border-black/[0.07] pb-3 text-center text-[15px] dark:border-white/10">
-        <span className="text-muted">From</span>
+        <span className="text-muted-foreground">From</span>
         <span className="font-semibold">{city}</span>
         <span aria-hidden className="text-black/25 dark:text-white/25">·</span>
         <span className="font-semibold">Fri–Sun</span>
@@ -191,7 +191,7 @@ export default async function OriginPage({
 
       <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[15px] font-semibold tracking-tight tabular-nums">
         {weekends.length} weekends ahead
-        <span className="text-[11px] font-normal text-muted">
+        <span className="text-[11px] font-normal text-muted-foreground">
           {destinations} destinations · {countries} countries · checked{" "}
           <time dateTime={new Date(fetchedAt).toISOString()}>
             {new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "UTC" }).format(fetchedAt)}
@@ -214,7 +214,7 @@ export default async function OriginPage({
       />
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-black/10 p-5 dark:border-white/10">
-        <p className="max-w-[42ch] text-[13.5px] text-muted">
+        <p className="max-w-[42ch] text-[13.5px] text-muted-foreground">
           <strong className="font-semibold text-foreground">Prices move.</strong>{" "}
           This page is rebuilt daily and shows the cheapest trip per weekend. The
           board searches live and knows every airline on the route.
@@ -227,7 +227,7 @@ export default async function OriginPage({
         </Link>
       </div>
 
-      <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted dark:border-white/10">
+      <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted-foreground dark:border-white/10">
         <p className="max-w-prose">
           Flights, stays and activities are booked on Kiwi.com, Booking.com and
           GetYourGuide. We may earn a commission from those bookings, at no extra

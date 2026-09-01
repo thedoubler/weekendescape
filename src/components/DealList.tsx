@@ -194,7 +194,7 @@ export function DealList({
               {/* "August" beside a bare "6" reads as August 6th — a date, in a
                   product whose every other number IS a date or a price. The
                   noun is what disambiguates it. */}
-              <span className="text-xs tabular-nums text-muted">
+              <span className="text-xs tabular-nums text-muted-foreground">
                 {section.deals.length} flight
                 {section.deals.length === 1 ? "" : "s"}
               </span>

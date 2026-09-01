@@ -15,7 +15,7 @@ export default function Error({
       <h1 className="text-lg font-semibold tracking-tight">
         The board stopped loading
       </h1>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         Something broke on our side, not with your search. Trying again usually
         works.
       </p>
@@ -29,7 +29,7 @@ export default function Error({
       {/* The digest is what makes a report traceable in the server logs; the
           message itself never reaches the user. */}
       {error.digest && (
-        <p className="text-[11px] text-muted">Reference: {error.digest}</p>
+        <p className="text-[11px] text-muted-foreground">Reference: {error.digest}</p>
       )}
     </main>
   );

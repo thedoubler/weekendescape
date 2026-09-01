@@ -106,7 +106,7 @@ export function CheapestWeekend({
       {/* The row used to appear under the cost table with nothing saying what
           it was: a second date and a second price, unlabelled, directly beneath
           the total for the trip you were reading about. */}
-      <h5 className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">
+      <h5 className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
         Cheaper on another weekend
       </h5>
       {/* The whole card is the link, and it never says "Book" — that word
@@ -122,7 +122,7 @@ export function CheapestWeekend({
           <span className="text-sm font-medium">
             {weekendRange(deal.outDepart, deal.backArrive)}
           </span>
-          <span className="text-[11px] text-muted">
+          <span className="text-[11px] text-muted-foreground">
             {saving.amount} {deal.currency} less
             {saving.allIn ? ", with one checked bag" : " on the fare"}
           </span>

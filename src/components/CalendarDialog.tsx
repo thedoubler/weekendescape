@@ -106,7 +106,7 @@ export function CalendarDialog({
             <h2 className="text-[17px] leading-tight font-bold tracking-tight">
               Calendar
             </h2>
-            <p className="text-[12.5px] text-muted">
+            <p className="text-[12.5px] text-muted-foreground">
               Every weekend you could fly. Tap one to see all its flights.
             </p>
           </div>
@@ -114,7 +114,7 @@ export function CalendarDialog({
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close"
-            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted transition hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
           >
             <span aria-hidden>✕</span>
           </button>
@@ -159,7 +159,7 @@ export function CalendarDialog({
                   <h3 className="text-[15px] leading-tight font-bold tracking-tight">
                     {weekendRange(first.outDepart, first.backDepart)}
                   </h3>
-                  <p className="text-[12.5px] text-muted">
+                  <p className="text-[12.5px] text-muted-foreground">
                     {trips.length} flight{trips.length === 1 ? "" : "s"} this
                     weekend, cheapest first
                   </p>
@@ -184,7 +184,7 @@ export function CalendarDialog({
                 </div>
               </>
             ) : (
-              <p className="p-4 text-sm text-muted">
+              <p className="p-4 text-sm text-muted-foreground">
                 Tap a weekend on the calendar to see every flight on it.
               </p>
             )}

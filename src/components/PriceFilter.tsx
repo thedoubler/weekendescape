@@ -48,7 +48,7 @@ export function PriceFilter({
         <button
           type="button"
           onClick={() => onChange(max)}
-          className="shrink-0 rounded-full px-3 py-1 text-sm whitespace-nowrap text-muted underline underline-offset-4 transition hover:text-black dark:hover:text-white"
+          className="shrink-0 rounded-full px-3 py-1 text-sm whitespace-nowrap text-muted-foreground underline underline-offset-4 transition hover:text-black dark:hover:text-white"
         >
           Any
         </button>

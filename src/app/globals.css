@@ -1,4 +1,20 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* shadcn integration note — read before touching tokens.
+   The stock shadcn init was NOT kept as written. Three of its edits would have
+   broken this app and were reversed:
+     · `@custom-variant dark (&:is(.dark *))` — every `dark:` utility here is
+       MEDIA-based (prefers-color-scheme); nothing ever sets a .dark class, so
+       that line silently killed all dark styling.
+     · Its `--muted` is a SURFACE (near-white wash). Ours was secondary TEXT.
+       Resolution: we adopt shadcn's dialect — the text token is now
+       `--muted-foreground` (see its comment below) and `--muted` is a surface.
+     · It pointed --font-sans at Geist. The brand is Space Grotesk.
+   Token values are OURS (hex, tuned per theme), not shadcn's oklch neutrals.
+   Every shadcn token is defined three-state: bare :root (light), the
+   prefers-dark media query, and both [data-theme] branches. */
 
 :root {
   /* Tells the UA which palettes this page supports. Without it, anything the
@@ -34,6 +50,12 @@
      -webkit-text-fill-color, which browsers apply to colour emoji and wash
      them out (see the weather glyph in DealCard).
 
+     Named --muted-foreground (not --muted) since the shadcn integration:
+     shadcn's --muted is a surface colour, and fighting the imported components
+     over the word would mean re-theming every one of them. The role, values
+     and call sites are unchanged — only the spelling moved
+     (text-muted → text-muted-foreground).
+
      What deliberately did NOT fold in here, because it is a different job:
        · text-black/70 — body prose on /about, and control labels that darken
          to full foreground on hover. Reading text, not supporting text.
@@ -42,13 +64,53 @@
          are allowed to sit below text contrast because they carry no words.
        · One documented light/dark asymmetry in DealCard ("2d to explore" over
          a pastel flag wash) that is /55 in light and full white in dark. */
-  --muted: #5f6368; /* 6.05:1 on #fff, 5.55:1 on the light card */
+  --muted-foreground: #5f6368; /* 6.05:1 on #fff, 5.55:1 on the light card */
+
+  /* shadcn surface + control tokens, in this app's palette. Existing board
+     styles keep their literal classes (bg-white, border-black/10, …); these
+     exist so imported shadcn/ui components land already dressed in the same
+     values rather than in shadcn's grey defaults. */
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #171717; /* the ink CTA pill (Book flight) */
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #171717;
+  --muted: #f4f4f5; /* surface wash ≈ the board's black/[0.04] tints */
+  --accent: #f4f4f5;
+  --accent-foreground: #171717;
+  --destructive: #b91c1c; /* red-700 — the app's error text colour */
+  --border: rgba(0, 0, 0, 0.1); /* = border-black/10, the board's hairline */
+  --input: rgba(0, 0, 0, 0.12); /* = AirportInput's border-black/12 */
+  --ring: #171717; /* matches the global :focus-visible outline (foreground) */
+  --radius: 0.75rem; /* rounded-xl, the board's card corner */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
   --font-sans: var(--font-space-grotesk);
   --font-serif: var(--font-instrument-serif);
 }
@@ -62,17 +124,79 @@
     --background: #14161c;
     --foreground: #e7e8ec;
     --glow: rgba(249, 115, 22, 0.06);
-    --muted: #a3a8b3; /* 7.59:1 on the base ground, 6.51:1 on the card */
+    --muted-foreground: #a3a8b3; /* 7.59:1 on the base ground, 6.51:1 on the card */
+
+    --card: #1b1e26; /* the dialog/panel surface (AboutDialog, map panel) */
+    --card-foreground: #e7e8ec;
+    --popover: #1b1e26;
+    --popover-foreground: #e7e8ec;
+    --primary: #e7e8ec;
+    --primary-foreground: #14161c;
+    --secondary: #232630;
+    --secondary-foreground: #e7e8ec;
+    --muted: #232630; /* surface wash ≈ white/[0.06] over the base ground */
+    --accent: #232630;
+    --accent-foreground: #e7e8ec;
+    --destructive: #f87171; /* red-400 — the lighter value a dark ground needs */
+    --border: rgba(255, 255, 255, 0.11);
+    --input: rgba(255, 255, 255, 0.16);
+    --ring: #e7e8ec;
   }
 }
 
 /* The explicit-choice branches the wordmark already needs, so a page with
-   data-theme set gets the matching muted value rather than the light default. */
+   data-theme set gets the matching values rather than the media-query answer. */
 :root[data-theme="dark"] {
-  --muted: #a3a8b3;
+  --background: #14161c;
+  --foreground: #e7e8ec;
+  --glow: rgba(249, 115, 22, 0.06);
+  --muted-foreground: #a3a8b3;
+  --card: #1b1e26;
+  --card-foreground: #e7e8ec;
+  --popover: #1b1e26;
+  --popover-foreground: #e7e8ec;
+  --primary: #e7e8ec;
+  --primary-foreground: #14161c;
+  --secondary: #232630;
+  --secondary-foreground: #e7e8ec;
+  --muted: #232630;
+  --accent: #232630;
+  --accent-foreground: #e7e8ec;
+  --destructive: #f87171;
+  --border: rgba(255, 255, 255, 0.11);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: #e7e8ec;
 }
 :root[data-theme="light"] {
-  --muted: #5f6368;
+  --background: #ffffff;
+  --foreground: #171717;
+  --glow: rgba(249, 115, 22, 0.08);
+  --muted-foreground: #5f6368;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #171717;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #171717;
+  --muted: #f4f4f5;
+  --accent: #f4f4f5;
+  --accent-foreground: #171717;
+  --destructive: #b91c1c;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.12);
+  --ring: #171717;
+}
+
+/* shadcn's base expectations: components use bare `border` and rely on the
+   token default. Safe here — every existing bare-border class string in src/
+   also names an explicit colour, so nothing on the board changes (verified by
+   grep before adopting). */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 /* The base colour lives on <html> so the fixed glow layer below can sit above
@@ -233,4 +357,3 @@ html:has(dialog[open]) {
     animation: none;
   }
 }
-
