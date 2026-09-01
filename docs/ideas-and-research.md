@@ -457,6 +457,51 @@ Sources: [Tequila](https://tequila.kiwi.com/) ·
 [Amadeus Cheapest Date Search](https://developers.amadeus.com/self-service/category/flights/api-doc/flight-cheapest-date-search) ·
 [Amadeus pricing](https://developers.amadeus.com/pricing)
 
+### TODO: the provider ladder (agent-researched 2026-09-02, decided with owner)
+
+The September 2026 research pass (agent-verified against live docs and API
+responses) settled the strategy: **Kiwi today → Aviasales as tested fallback →
+Skyscanner when big.** All three are affiliate models — the data is free and
+they pay commissions; the axes that matter are access and data quality, never
+a bill. Amadeus was ruled out (production 500s for origins like BER; no
+weekday filtering; nothing bookable to link to), Google-Flights scraping too
+(Google v. SerpApi, Dec 2025).
+
+- [ ] **Owner: email the Kiwi partner contact** for a plain statement on the
+      key's continuity. Tequila closed to new partners May 2024 and Kiwi
+      publicly de-prioritised the affiliate/deeplink model — the existing key
+      is a grandfathered privilege. Their pruning filter is commercial value,
+      so booking volume through our links is the number that protects us.
+- [ ] **Owner: create a free Travelpayouts account** (self-serve, ~1–5 days'
+      approval) and drop the API token in `.env.local` as
+      `TRAVELPAYOUTS_TOKEN`. Blocks the next item.
+- [ ] **Build the Aviasales shadow adapter** (S–M, ~2–4 days): a second
+      implementation behind the `searchDeals()` seam in
+      `src/lib/weekend-search.ts` that runs QUIETLY beside Kiwi on real
+      searches and logs coverage/price deltas — users never see it. What it
+      measures is the one unverifiable claim: European cache depth (their
+      data comes from Aviasales users, who skew RU/CIS). Mapping notes from
+      the research: origin→everywhere works (`destination` omitted /
+      `prices_for_dates`), weekday windows and nights must be filtered
+      client-side from returned date pairs, `market` must not default to
+      `ru`, response `link` + our `marker` is the affiliate handoff, and
+      cached prices go stale — the "checked X ago" stamp becomes
+      load-bearing honesty.
+- [ ] **After ~a month of shadow data, decide**: fallback-only (insurance if
+      Kiwi pulls the key) · enrichment (merge where Kiwi is thin — dedupe by
+      city+weekend, keep cheapest, label staleness honestly) · or shelve it
+      if European coverage measures weak (owner's floor from the decision
+      chat: ~15–25% fewer weekend pairs for smaller EU origins would be the
+      pain threshold to discuss).
+- [ ] **Owner: apply to Skyscanner's plain affiliate programme** once traffic
+      clears ~5k uniques/month (impact.com, links/widgets only — no data
+      feed) so handoffs earn before the API is reachable.
+- [ ] **Apply for the Skyscanner Travel API at ~100k monthly visitors** — the
+      strategic destination: Indicative Prices is cached everywhere-search
+      built for exactly this board, with CPC-valued deeplinks. Their usage
+      guidelines impose UX obligations (Powered-by branding, pre-deeplink
+      disclosure, click-quality bars) that need a design pass of their own.
+
 ---
 
 ## Best practices for flight-deal / getaway sites (researched)
