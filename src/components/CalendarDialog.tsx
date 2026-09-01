@@ -43,12 +43,15 @@ export function CalendarDialog({
   open,
   deals,
   currency,
+  window,
   onClose,
   hideStops,
 }: {
   open: boolean;
   deals: Deal[];
   currency: string;
+  /** The searched range, forwarded to CalendarView so empty months show. */
+  window?: { from: string; to: string };
   onClose: () => void;
   /** See DealCard.hideStops. */
   hideStops?: boolean;
@@ -136,6 +139,7 @@ export function CalendarDialog({
               <CalendarView
                 deals={deals}
                 currency={currency}
+                window={window}
                 selected={shownKey}
                 onSelect={setSelected}
               />

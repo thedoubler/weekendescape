@@ -23,6 +23,7 @@ import {
   filterByContinents,
 } from "@/lib/continents";
 import { monthShort, monthKey } from "@/lib/format";
+import { timelineRange } from "@/lib/timeline";
 import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes } from "@/lib/home-storage";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -449,6 +450,15 @@ export default function Home() {
     [filtered]
   );
   const calendarDeals = visible;
+  // The searched date range, for the calendar's month span. `applied.months` is
+  // what the current results were fetched with (the live control is pinned at
+  // six, but reading `applied` keeps this honest if that ever changes). Anchored
+  // to today, exactly as the search was.
+  const calendarWindow = useMemo(() => {
+    const m = applied?.months ?? months;
+    const { dateFrom, dateTo } = timelineRange(m, new Date());
+    return { from: dateFrom, to: dateTo };
+  }, [applied, months]);
   // The denominator for "N of M": the board before month/region/price, but
   // after the short-stay rule — otherwise a filtered count could exceed a
   // total the user was never shown.
@@ -1121,6 +1131,10 @@ export default function Home() {
           open={showCalendar}
           deals={calendarDeals}
           currency={currency}
+          // The window these deals were actually searched over, so the calendar
+          // shows every month the search covered — six for a six-month search —
+          // rather than only the months that happened to return a flight.
+          window={calendarWindow}
           hideStops={applied?.direct === true}
           onClose={() => setShowCalendar(false)}
         />

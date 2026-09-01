@@ -37,16 +37,20 @@ const BLOCK_ON =
 export function CalendarView({
   deals,
   currency,
+  window,
   selected,
   onSelect,
 }: {
   deals: Deal[];
   currency: string;
+  /** The searched range, so empty months inside it still appear — a six-month
+   *  search shows six months even where two of them found nothing. */
+  window?: { from: string; to: string };
   /** Weekend key (the Saturday, ISO) currently filtered to, if any. */
   selected: string | null;
   onSelect: (weekend: string | null) => void;
 }) {
-  const months = calendarMonths(deals);
+  const months = calendarMonths(deals, window);
   const byWeekend = dealsByWeekend(deals);
   if (months.length === 0) return null;
 

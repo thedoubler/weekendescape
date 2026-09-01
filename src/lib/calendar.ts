@@ -85,38 +85,68 @@ export interface CalendarMonth {
 }
 
 /**
- * One grid per month across the span the results cover, Monday-first — which is
- * what puts Sat and Sun adjacent at the end of every row, so a weekend never
- * breaks across two lines.
+ * One grid per month across the SEARCHED WINDOW, Monday-first — which is what
+ * puts Sat and Sun adjacent at the end of every row, so a weekend never breaks
+ * across two lines.
  *
- * EVERY month between the first and last with deals is emitted, including the
- * ones with none. Emitting only months that had deals silently deleted the
- * others: a six-month board came back "September, October, November, January"
- * and December was simply not there. Nothing on screen could tell you whether
- * the month was empty or the calendar was broken, and the answer a reader most
- * needs — "no, there is genuinely nothing that month" — was the one thing the
- * grid could not say. A month with no flights now says so in its own words.
+ * Every month the search covered is emitted, empty ones included. This has been
+ * wrong twice, in opposite directions. First it emitted only months that had
+ * deals, so December vanished between November and January and read as a bug.
+ * Then it spanned first-deal-month to last-deal-month, on the theory that "a
+ * sequence that ends reads as the end of the data" — and a user promptly asked
+ * why a six-month search showed five months. A trailing gap reads as missing
+ * exactly like a middle one does. The honest span is the window itself: if the
+ * search covered February and found nothing, February appears and says so.
  *
- * The span stops at the last month WITH deals rather than running to the end of
- * the search window: a sequence that ends is read as the end of the data, while
- * a hole in the middle is read as a bug.
+ * The window's edge months count only if a full weekend fits: the range runs
+ * from the first Saturday on or after `from` to the last Saturday on or before
+ * `to`, because a window that touches March 1st did not meaningfully search
+ * March, and "no weekend flights in March" would be a claim the search never
+ * tested. Without a window (older callers, tests), deal months bound the span.
  */
-export function calendarMonths(deals: Deal[]): CalendarMonth[] {
+export function calendarMonths(
+  deals: Deal[],
+  window?: { from: string; to: string }
+): CalendarMonth[] {
   const present = new Set<string>();
   for (const d of deals) {
     const ms = utcOf(d.outDepart);
     if (ms !== null) present.add(isoOf(ms).slice(0, 7));
   }
-  if (present.size === 0) return [];
   const sorted = [...present].sort();
+
+  // Saturday on-or-after / on-or-before, because the Saturday is the weekend's
+  // anchor (see weekendKey): a month is in the span iff a searchable weekend is.
+  const satAfter = (iso: string): string | null => {
+    const ms = utcOf(iso);
+    if (ms === null) return null;
+    const wd = new Date(ms).getUTCDay();
+    return isoOf(ms + ((6 - wd + 7) % 7) * DAY).slice(0, 7);
+  };
+  const satBefore = (iso: string): string | null => {
+    const ms = utcOf(iso);
+    if (ms === null) return null;
+    const wd = new Date(ms).getUTCDay();
+    return isoOf(ms - ((wd - 6 + 7) % 7) * DAY).slice(0, 7);
+  };
+
+  let first: string | undefined = sorted[0];
+  let last: string | undefined = sorted[sorted.length - 1];
+  if (window) {
+    const wFirst = satAfter(window.from);
+    const wLast = satBefore(window.to);
+    if (wFirst && (!first || wFirst < first)) first = wFirst;
+    if (wLast && (!last || wLast > last)) last = wLast;
+  }
+  if (!first || !last) return [];
+
   const span: string[] = [];
-  const [y0, m0] = sorted[0].split("-").map(Number);
-  const last = sorted[sorted.length - 1];
+  const [y0, m0] = first.split("-").map(Number);
   for (let i = 0; i < 240; i++) {
     const d = new Date(Date.UTC(y0, m0 - 1 + i, 1));
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     span.push(key);
-    if (key === last) break;
+    if (key >= last) break;
   }
   return span
     .map((key) => {

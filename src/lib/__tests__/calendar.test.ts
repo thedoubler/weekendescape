@@ -111,6 +111,31 @@ describe("calendarMonths", () => {
     expect(calendarMonths([])).toEqual([]);
   });
 
+  it("spans the full searched window, not just the months with deals", () => {
+    // The bug a user reported: a six-month search showed five months, because
+    // the last month of the window found no flights and was dropped. With the
+    // window passed in, every searched month appears — the empty one flagged.
+    const ms = calendarMonths(
+      [deal("Milan", "2026-11-20", 33)],
+      { from: "2026-11-05", to: "2027-04-01" }
+    );
+    // Nov (has a deal) through Mar. April is excluded: the window ends Apr 1
+    // (a Thursday), so April's first Saturday (the 3rd) is past the window —
+    // April was never meaningfully searched, so the calendar does not claim it.
+    expect(ms.map((m) => m.key)).toEqual([
+      "2026-11", "2026-12", "2027-01", "2027-02", "2027-03",
+    ]);
+    expect(ms.map((m) => m.hasDeals)).toEqual([true, false, false, false, false]);
+  });
+
+  it("without a window, still bounds the span by the deals (back-compat)", () => {
+    const ms = calendarMonths([
+      deal("Milan", "2026-11-20", 33),
+      deal("Rome", "2027-01-15", 90),
+    ]);
+    expect(ms.map((m) => m.key)).toEqual(["2026-11", "2026-12", "2027-01"]);
+  });
+
   it("lays out Monday-first with every week exactly 7 cells", () => {
     const [m] = calendarMonths([deal("Milan", "2026-11-20", 33)]);
     for (const w of m.weeks) expect(w).toHaveLength(7);
