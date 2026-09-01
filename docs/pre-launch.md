@@ -17,6 +17,18 @@ nothing at all.
 `TEQUILA_API_KEY`, `UNSPLASH_ACCESS_KEY` and `GOOGLE_TIM_API_KEY` are server-only
 and belong in the second group. Every `NEXT_PUBLIC_` one belongs in the first.
 
+## The build cache lies
+
+Cloudflare restores `.next` between builds ("Success: Build output restored from
+build cache"), and `next build` then re-exports pages from that stale output
+instead of from source. This burned four deploys: builds kept generating 18
+pages and throwing `MissingApiKeyError` from a `throw` that no longer existed in
+`main`, twelve minutes after the commit that removed it.
+
+`npm run build` now starts with `rm -rf .next .open-next`. If a build ever again
+reports a page count or an error that does not match the source, suspect the
+cache before suspecting the ref.
+
 ## Blockers
 
 - [ ] **Deploy current `main`.** Production has repeatedly built a stale ref —
