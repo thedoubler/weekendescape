@@ -153,6 +153,13 @@ export function timeLabel(iso: string): string {
   return `${String(p.h).padStart(2, "0")}:${String(p.mi).padStart(2, "0")}`;
 }
 
+/** Short weekday of an ISO datetime's date part ("Fri"), timezone-free. */
+export function weekdayShort(iso: string): string {
+  const p = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!p) return "";
+  return WD[new Date(Date.UTC(+p[1], +p[2] - 1, +p[3])).getUTCDay()];
+}
+
 export function durationLabel(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes < 0) return "0m";
   const d = Math.floor(minutes / 1440);

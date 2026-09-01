@@ -13,6 +13,7 @@ import PlaceLinks from "@/components/PlaceLinks";
 import {
   timeLabel,
   durationLabel,
+  weekdayShort,
   dayBlocks,
   crossesMidnight,
   isNightHour,
@@ -539,7 +540,11 @@ export function DealCard({
         </button>
       </div>
 
-      {!hideDays && (
+      {/* No day tiles in meet-up mode: the strip's whole vocabulary — one
+          landing glyph, one takeoff glyph, one flight's fill — narrates a
+          single itinerary, and with two tickets it was a story about nobody.
+          The meet-up box below carries the mode's own timeline instead. */}
+      {!hideDays && !together && (
         <button
           type="button"
           onClick={toggleOpen}
@@ -569,10 +574,14 @@ export function DealCard({
               length; the duration itself still carries the judgement.
               /55 in light mode: at /70 it was the blackest small text on a
               pastel-washed card and read as odd emphasis. Dark stays white. */}
-          <span className="text-sm text-black/55 dark:text-white">
-            <span className="font-medium">{stay}</span>{" "}
-            {together ? "together" : "to explore"}
-          </span>
+          {/* In meet-up mode the Together header above already states the
+              duration — repeating it here made the same number the card's
+              loudest fact twice. */}
+          {!together && (
+            <span className="text-sm text-black/55 dark:text-white">
+              <span className="font-medium">{stay}</span> to explore
+            </span>
+          )}
         </div>
         {/* Visible in BOTH card states — restored by request after a
             collapsed-only version shipped briefly. Yes, "Book flight" here
@@ -634,6 +643,23 @@ export function DealCard({
           itinerary; each row names its own departure and return day-times. */}
       {deal.meetup && (
         <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-black/10 p-3 dark:border-white/10">
+          {/* The mode's own timeline, in words: when the window you're all
+              there opens and closes, and how long it holds. Replaces the day
+              tiles this card no longer shows. */}
+          {together && (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-black/10 pb-2 dark:border-white/10">
+              <span className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+                Together
+              </span>
+              <span className="text-sm">
+                <span className="font-medium">
+                  {weekdayShort(together.arrive)} {timeLabel(together.arrive)}{" "}
+                  → {weekdayShort(together.depart)} {timeLabel(together.depart)}
+                </span>
+                <span className="text-muted-foreground"> · {stay}</span>
+              </span>
+            </div>
+          )}
           {deal.meetup.map((leg) => (
             <div
               key={leg.flyFrom}
