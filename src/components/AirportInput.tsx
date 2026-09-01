@@ -350,7 +350,14 @@ export function AirportInput({
         // lost. Without it the sheet opens with a hard black 2px rectangle
         // drawn tight around this input.
         data-no-focus-ring
-        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-muted disabled:cursor-not-allowed"
+        // 16px on phones, and that number is load-bearing: iOS Safari force-zooms
+        // the page when a focused input's font-size is below 16px, and this
+        // input AUTOFOCUSES when the sheet opens — so tapping the origin zoomed
+        // the viewport, and the zoom outlives the dialog, leaving the whole
+        // board slightly magnified with sideways pan. Reported as "it zooms a
+        // bit in the field" and, earlier, as phantom horizontal scroll on
+        // mobile. 15px returns from `sm` up, where no browser pulls this trick.
+        className="min-w-[10ch] flex-1 bg-transparent px-1.5 py-1 text-base outline-none placeholder:text-muted disabled:cursor-not-allowed sm:text-[15px]"
       />
       </div>
       {showList && (

@@ -41,7 +41,11 @@ const CSP = [
   "connect-src 'self' https://tiles.openfreemap.org https://widget.getyourguide.com https://*.getyourguide.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
   "worker-src 'self' blob:",
   "frame-src https://widget.getyourguide.com https://*.getyourguide.com",
-  "upgrade-insecure-requests",
+  // No upgrade-insecure-requests. On the https production origin it is a no-op
+  // — every subresource here is already https or same-origin — and on a plain
+  // http origin it actively breaks things: an older Chromium that does not
+  // exempt localhost upgrades the stylesheet request to an https port nothing
+  // listens on, and the page renders bare HTML. Observed, not theoretical.
 ].join("; ");
 
 const securityHeaders = [
