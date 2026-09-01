@@ -222,7 +222,9 @@ export function SearchReceipt({
       // Centred to sit on the masthead's axis — see the header comment in
       // page.tsx for why the whole block is centred. `justify-center` only
       // moves the row; each value keeps its own popover anchored to itself.
-      className="relative flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 border-b border-black/[0.07] pb-3 text-center text-[15px] dark:border-white/10"
+      // No rule under the row (removed by request): the whitespace and the
+      // sticky filter bar's own top edge already separate it from the board.
+      className="relative flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 pb-3 text-center text-[15px]"
     >
       {/* "From", not "Searching": the reference deals page says "from <city>",
           it answers the headline's "Pick your airport" directly, and

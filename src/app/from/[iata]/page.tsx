@@ -162,7 +162,9 @@ export default async function OriginPage({
           so someone arriving here from a search recognises the board they are
           about to land on. The values are fixed because this page IS one
           search; the live version is a click away. */}
-      <p className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 border-b border-black/[0.07] pb-3 text-center text-[15px] dark:border-white/10">
+      {/* No rule under the line — removed on the board's receipt by request,
+          and this static twin follows it. */}
+      <p className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 pb-3 text-center text-[15px]">
         <span className="text-muted-foreground">From</span>
         <span className="font-semibold">{city}</span>
         <span aria-hidden className="text-black/25 dark:text-white/25">·</span>
