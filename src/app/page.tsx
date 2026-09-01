@@ -193,6 +193,13 @@ export default function Home() {
   // The origin sheet, and the airports it held when it opened — dismissal is
   // the commit, so it needs a before-image to compare against.
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Why the sheet is asking: set when geolocation failed, shown inside the
+  // sheet, cleared on close or on a later successful detection. Without it a
+  // declined permission prompt was answered by an unexplained modal.
+  const [geoNotice, setGeoNotice] = useState<string | null>(null);
+  // Detection in flight, for the sheet's "Find my airport" button — the tap
+  // used to do nothing visible for up to 8 seconds.
+  const [detecting, setDetecting] = useState(false);
   const originsAtOpen = useRef<string[] | null>(null);
   // The control bar's real height. The list's month dividers pin directly
   // beneath it, and the bar changes height for several reasons: it wraps to
@@ -341,36 +348,83 @@ export default function Home() {
     }
   }
 
-  function detectLocation() {
-    const fallback = () => {
-      const saved = loadHomes();
-      if (saved.length) runSearch(saved);
-      else {
-        // No location and nothing saved. There is no longer an inline field to
-        // reveal — the origin lives in a sheet — so open it, which is also the
-        // only thing this visitor can usefully do.
-        setBooting(false);
-        openOriginSheet();
-      }
+  function detectLocation(opts?: { fromSheet?: boolean }) {
+    const fromSheet = opts?.fromSheet ?? false;
+    // First outcome wins. getCurrentPosition's own `timeout` clock does not
+    // run while the permission prompt is undecided, and a prompt that is
+    // dismissed rather than answered can fire NEITHER callback — which left
+    // the boot spinner (no controls) up forever. The guard timer below is the
+    // path out of that trap, and `settled` keeps a late real answer from
+    // firing a second search over whatever the user did meanwhile.
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(guard);
+      setDetecting(false);
+      fn();
     };
+    const fail = (msg: string) => settle(() => {
+      if (fromSheet) {
+        // The sheet is open and the user is watching the button they just
+        // pressed: the notice is the whole response. Closing or reloading
+        // anything here would be the sheet acting on a location it never got.
+        setGeoNotice(msg);
+        return;
+      }
+      const saved = loadHomes();
+      if (saved.length) {
+        // A remembered board still loads; the geolocation miss is invisible
+        // and a notice about it would outlive its moment. Say nothing.
+        runSearch(saved);
+        return;
+      }
+      // No location and nothing saved. The origin lives in a sheet, so open
+      // it — and SAY WHY it opened, because to the visitor the permission
+      // prompt just vanished and an unexplained modal reads as a glitch.
+      setGeoNotice(msg);
+      setBooting(false);
+      openOriginSheet();
+    });
+    const MSG_BLOCKED =
+      "Location is blocked for this site — type your airport instead.";
+    const MSG_UNFOUND =
+      "Couldn't find your location — type your airport instead.";
     if (!navigator.geolocation) {
-      fallback();
+      fail(MSG_UNFOUND);
       return;
     }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      try {
-        const res = await fetchWithTimeout(
-          `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`,
-          8000
-        );
-        const body = res.ok ? await res.json() : null;
-        const code = body?.airports?.[0]?.code;
-        if (code) runSearch(code);
-        else fallback();
-      } catch {
-        fallback();
-      }
-    }, fallback, { timeout: 8000 });
+    setDetecting(true);
+    const guard = setTimeout(() => fail(MSG_UNFOUND), 12000);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetchWithTimeout(
+            `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`,
+            8000
+          );
+          const body = res.ok ? await res.json() : null;
+          const code = body?.airports?.[0]?.code;
+          if (code)
+            settle(() => {
+              setGeoNotice(null);
+              if (fromSheet) {
+                setSheetOpen(false);
+                originsAtOpen.current = null;
+              }
+              runSearch(code);
+            });
+          else fail(MSG_UNFOUND);
+        } catch {
+          fail(MSG_UNFOUND);
+        }
+      },
+      // code 1 is PERMISSION_DENIED — the one failure the visitor themselves
+      // chose, so the message can honestly point at the setting. Everything
+      // else (unavailable, timeout) is just "couldn't".
+      (err) => fail(err?.code === 1 ? MSG_BLOCKED : MSG_UNFOUND),
+      { timeout: 8000 }
+    );
   }
 
   useEffect(() => {
@@ -704,6 +758,9 @@ export default function Home() {
 
   function closeOriginSheet() {
     setSheetOpen(false);
+    // The notice explains why the sheet opened; once the visitor leaves it,
+    // it has been read (or overtaken by a typed airport) either way.
+    setGeoNotice(null);
     const before = originsAtOpen.current;
     originsAtOpen.current = null;
     if (!before) return;
@@ -1335,11 +1392,13 @@ export default function Home() {
         open={sheetOpen}
         origins={origins}
         onChange={applyOrigins}
-        onDetect={() => {
-          setSheetOpen(false);
-          originsAtOpen.current = null;
-          detectLocation();
-        }}
+        // The sheet STAYS OPEN while detection runs. It used to close first,
+        // which on a denied permission meant either a silent reload of the old
+        // search or the sheet popping straight back with no explanation —
+        // detectLocation closes it itself, and only on success.
+        onDetect={() => detectLocation({ fromSheet: true })}
+        detecting={detecting}
+        notice={geoNotice}
         onClose={closeOriginSheet}
       />
 

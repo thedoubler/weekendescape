@@ -20,11 +20,24 @@ interface Props {
   origins: string[];
   onChange: (next: string[]) => void;
   onDetect: () => void;
+  /** Location detection in flight — the button says so and stops re-arming. */
+  detecting?: boolean;
+  /** Why the sheet is asking (geolocation denied / not found). One line,
+   *  under the detect button it answers. */
+  notice?: string | null;
   /** Dismissal is the commit — the parent decides whether anything changed. */
   onClose: () => void;
 }
 
-export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Props) {
+export function OriginSheet({
+  open,
+  origins,
+  onChange,
+  onDetect,
+  detecting = false,
+  notice = null,
+  onClose,
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // Resolves text still sitting in the field. Only the explicit ways out call
@@ -137,11 +150,24 @@ export function OriginSheet({ open, origins, onChange, onDetect, onClose }: Prop
         <button
           type="button"
           onClick={onDetect}
-          className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-black/10 px-3.5 py-2 text-xs font-medium text-black/70 transition hover:bg-black/[0.04] hover:text-black dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
+          disabled={detecting}
+          className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-black/10 px-3.5 py-2 text-xs font-medium text-black/70 transition hover:bg-black/[0.04] hover:text-black disabled:opacity-60 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
         >
           <span aria-hidden>📍</span>
-          Find my airport
+          {detecting ? "Finding your airport…" : "Find my airport"}
         </button>
+
+        {/* The answer to a failed detection, where the eye already is: under
+            the button that failed. role="status" so a screen reader hears it
+            without focus moving; amber because it explains, it doesn't scold. */}
+        {notice && (
+          <p
+            role="status"
+            className="text-[12.5px] leading-snug text-amber-700 dark:text-amber-300/90"
+          >
+            {notice}
+          </p>
+        )}
 
         {/* mt-auto pushes the footer to the bottom of the full-screen phone
             dialog; with a content-sized desktop dialog there is no free space
