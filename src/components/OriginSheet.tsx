@@ -25,6 +25,10 @@ interface Props {
   /** Why the sheet is asking (geolocation denied / not found). One line,
    *  under the detect button it answers. */
   notice?: string | null;
+  /** Meet-up: everyone flies to the same place, the same weekend. Only
+   *  offered once a second airport exists — with one it has no meaning. */
+  meetUp?: boolean;
+  onMeetUpChange?: (v: boolean) => void;
   /** Dismissal is the commit — the parent decides whether anything changed. */
   onClose: () => void;
 }
@@ -36,6 +40,8 @@ export function OriginSheet({
   onDetect,
   detecting = false,
   notice = null,
+  meetUp = false,
+  onMeetUpChange,
   onClose,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -156,6 +162,29 @@ export function OriginSheet({
           <span aria-hidden>📍</span>
           {detecting ? "Finding your airport…" : "Find my airport"}
         </button>
+
+        {/* Meet-up belongs here, not in the receipt: it is a statement about
+            the airports above it ("these are two PEOPLE, not one person with
+            two options"), and it only appears once a second airport gives it
+            meaning. A native checkbox — this is a setting, not a search. */}
+        {origins.length >= 2 && onMeetUpChange && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-black/10 p-3 dark:border-white/15">
+            <input
+              type="checkbox"
+              checked={meetUp}
+              onChange={(e) => onMeetUpChange(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-orange-600 dark:accent-orange-400"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">Meet up</span>
+              <span className="text-[12.5px] leading-snug text-muted-foreground">
+                Fly from different cities to the same place, the same weekend.
+                The board shows only places everyone can reach, priced as one
+                fare each.
+              </span>
+            </span>
+          </label>
+        )}
 
         {/* The answer to a failed detection, where the eye already is: under
             the button that failed. role="status" so a screen reader hears it

@@ -4,6 +4,7 @@ import { timelineRange } from "@/lib/timeline";
 import { normalizeDeals, isBridge, type Deal } from "@/lib/deals";
 import { fetchHolidays, forRegion, regionsIn, annotate } from "@/lib/holidays";
 import { inferHomeRegion, regionName } from "@/lib/airport-region";
+import { combineMeetup } from "@/lib/meetup";
 import { computeBridges } from "@/lib/bridges";
 import { airportCityKm } from "@/lib/cities";
 import { distinctAirportCity } from "@/lib/airport-city";
@@ -47,6 +48,11 @@ export interface WeekendSearchOptions {
   direct?: boolean;
   /** Holiday-anchored long weekends only. */
   bridgeMode?: boolean;
+  /** Meet-up: several origins, one destination, the same weekend — one fare
+   *  per person, priced as the total. Needs ≥2 origins; the route disables
+   *  bridge mode alongside it (holiday windows are per-country and the
+   *  origins may not share one). */
+  meetUp?: boolean;
   /** Which regional holidays count as the traveller's own, bridge mode only.
    *  undefined → infer from the home airports (see inferHomeRegion);
    *  "national" → national holidays only, explicitly;
@@ -82,6 +88,7 @@ export async function searchWeekends({
   flyTo = null,
   direct = false,
   bridgeMode = false,
+  meetUp = false,
   homeRegion = null,
   style,
   months,
@@ -152,8 +159,78 @@ export async function searchWeekends({
 
   // normalizeDeals returns price-ascending; for a single-city lookup keep only
   // the cheapest weekend.
-  const mainDeals = await searchDeals({}, "main");
-  const deals = flyTo ? mainDeals.slice(0, 1) : mainDeals;
+  //
+  // Meet-up runs one search PER ORIGIN and intersects on (city, weekend) —
+  // the merged fly_from can't say which origin a fare belongs to. It is TWO
+  // stages, and the second exists because of a measured failure: a plain
+  // price-sorted, limit-200 search returns each origin's few ultra-cheap
+  // cities (CLJ: 12, VIE: 8 when this landed) and those sets barely overlap —
+  // the one-stage intersection was empty on real data. So: stage 1 asks each
+  // origin for its city list (one_for_city, the normal board query); the
+  // cities every origin serves are ranked by combined price and the best
+  // MEETUP_CITY_CAP go to stage 2, which re-searches per origin restricted to
+  // those airports with one_for_city OFF — the full weekend grid, but only
+  // where a meet-up is possible. combineMeetup then matches weekends (same
+  // Saturday anchor as the calendar).
+  let deals: Deal[];
+  const meetingUp = meetUp && origins.length > 1 && !flyTo;
+  if (meetingUp) {
+    const MEETUP_CITY_CAP = 12;
+    const perCity = await Promise.all(
+      origins.map((o) =>
+        searchDeals({ fly_from: o }, `meetup-cities:${o}`).catch(
+          () => [] as Deal[]
+        )
+      )
+    );
+    const cityMaps = perCity.map((list) => {
+      const m = new Map<string, Deal>();
+      for (const d of list) if (!m.has(d.cityTo)) m.set(d.cityTo, d);
+      return m;
+    });
+    const common = [...cityMaps[0].keys()].filter((c) =>
+      cityMaps.every((m) => m.has(c))
+    );
+    const ranked = common
+      .map((c) => ({
+        city: c,
+        total: cityMaps.reduce((s, m) => s + (m.get(c)?.price ?? 0), 0),
+      }))
+      .sort((a, b) => a.total - b.total)
+      .slice(0, MEETUP_CITY_CAP);
+    if (ranked.length === 0) {
+      deals = [];
+    } else {
+      // Every airport those cities were reached through, from any origin —
+      // a city can have several (Milan: BGY, MXP) and the origins may not
+      // use the same one.
+      const codes = [
+        ...new Set(
+          ranked.flatMap(({ city }) =>
+            cityMaps.map((m) => m.get(city)?.flyTo).filter(Boolean)
+          )
+        ),
+      ].sort() as string[];
+      const perOrigin = await Promise.all(
+        origins.map((o) =>
+          searchDeals(
+            // limit 600, not the default 200: this call exists to enumerate
+            // WEEKENDS (12 cities × ~26 weekends × fare variants), and at 200
+            // the price sort truncated the grid to the cheap end — measured:
+            // 2 matched weekends at 200, more at 600. Server-side only.
+            { fly_from: o, fly_to: codes.join(","), one_for_city: 0, limit: 600 },
+            // codes derive from stage 1, which shares the cache TTL — but
+            // they still vary run to run, so they belong in the key.
+            `meetup:${o}:${codes.join(".")}`
+          ).catch(() => [] as Deal[])
+        )
+      );
+      deals = combineMeetup(perOrigin);
+    }
+  } else {
+    const mainDeals = await searchDeals({}, "main");
+    deals = flyTo ? mainDeals.slice(0, 1) : mainDeals;
+  }
 
   let homeRegionInfo: WeekendSearchResult["homeRegion"];
 
@@ -301,8 +378,12 @@ export async function searchWeekends({
   }));
 
   // When the underlying prices were actually fetched from Kiwi (for an honest
-  // "checked X ago" stamp) — falls back to now for a fresh miss.
-  const fetchedAt = cacheFetchedAt(`${cacheKeyBase}:main`) ?? Date.now();
+  // "checked X ago" stamp) — falls back to now for a fresh miss. Meet-up has
+  // no :main search; its first per-origin key carries the same fact.
+  const fetchedAt =
+    cacheFetchedAt(
+      meetingUp ? `${cacheKeyBase}:meetup:${origins[0]}` : `${cacheKeyBase}:main`
+    ) ?? Date.now();
 
   return {
     deals: responseDeals,

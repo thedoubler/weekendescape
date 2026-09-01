@@ -151,6 +151,7 @@ export default function Home() {
     adults: number;
     bridges: boolean;
     region: string | null;
+    meetUp: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const loadingMore = false;
@@ -193,6 +194,10 @@ export default function Home() {
   // The origin sheet, and the airports it held when it opened — dismissal is
   // the commit, so it needs a before-image to compare against.
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Meet-up: with ≥2 home airports, show only destinations everyone can
+  // reach on the same weekend, one fare per person, priced as the total.
+  // Lives with the origins (the sheet) because it is a statement about them.
+  const [meetUp, setMeetUp] = useState(false);
   // Why the sheet is asking: set when geolocation failed, shown inside the
   // sheet, cleared on close or on a later successful detection. Without it a
   // declined permission prompt was answered by an unexplained modal.
@@ -253,6 +258,7 @@ export default function Home() {
   const adultsRef = useRef(adults);
   const bridgesRef = useRef(bridges);
   const regionRef = useRef(region);
+  const meetUpRef = useRef(meetUp);
   useEffect(() => {
     styleRef.current = style;
     monthsRef.current = months;
@@ -260,6 +266,7 @@ export default function Home() {
     adultsRef.current = adults;
     bridgesRef.current = bridges;
     regionRef.current = region;
+    meetUpRef.current = meetUp;
   });
 
   // `overrides` exists for callers that set state and search in the SAME
@@ -278,18 +285,26 @@ export default function Home() {
       adults: number;
       bridges: boolean;
       region: string | null;
+      meetUp: boolean;
     }>
   ) {
     const list = parseOrigins(
       Array.isArray(codes) ? codes.join(",") : codes
     );
     if (list.length === 0) return;
+    // Meet-up needs company: with one airport it silently degrades to a
+    // normal search rather than an empty board.
+    const meetUpWanted =
+      (overrides?.meetUp ?? meetUpRef.current) && list.length > 1;
     const params = {
       style: overrides?.style ?? styleRef.current,
       months: monthsRef.current,
       direct: overrides?.direct ?? stopModeRef.current === "direct",
       adults: overrides?.adults ?? adultsRef.current,
-      bridges: overrides?.bridges ?? bridgesRef.current,
+      // Meet-up displaces bridge mode (per-country holiday windows don't
+      // combine across origins) — mirrored server-side in the route.
+      bridges: meetUpWanted ? false : (overrides?.bridges ?? bridgesRef.current),
+      meetUp: meetUpWanted,
       // `undefined` means the caller didn't touch it; null is a real value
       // ("back to automatic"), so ?? would erase it.
       region:
@@ -313,6 +328,7 @@ export default function Home() {
       if (params.direct) qs.set("direct", "1");
       if (params.bridges) qs.set("bridges", "1");
       if (params.bridges && params.region) qs.set("region", params.region);
+      if (params.meetUp) qs.set("meetup", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Search failed");
@@ -448,6 +464,7 @@ export default function Home() {
       const a = Number(p.get("adults"));
       const adults0 = [1, 2, 3, 4].includes(a) ? a : 1;
       const bridges0 = p.get("bridges") === "1";
+      const meetUp0 = p.get("meetup") === "1";
       // The shared URL's region wins over the stored choice — the link should
       // reproduce the board it described.
       const regionParam = p.get("region");
@@ -464,6 +481,7 @@ export default function Home() {
       adultsRef.current = adults0;
       bridgesRef.current = bridges0;
       regionRef.current = region0;
+      meetUpRef.current = meetUp0;
       // Deliberately an effect. `/` is prerendered as static content, so this
       // component renders on the server at build time — reading
       // window.location from a render-phase state initialiser would throw
@@ -475,6 +493,7 @@ export default function Home() {
       setAdults(adults0);
       setBridges(bridges0);
       setRegion(region0);
+      setMeetUp(meetUp0);
       runSearch(from);
     } else {
       // No URL to honour — the stored explicit region (if any) still applies.
@@ -506,6 +525,7 @@ export default function Home() {
     if (applied.adults !== 1) p.set("adults", String(applied.adults));
     if (applied.bridges) p.set("bridges", "1");
     if (applied.bridges && applied.region) p.set("region", applied.region);
+    if (applied.meetUp) p.set("meetup", "1");
     const qs = p.toString();
     // Preserve history.state rather than passing null: Next keeps router
     // internals in there, and wiping them on every filter change breaks
@@ -751,8 +771,11 @@ export default function Home() {
 
   // The sheet edits `origins` live (chips appear as you add them), so the
   // before-image has to be taken when it opens.
+  const meetUpAtOpen = useRef<boolean | null>(null);
+
   function openOriginSheet() {
     originsAtOpen.current = origins;
+    meetUpAtOpen.current = meetUp;
     setSheetOpen(true);
   }
 
@@ -762,12 +785,19 @@ export default function Home() {
     // it has been read (or overtaken by a typed airport) either way.
     setGeoNotice(null);
     const before = originsAtOpen.current;
+    const meetBefore = meetUpAtOpen.current;
     originsAtOpen.current = null;
+    meetUpAtOpen.current = null;
     if (!before) return;
     // The ref, not the state: see the note where it is declared. Reading
     // `origins` here missed anything the field committed on the way out.
     const after = originsRef.current;
-    if ([...before].sort().join() === [...after].sort().join()) return;
+    const meetChanged = meetBefore !== null && meetBefore !== meetUpRef.current;
+    if (
+      [...before].sort().join() === [...after].sort().join() &&
+      !meetChanged
+    )
+      return;
     if (after.length === 0) {
       // Emptied and dismissed: put back what was searched rather than leaving
       // the board showing results for an airport the receipt no longer names.
@@ -873,6 +903,7 @@ export default function Home() {
         originCities={originCities}
         values={{ style, stopMode, adults, bridges, region }}
         homeRegion={applied?.bridges ? homeRegionInfo : null}
+        meetUp={applied?.meetUp ?? false}
         onChange={(patch) => {
           if (patch.style !== undefined) setStyle(patch.style);
           if (patch.stopMode !== undefined) setStopMode(patch.stopMode);
@@ -1399,6 +1430,13 @@ export default function Home() {
         onDetect={() => detectLocation({ fromSheet: true })}
         detecting={detecting}
         notice={geoNotice}
+        meetUp={meetUp}
+        onMeetUpChange={(v) => {
+          setMeetUp(v);
+          // Bridge mode can't ride along (per-country holiday windows) — the
+          // trip-length facet visibly returns to its shape when this flips on.
+          if (v) setBridges(false);
+        }}
         onClose={closeOriginSheet}
       />
 

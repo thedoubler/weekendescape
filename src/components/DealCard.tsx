@@ -454,9 +454,16 @@ export function DealCard({
           <div className="text-lg font-semibold tabular-nums">
             {deal.price} {deal.currency}
           </div>
+          {/* Meet-up: the headline is the whole party's total (see meetup.ts),
+              and saying so beats a per-person misreading. */}
+          {deal.meetup && (
+            <div className="text-[11px] text-muted-foreground">
+              total for {deal.meetup.length}
+            </div>
+          )}
           {/* Kiwi prices the whole party — flag it for groups so the total
               isn't read as per-person (the CO₂ line in details is per-person). */}
-          {adults > 1 && (
+          {!deal.meetup && adults > 1 && (
             <div className="text-[11px] text-muted-foreground">
               {adults} travellers
             </div>
@@ -544,27 +551,80 @@ export function DealCard({
               <span className="underline underline-offset-2">Hotels</span>
               <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
             </a>
-            <a
-              href={deal.deepLink}
-              onClick={() =>
-                track("outbound_click", {
-                  kind: "flight",
-                  to: deal.flyTo,
-                  city: deal.cityTo,
-                  price: deal.price,
-                  currency: deal.currency,
-                })
-              }
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
-              className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 dark:text-white"
-            >
-              <span className="underline underline-offset-2">Book flight</span>
-              <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
-            </a>
+            {/* In meet-up mode each traveller books their own leg from the
+                rows below — a single "Book flight" here would book ONE
+                person's trip while wearing the whole party's price. */}
+            {!deal.meetup && (
+              <a
+                href={deal.deepLink}
+                onClick={() =>
+                  track("outbound_click", {
+                    kind: "flight",
+                    to: deal.flyTo,
+                    city: deal.cityTo,
+                    price: deal.price,
+                    currency: deal.currency,
+                  })
+                }
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
+                className="inline-flex items-center gap-1 text-sm font-medium text-black transition duration-200 dark:text-white"
+              >
+                <span className="underline underline-offset-2">Book flight</span>
+                <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
+              </a>
+            )}
           </div>
       </div>
+
+      {/* Meet-up: one row per traveller, each with their own fare and their
+          own booking link — these are separate tickets from separate cities
+          that happen to land on the same weekend, and the card must not
+          pretend otherwise. The day strip above shows the cheapest leg's
+          itinerary; each row names its own departure and return day-times. */}
+      {deal.meetup && (
+        <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-black/10 p-3 dark:border-white/10">
+          {deal.meetup.map((leg) => (
+            <div
+              key={leg.flyFrom}
+              className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm"
+            >
+              <span className="min-w-0">
+                <span className="font-medium">From {leg.cityFrom}</span>{" "}
+                <span className="text-muted-foreground">
+                  {leg.outDepart.slice(11, 16)} → back{" "}
+                  {leg.backDepart.slice(11, 16)}
+                </span>
+              </span>
+              <span className="inline-flex items-baseline gap-3 whitespace-nowrap">
+                <span className="font-semibold">
+                  {leg.price} {leg.currency}
+                </span>
+                <a
+                  href={leg.deepLink}
+                  onClick={() =>
+                    track("outbound_click", {
+                      kind: "flight",
+                      to: deal.flyTo,
+                      city: deal.cityTo,
+                      price: leg.price,
+                      currency: leg.currency,
+                    })
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  aria-label={`Book ${deal.cityTo} from ${leg.cityFrom} on Kiwi.com (opens a new tab)`}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-black dark:text-white"
+                >
+                  <span className="underline underline-offset-2">Book</span>
+                  <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
+                </a>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {isBridge(deal) && deal.homeHoliday && (
         // Two lines, not one sentence. This used to run "Long weekend · no day

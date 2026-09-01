@@ -72,6 +72,19 @@ export interface Deal {
   airportKmFromCity?: number | null;
   // Rough per-person round-trip CO₂ estimate (kg). Set server-side.
   co2Kg?: number | null;
+  // Meet-up mode only: one row per home airport, everyone landing on the same
+  // weekend. When present, `price` is the TOTAL of these rows and the deal's
+  // own itinerary fields describe the cheapest row's flight. Shape lives in
+  // lib/meetup.ts, mirrored here so the client type needs no server import.
+  meetup?: {
+    flyFrom: string;
+    cityFrom: string;
+    price: number;
+    currency: string;
+    deepLink: string;
+    outDepart: string;
+    backDepart: string;
+  }[];
   // Gate-to-gate journey time for the direction, in minutes, from upstream's
   // `duration` field. VERIFIED against a live 1-stop itinerary: it INCLUDES
   // layovers (CLJ→LIS came back 375m gate-to-gate vs 315m of actual air time),

@@ -88,6 +88,10 @@ interface Props {
   /** Region facts from the last bridge-mode response; null hides the region
    *  control (bridges off, or a home country with no regional holidays). */
   homeRegion?: HomeRegionInfo | null;
+  /** The applied search was a meet-up — the receipt must say so, because the
+   *  board's prices are totals for the whole party. Tapping it opens the
+   *  sheet, where the toggle lives. */
+  meetUp?: boolean;
   /** Live edit — updates the label immediately, without searching. */
   onChange: (patch: Partial<ReceiptValues>) => void;
   /** Commit — one search, on dismiss. Tapping 1→2→3→4 adults must not fire three. */
@@ -100,6 +104,7 @@ export function SearchReceipt({
   originCities,
   values,
   homeRegion,
+  meetUp = false,
   onChange,
   onCommit,
   onEditOrigins,
@@ -242,6 +247,24 @@ export function SearchReceipt({
       >
         {originLabel}
       </button>
+
+      {/* Meet-up rewrites what every price below means (a total for the whole
+          party), so the receipt says it beside the origins it applies to.
+          Same dotted-underline dialect; it opens the sheet, where the toggle
+          lives. */}
+      {meetUp && origins.length > 1 && (
+        <span className="inline-flex items-baseline gap-x-2.5">
+          <Sep />
+          <button
+            type="button"
+            onClick={onEditOrigins}
+            aria-label={reloadHint("meeting up")}
+            className="relative -mx-0.5 rounded border-b-2 border-dotted border-amber-700 px-0.5 pb-0.5 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] font-semibold whitespace-nowrap text-black/70 transition-colors hover:text-black dark:border-amber-400 dark:text-white/70 dark:hover:text-white"
+          >
+            meeting up
+          </button>
+        </span>
+      )}
 
       {/* Each separator travels with the value AFTER it, so a wrap can never
           strand one at the end of a line. Measured at 390px, where the row

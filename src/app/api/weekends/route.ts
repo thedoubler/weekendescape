@@ -24,9 +24,15 @@ export async function GET(request: NextRequest) {
     const flyFrom = origins[0] ?? null;
     const flyTo = searchParams.get("flyTo");
     const direct = searchParams.get("direct") === "1";
+    // Meet-up: several origins, one destination, the same weekend. Only
+    // meaningful with ≥2 origins and no fixed destination; it also displaces
+    // bridge mode below — holiday windows are per-country, and a meet-up's
+    // origins may not share one.
+    const meetUp =
+      searchParams.get("meetup") === "1" && origins.length > 1 && !flyTo;
     // Opt-in "bridge days" mode: run the holiday-anchored searches and return
     // only the long-weekend / puente escapes. Off by default (a plain search).
-    const bridgeMode = searchParams.get("bridges") === "1" && !flyTo;
+    const bridgeMode = searchParams.get("bridges") === "1" && !flyTo && !meetUp;
     const style = (searchParams.get("style") || "strict") as WeekendStyle;
     const months = parseInt(searchParams.get("months") || "3", 10);
     // Passengers — Tequila prices scale with headcount. Default 1, clamp 1–9.
@@ -113,6 +119,7 @@ export async function GET(request: NextRequest) {
         flyTo,
         direct,
         bridgeMode,
+        meetUp,
         homeRegion,
         style,
         months,
