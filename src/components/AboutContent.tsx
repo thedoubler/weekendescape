@@ -108,10 +108,19 @@ export function AboutContent() {
 
       <Section title="What it stores about you">
         <p className="text-sm leading-relaxed text-black/70 dark:text-white/70">
-          There are no accounts, no tracking scripts, no advertising pixels and
-          no analytics. Nothing you do here is profiled.
+          No accounts, no advertising pixels. One measurement tool runs, named
+          below.
         </p>
         <ul className="flex flex-col gap-1.5 text-sm leading-relaxed text-black/70 dark:text-white/70">
+          <li>
+            <span className="font-medium text-black dark:text-white">
+              Usage analytics
+            </span>{" "}
+            &mdash; Google Analytics counts visits: which pages, what device,
+            roughly where from. Google&rsquo;s script, Google&rsquo;s
+            identifiers, Google&rsquo;s terms. Not tied to your searches, your
+            airports or anything you type.
+          </li>
           <li>
             <span className="font-medium text-black dark:text-white">
               Your location
