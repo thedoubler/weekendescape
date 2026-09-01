@@ -283,7 +283,19 @@ export function SearchReceipt({
           ? [facet("region", regionLabel(values.region, homeRegion))]
           : []),
         facet("stops", values.stopMode === "direct" ? "direct" : "any stops"),
-        facet("adults", values.adults === 1 ? "1 adult" : `${values.adults} adults`),
+        // In meet-up mode "1 adult" would undercount the party: adults means
+        // adults PER CITY there (each leg is priced for that many people from
+        // that origin), and the label says so.
+        facet(
+          "adults",
+          meetUp && origins.length > 1
+            ? values.adults === 1
+              ? "1 adult each"
+              : `${values.adults} adults each`
+            : values.adults === 1
+              ? "1 adult"
+              : `${values.adults} adults`
+        ),
       ].map((control, i) => (
         <span key={i} className="inline-flex items-baseline gap-x-2.5">
           <Sep />
@@ -335,7 +347,7 @@ export function SearchReceipt({
           )}
           {open === "adults" && (
             <Options
-              title="Adults"
+              title={meetUp && origins.length > 1 ? "Adults from each city" : "Adults"}
               options={ADULT_OPTS.map((n) => ({ value: n, label: String(n) }))}
               value={values.adults}
               onPick={(v) => onChange({ adults: v })}

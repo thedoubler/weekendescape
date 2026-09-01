@@ -504,10 +504,12 @@ export function DealCard({
             {deal.price} {deal.currency}
           </div>
           {/* Meet-up: the headline is the whole party's total (see meetup.ts),
-              and saying so beats a per-person misreading. */}
+              and saying so beats a per-person misreading. PEOPLE, not legs:
+              each leg is priced for `adults` travellers from its city, so two
+              cities at 2 adults each is a total for 4. */}
           {deal.meetup && (
             <div className="text-[11px] text-muted-foreground">
-              total for {deal.meetup.length}
+              total for {deal.meetup.length * adults}
             </div>
           )}
           {/* Kiwi prices the whole party — flag it for groups so the total
