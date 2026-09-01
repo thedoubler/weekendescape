@@ -198,10 +198,13 @@ export function OriginSheet({
           </p>
         )}
 
-        {/* mt-auto pushes the footer to the bottom of the full-screen phone
-            dialog; with a content-sized desktop dialog there is no free space
-            for it to take, so it sits directly under the content as before. */}
-        <div className="flex items-center justify-end border-t border-black/[0.07] pt-3 max-sm:mt-auto dark:border-white/10">
+        {/* In the flow, NOT pinned to the sheet's bottom edge (the mt-auto it
+            shipped with). On a phone this sheet opens with the keyboard —
+            the field autofocuses — and a bottom-pinned Done sat exactly where
+            the keyboard lands: invisible until dismissed, and a long reach
+            after. Directly under the content it stays on screen above the
+            keyboard, right where the eye already is. */}
+        <div className="flex items-center justify-end border-t border-black/[0.07] pt-3 dark:border-white/10">
           <button
             type="button"
             disabled={origins.length === 0}
