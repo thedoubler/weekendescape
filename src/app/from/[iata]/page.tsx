@@ -7,6 +7,8 @@ import { searchWeekends, MissingApiKeyError } from "@/lib/weekend-search";
 import { SITE_NAME, siteUrl } from "@/lib/site";
 import type { Deal } from "@/lib/deals";
 import { AboutDialog } from "@/components/AboutDialog";
+import { Masthead } from "@/components/Masthead";
+import { DealList } from "@/components/DealList";
 
 // One page per origin airport: "cheap weekend flights from Barcelona".
 //
@@ -95,10 +97,6 @@ function byWeekend(deals: Deal[]) {
     }));
 }
 
-const MONTH = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" });
-const DAY = new Intl.DateTimeFormat("en", { day: "numeric", timeZone: "UTC" });
-const SHORT = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", timeZone: "UTC" });
-const WEEKDAY = new Intl.DateTimeFormat("en", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 export default async function OriginPage({
   params,
@@ -112,7 +110,9 @@ export default async function OriginPage({
 
   let deals: Deal[] = [];
   let currency = "EUR";
-  let fetchedAt = Date.now();
+  // No Date.now() placeholder: it is impure during render, and the value is
+  // always replaced by the search's own honest fetch time below.
+  let fetchedAt = 0;
   try {
     const r = await searchWeekends({
       origins: [code],
@@ -144,132 +144,76 @@ export default async function OriginPage({
 
   const weekends = byWeekend(deals);
   const cheapest = deals[0];
-  const prices = weekends.map((w) => w.best.price);
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
   const destinations = new Set(deals.map((d) => d.cityTo)).size;
   const countries = new Set(deals.map((d) => d.countryTo)).size;
-  const out = new Date(cheapest.outDepart);
-  const back = new Date(cheapest.backDepart);
   const money = (n: number) =>
     new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
-  let lastMonth = "";
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-3xl p-4 sm:p-6">
-      <header className="flex items-baseline justify-between gap-4 pb-6">
-        <Link href="/" className="text-[17px] font-bold tracking-tight">
-          weekend<span className="text-orange-600 dark:text-orange-400">.flights</span>
-        </Link>
-        <Link href="/" className="text-[12.5px] text-muted underline underline-offset-4">
-          Flying from somewhere else?
-        </Link>
-      </header>
+    // The board's own wrapper, verbatim: same max width, same padding, same
+    // column gap. The origin page used to be max-w-3xl with its own spacing,
+    // which was enough to make the two surfaces feel like different products.
+    <main className="max-w-4xl mx-auto w-full min-w-0 p-4 sm:p-6 flex flex-col gap-4">
+      <Masthead />
 
-      <h1 className="text-[13px] font-semibold uppercase tracking-[0.09em] text-muted">
-        Cheap weekend flights from {city}
-      </h1>
+      {/* The board's receipt line, stated rather than interactive. It is the
+          same sentence in the same grammar — "From <city> · Fri–Sun · direct" —
+          so someone arriving here from a search recognises the board they are
+          about to land on. The values are fixed because this page IS one
+          search; the live version is a click away. */}
+      <p className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 border-b border-black/[0.07] pb-3 text-center text-[15px] dark:border-white/10">
+        <span className="text-muted">From</span>
+        <span className="font-semibold">{city}</span>
+        <span aria-hidden className="text-black/25 dark:text-white/25">·</span>
+        <span className="font-semibold">Fri–Sun</span>
+        <span aria-hidden className="text-black/25 dark:text-white/25">·</span>
+        <span className="font-semibold">direct</span>
+        <span aria-hidden className="text-black/25 dark:text-white/25">·</span>
+        <span className="font-semibold">1 adult</span>
+      </p>
 
-      {/* The thesis. A crawler and an assistant both read this sentence and
-          have the answer; a grid of destination cards gives neither anything to
-          quote. Every number in it is real and refreshed daily. */}
-      <p className="mt-4 max-w-[20ch] font-serif text-[clamp(1.9rem,5.4vw,2.9rem)] italic leading-[1.18] tracking-[-0.015em] text-balance">
+      {/* The one thing this page has that the board does not, and the reason it
+          exists: a sentence a crawler and an assistant can quote. It sits below
+          the masthead so the page still reads as the product, not as a document
+          wearing the product's logo. */}
+      <h1 className="sr-only">Cheap weekend flights from {city}</h1>
+      <p className="max-w-[34ch] font-serif text-[clamp(1.6rem,4.4vw,2.3rem)] italic leading-[1.2] tracking-[-0.015em] text-balance">
         The cheapest weekend from {city} is {cheapest.cityTo}, at{" "}
         <span className="whitespace-nowrap not-italic text-orange-600 dark:text-orange-400">
           {money(cheapest.price)}
         </span>{" "}
         return.
       </p>
-      <p className="mt-3.5 font-sans text-[15px] text-muted">
-        Out {WEEKDAY.format(out)}, back {WEEKDAY.format(back)} — direct.
+
+      <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[15px] font-semibold tracking-tight tabular-nums">
+        {weekends.length} weekends ahead
+        <span className="text-[11px] font-normal text-muted">
+          {destinations} destinations · {countries} countries · checked{" "}
+          <time dateTime={new Date(fetchedAt).toISOString()}>
+            {new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "UTC" }).format(fetchedAt)}
+          </time>
+        </span>
       </p>
 
-      <p className="mt-6 flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[12.5px] tabular-nums text-muted">
-        <span><b className="font-semibold text-foreground">{destinations}</b> destinations</span>
-        <span aria-hidden className="opacity-40">·</span>
-        <span><b className="font-semibold text-foreground">{countries}</b> countries</span>
-        <span aria-hidden className="opacity-40">·</span>
-        <span><b className="font-semibold text-foreground">{weekends.length}</b> weekends ahead</span>
-        <span aria-hidden className="opacity-40">·</span>
-        <span>direct flights only</span>
-      </p>
+      {/* The board's own list component, so a weekend looks the same here as it
+          does there — same card, same day strip, same month dividers, same booking
+          hand-off. It also means this page inherits every future card change for
+          free, which the hand-rolled ledger never would. Chronological, because
+          this page answers "when could I go" rather than "what is cheapest". */}
+      <DealList
+        deals={weekends.map((w) => w.best)}
+        loading={false}
+        error={null}
+        groupByMonth
+        hideStops
+      />
 
-      {/* One row per WEEKEND, not per destination: the weekend is this
-          product's unit of inventory, so the page is a calendar of departures
-          rather than a storefront of places. It is also what makes the content
-          genuinely unique per origin. */}
-      <section className="mt-9 border-t border-black/10 dark:border-white/10">
-        {weekends.map((w) => {
-          const o = new Date(w.best.outDepart);
-          const b = new Date(w.best.backDepart);
-          const month = MONTH.format(o);
-          const showMonth = month !== lastMonth;
-          lastMonth = month;
-          const isBest = w.best.price === min;
-          const width = max > min ? 8 + ((w.best.price - min) / (max - min)) * 92 : 100;
-          const sameMonth = o.getUTCMonth() === b.getUTCMonth();
-          return (
-            <div key={w.sat}>
-              {showMonth && (
-                <h2 className="px-2 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
-                  {month}
-                </h2>
-              )}
-              <div
-                className={`-mx-2 grid grid-cols-[86px_minmax(0,1fr)_62px] items-center gap-3 rounded-lg border-b border-black/[0.06] px-2 py-2.5 sm:grid-cols-[92px_minmax(0,1fr)_74px_66px] dark:border-white/[0.06] ${
-                  isBest ? "bg-orange-500/[0.07] dark:bg-orange-400/10" : ""
-                }`}
-              >
-                <div className="flex flex-col gap-px tabular-nums">
-                  <span className="text-[14px] font-semibold tracking-[-0.01em]">
-                    {sameMonth
-                      ? `${DAY.format(o)}–${DAY.format(b)}`
-                      : `${SHORT.format(o)} – ${SHORT.format(b)}`}
-                  </span>
-                  <span className="text-[10.5px] text-muted">
-                    {w.best.nights} {w.best.nights === 1 ? "night" : "nights"}
-                  </span>
-                </div>
-                <div className="flex min-w-0 items-baseline gap-1.5">
-                  <span aria-hidden className="shrink-0 text-[13px]">{w.best.flag}</span>
-                  <span className="truncate text-[14.5px] font-medium">{w.best.cityTo}</span>
-                  <span className="hidden whitespace-nowrap text-[12px] text-muted sm:inline">
-                    {w.best.countryTo}
-                  </span>
-                  {w.count > 1 && (
-                    <span className="hidden shrink-0 whitespace-nowrap rounded-full border border-black/10 px-1.5 py-px text-[10.5px] text-muted sm:inline dark:border-white/15">
-                      +{w.count - 1} more
-                    </span>
-                  )}
-                </div>
-                {/* The fare drawn to scale, so the shape of the season is
-                    visible at a glance. The number is right beside it, so this
-                    carries no information of its own. */}
-                <span aria-hidden className="hidden h-[3px] overflow-hidden rounded-sm bg-black/[0.06] sm:block dark:bg-white/[0.08]">
-                  <i
-                    className={`block h-full rounded-sm ${isBest ? "bg-orange-600 dark:bg-orange-400" : "bg-muted/55"}`}
-                    style={{ width: `${width}%` }}
-                  />
-                </span>
-                <span
-                  className={`text-right text-[15px] font-semibold tabular-nums tracking-[-0.02em] ${
-                    isBest ? "text-orange-600 dark:text-orange-400" : ""
-                  }`}
-                >
-                  {money(w.best.price)}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-black/10 p-5 dark:border-white/10">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-black/10 p-5 dark:border-white/10">
         <p className="max-w-[42ch] text-[13.5px] text-muted">
           <strong className="font-semibold text-foreground">Prices move.</strong>{" "}
-          This page is rebuilt daily; the board searches live and knows every
-          airline on the route, not just the cheapest one per weekend.
+          This page is rebuilt daily and shows the cheapest trip per weekend. The
+          board searches live and knows every airline on the route.
         </p>
         <Link
           href={`/?from=${code}`}
@@ -279,15 +223,7 @@ export default async function OriginPage({
         </Link>
       </div>
 
-      <p className="mt-7 text-[12px] text-muted">
-        Checked{" "}
-        <time dateTime={new Date(fetchedAt).toISOString()}>
-          {new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "UTC" }).format(fetchedAt)}
-        </time>
-        . Fares are found by Kiwi.com and set at booking.
-      </p>
-
-      <footer className="mt-8 flex flex-col items-center gap-2 border-t border-black/10 pt-4.5 text-center text-xs leading-relaxed text-muted dark:border-white/10">
+      <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted dark:border-white/10">
         <p className="max-w-prose">
           Flights, stays and activities are booked on Kiwi.com, Booking.com and
           GetYourGuide. We may earn a commission from those bookings, at no extra
