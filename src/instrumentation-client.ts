@@ -2,18 +2,21 @@
 // instrumentation-client convention, so no provider component and no layout
 // changes.
 //
-// Activation is gated twice, and both gates matter:
-//   · NEXT_PUBLIC_POSTHOG_KEY is inlined at BUILD time (the NEXT_PUBLIC rule
-//     in docs/pre-launch.md — it can never be a runtime Secret). Until the
-//     key is set as a Cloudflare BUILD variable, this whole file is a no-op.
-//   · Production only, same reasoning as the GA guard in layout.tsx: every
-//     dev session and preview deploy would otherwise write into the same
-//     project as real visitors.
+// The project token is inline for the same reason the GA measurement id is
+// inline in layout.tsx: it is a public client identifier (PostHog documents
+// it as safe to expose — it ships in the HTML of every PostHog site), and
+// the env-var route cost a day to a spelling mismatch between our name and
+// the one PostHog's docs use. The env var still wins when set — it is the
+// escape hatch for a fork or a staging project, and it is inlined at BUILD
+// time (the NEXT_PUBLIC rule in docs/pre-launch.md — never a runtime Secret).
 //
-// The import is dynamic and inside the guard, so a keyless build never
-// fetches the PostHog chunk at all — the board's LCP pays nothing for an
-// analytics tool that isn't configured.
-const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+// Production only, same reasoning as the GA guard: every dev session would
+// otherwise write into the same project as real visitors. The import is
+// dynamic and inside the guard, so a dev build never fetches the PostHog
+// chunk at all — the board's LCP pays nothing in development.
+const key =
+  process.env.NEXT_PUBLIC_POSTHOG_KEY ||
+  "phc_q7jxs7r8kC8NLpsyWhJC2avGVwFa5Zz3L9BpeiBLgHV7";
 
 if (key && process.env.NODE_ENV === "production") {
   import("posthog-js").then(({ default: posthog }) => {
@@ -26,7 +29,7 @@ if (key && process.env.NODE_ENV === "production") {
       // pageviews, sane cookie behaviour. The board rewrites its query
       // string per filter tap via replaceState — those are real state
       // changes, so counting them as pageviews is signal, not noise.
-      defaults: "2025-05-24",
+      defaults: "2026-05-30",
       // No person profiles for anonymous visitors: same posture the About
       // page promises for analytics generally — measurement, not identity.
       // Nothing here calls identify(), so today every visitor is anonymous.

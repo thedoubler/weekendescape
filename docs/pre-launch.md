@@ -50,12 +50,11 @@ cache before suspecting the ref.
       Unset, canonical URLs, OG images, `robots.txt` and the sitemap all fall
       back to a Vercel domain or localhost. Link previews and every SEO signal
       depend on it, so this is a launch blocker rather than a nicety.
-- [ ] **`NEXT_PUBLIC_POSTHOG_KEY=phc_…`** as a *build* variable (same rule —
-      never a Secret). Until it is set and a redeploy runs, PostHog is a
-      complete no-op: `src/instrumentation-client.ts` guards on the key and
-      never even fetches the chunk. The project lives on **US cloud**
-      (project 588833), which the code already defaults to; only an EU-cloud
-      key would also need `NEXT_PUBLIC_POSTHOG_HOST`.
+- [x] **PostHog needs no variable any more.** The public project token is
+      inline in `src/instrumentation-client.ts` (same reasoning as the GA id
+      in layout.tsx); `NEXT_PUBLIC_POSTHOG_KEY` remains as an optional
+      override for a fork or staging project. US cloud (project 588833) is
+      the default host.
 
 ## Worth doing before the first real traffic
 
