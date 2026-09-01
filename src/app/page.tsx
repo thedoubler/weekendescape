@@ -938,15 +938,22 @@ export default function Home() {
                 Sort above, triggers below (max-sm:order-3), chips directly
                 beneath the triggers. DOM order is unchanged. */}
             <div className="flex w-full shrink-0 items-center gap-1.5 max-sm:order-2 sm:ml-auto sm:w-auto">
-              <SegmentedControl
-                options={[
-                  { value: "soonest" as SortKey, label: "Soonest" },
-                  { value: "cheapest" as SortKey, label: "Cheapest" },
-                ]}
-                value={sort}
-                onChange={setSort}
-                ariaLabel="Sort"
-              />
+              {/* Hidden while a search is in flight, like Calendar and Map
+                  beside it — they always were, and the sort control was the one
+                  member of the cluster offering to order skeletons. One gate
+                  for the whole row: controls appear when there is something to
+                  control. */}
+              {!loading && !error && visible.length > 0 && (
+                <SegmentedControl
+                  options={[
+                    { value: "soonest" as SortKey, label: "Soonest" },
+                    { value: "cheapest" as SortKey, label: "Cheapest" },
+                  ]}
+                  value={sort}
+                  onChange={setSort}
+                  ariaLabel="Sort"
+                />
+              )}
               {!loading && !error && calendarDeals.length > 0 && (
                 <button
                   type="button"

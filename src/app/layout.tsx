@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Space_Grotesk, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
@@ -82,28 +81,34 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
-        {/* GA4. `afterInteractive` rather than the raw async tag from Google's
-            snippet: next/script then loads it after hydration instead of
-            competing with the board's own first paint, which is the number
-            this product is judged on. Measurement id is a public identifier,
-            so it is inline rather than an env var — nothing to leak.
+        {/* GA4, as Google's literal snippet rendered into the SERVER HTML.
+            The next/script version (strategy="afterInteractive") injected the
+            tag after hydration, which kept it out of the initial document —
+            and Google's tag detector reads the document, so it reported "your
+            Google tag wasn't detected" while analytics half-worked. A tag that
+            exists to be found has to be in the HTML. Measurement id is a
+            public identifier, so it is inline rather than an env var.
 
-            Production only. Without the guard every `npm run dev` session, and
-            every preview deploy, writes into the same property as real
+            Production only. Without the guard every `npm run dev` session and
+            every preview deploy writes into the same property as real
             visitors, and the first month of data is the one you cannot
             re-collect. */}
         {process.env.NODE_ENV === "production" && (
           <>
-            <Script
+            <script
+              async
               src="https://www.googletagmanager.com/gtag/js?id=G-BVSSW686DH"
-              strategy="afterInteractive"
             />
-            <Script id="ga4" strategy="afterInteractive">
-              {`window.dataLayer = window.dataLayer || [];
+            <script
+              // Google's own bootstrap, verbatim; a local literal, no user
+              // input — nothing here can be injected.
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-BVSSW686DH');`}
-            </Script>
+gtag('config', 'G-BVSSW686DH');`,
+              }}
+            />
           </>
         )}
       </body>
