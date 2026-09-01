@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics";
+
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type Deal, isBridge, dealDomId } from "@/lib/deals";
 import { type WeatherResult, packingCue } from "@/lib/weather";
@@ -237,6 +239,18 @@ export function DealCard({
   hideDays?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Intent signal: fires on the closed->open transition only. Repeat opens of
+  // the same card in one visit are separate intents and deliberately count.
+  function toggleOpen() {
+    if (!open)
+      track("deal_expanded", {
+        to: deal.flyTo,
+        city: deal.cityTo,
+        price: deal.price,
+        currency: deal.currency,
+      });
+    setOpen((o) => !o);
+  }
   // Real per-flight emissions, fetched on first expand. Null until it lands, or
   // for good if the model has no data for these flights.
   const [timGrams, setTimGrams] = useState<number | null>(null);
@@ -371,7 +385,7 @@ export function DealCard({
           type="button"
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggleOpen}
           className="min-w-0 flex-1 text-left"
         >
           <div className="flex items-start gap-2">
@@ -458,7 +472,7 @@ export function DealCard({
             is not where anyone looks to find out if a row opens. */}
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggleOpen}
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={open ? `Hide details for ${deal.cityTo}` : `Show details for ${deal.cityTo}`}
@@ -473,7 +487,7 @@ export function DealCard({
       {!hideDays && (
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggleOpen}
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={open ? "Hide details" : "Show details"}
@@ -513,6 +527,15 @@ export function DealCard({
         <div className="flex items-center gap-3">
             <a
               href={hotelUrl(deal, adults)}
+              onClick={() =>
+                track("outbound_click", {
+                  kind: "hotel",
+                  to: deal.flyTo,
+                  city: deal.cityTo,
+                  price: deal.price,
+                  currency: deal.currency,
+                })
+              }
               target="_blank"
               rel="noopener noreferrer sponsored"
               aria-label={`Find a hotel in ${deal.cityTo} on Booking.com (opens a new tab)`}
@@ -523,6 +546,15 @@ export function DealCard({
             </a>
             <a
               href={deal.deepLink}
+              onClick={() =>
+                track("outbound_click", {
+                  kind: "flight",
+                  to: deal.flyTo,
+                  city: deal.cityTo,
+                  price: deal.price,
+                  currency: deal.currency,
+                })
+              }
               target="_blank"
               rel="noopener noreferrer sponsored"
               aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}
@@ -873,6 +905,15 @@ export function DealCard({
                 read all of this and then had to scroll back up to act. */}
             <a
               href={deal.deepLink}
+              onClick={() =>
+                track("outbound_click", {
+                  kind: "flight",
+                  to: deal.flyTo,
+                  city: deal.cityTo,
+                  price: deal.price,
+                  currency: deal.currency,
+                })
+              }
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Book ${deal.cityTo} on Kiwi.com (opens a new tab)`}

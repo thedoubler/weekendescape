@@ -32,5 +32,10 @@ if (key && process.env.NODE_ENV === "production") {
       // Nothing here calls identify(), so today every visitor is anonymous.
       person_profiles: "identified_only",
     });
+    // The app's own events go through track() in src/lib/analytics.ts, which
+    // reads this handle. A window global rather than an import, so component
+    // bundles never pull posthog-js in — when this file didn't run (dev,
+    // keyless build), track() finds nothing and costs nothing.
+    (window as { __ph?: unknown }).__ph = posthog;
   });
 }

@@ -26,6 +26,7 @@ import { monthShort, monthKey } from "@/lib/format";
 import { timelineRange } from "@/lib/timeline";
 import { priceBuckets } from "@/lib/price";
 import { loadHomes, saveHomes, loadRegion, saveRegion } from "@/lib/home-storage";
+import { track } from "@/lib/analytics";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import {
   BRIDGE_HELP,
@@ -313,6 +314,17 @@ export default function Home() {
       setOriginPoints(body.origins ?? []);
       setHomeRegionInfo(body.homeRegion ?? null);
       setApplied({ origins: list, ...params });
+      // Activation: one event per answered search, in product vocabulary
+      // only (codes and counts — nothing typed by the person).
+      track("search", {
+        origins: list.join(","),
+        origin_count: list.length,
+        style: params.style,
+        bridges: params.bridges,
+        direct: params.direct,
+        adults: params.adults,
+        results: (body.deals ?? []).length,
+      });
       setSelectedMonths([]);
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "AbortError";
