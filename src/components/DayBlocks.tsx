@@ -134,7 +134,7 @@ export function DayBlocks({
               // cells, so the tint marked nothing and simply became the
               // background. Those cells already carry a "you're off" chip; the
               // fill was a second device for the same fact.
-              className="min-w-0 flex-1 rounded-lg bg-black/[0.04] px-1.5 py-2.5 text-center dark:bg-white/[0.06]"
+              className="flex min-w-0 flex-1 flex-col rounded-lg bg-black/[0.04] px-1.5 py-2.5 text-center dark:bg-white/[0.06]"
             >
               <div className="text-[11px] font-medium uppercase tracking-wider text-muted">
                 {c.weekday}
@@ -158,6 +158,17 @@ export function DayBlocks({
                   {isHomeHoliday ? "you’re off" : isDayOff ? "book off" : " "}
                 </div>
               )}
+              {/* Everything from here down is pinned to the BOTTOM of the cell.
+                  The cells are equal-height flex siblings, but their upper
+                  halves are not equal-CONTENT: a "you're off" chip wraps to two
+                  lines in a five-day card where "book off" stays on one, and a
+                  day with no chip at all is shorter still. That pushed the hours
+                  bar and the arrival time to a different height in each cell —
+                  visible as a stagger across the strip. Reserving the chip row
+                  (hasTags, above) fixed the untagged case but not the wrapped
+                  one. mt-auto fixes the whole class: whatever happens above,
+                  the bar and the times line up across every cell. */}
+              <div className="mt-auto">
               {/* Hours at the destination as a slice of the day (arrival→departure). */}
               {/* 4px. Sized when it was a pale orange gradient; as a solid
                   neutral the same height read far heavier than the proportion
@@ -208,6 +219,7 @@ export function DayBlocks({
                   full day
                 </div>
               )}
+              </div>
             </div>
           );
         })}
