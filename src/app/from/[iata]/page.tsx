@@ -32,12 +32,24 @@ import { AboutDialog } from "@/components/AboutDialog";
 export const revalidate = 86400;
 export const dynamicParams = true;
 
-// A handful, not all 200. `generateStaticParams` returning every origin would
-// fire 200 Kiwi searches in a burst at deploy time — exactly where a rate limit
-// bites and what makes every deploy slow. The rest render lazily on first visit
-// and are cached from then on.
+// A handful, not all 200: returning every origin would fire 200 Kiwi searches in
+// a burst at deploy time — exactly where a rate limit bites, and what makes
+// every deploy slow. The rest render on first visit and are cached from then on.
 const SEEDED = ["BCN", "MAD", "LON", "CLJ", "BER"];
+
+// ...and NONE at all when the key is absent, which is the normal case on
+// Cloudflare. TEQUILA_API_KEY is a runtime Secret on the Worker; the Workers
+// Builds environment that runs `next build` has never seen it. Prerendering
+// unconditionally therefore threw MissingApiKeyError on /from/bcn and took the
+// whole build down with it — a page that cannot be built must not be able to
+// stop the site from shipping.
+//
+// Returning [] is not a downgrade: `dynamicParams` is on, so every origin still
+// renders on first request — where the secret does exist — and is then cached
+// for `revalidate`. Where the key IS present at build time (a local build, or a
+// host that exposes it), the seeds are prerendered as before.
 export function generateStaticParams() {
+  if (!process.env.TEQUILA_API_KEY) return [];
   return SEEDED.map((iata) => ({ iata: iata.toLowerCase() }));
 }
 
