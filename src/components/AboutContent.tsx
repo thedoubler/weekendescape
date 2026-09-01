@@ -128,7 +128,7 @@ export function AboutContent() {
 
       <Section title="What it stores about you">
         <p className="text-sm leading-relaxed text-black/70 dark:text-white/70">
-          No accounts, no advertising pixels. One measurement tool runs, named
+          No accounts, no advertising pixels. Two measurement tools run, named
           below.
         </p>
         <ul className="flex flex-col gap-1.5 text-sm leading-relaxed text-black/70 dark:text-white/70">
@@ -140,6 +140,15 @@ export function AboutContent() {
             roughly where from. Google&rsquo;s script, Google&rsquo;s
             identifiers, Google&rsquo;s terms. Not tied to your searches, your
             airports or anything you type.
+          </li>
+          <li>
+            <span className="font-medium text-black dark:text-white">
+              Product analytics
+            </span>{" "}
+            &mdash; PostHog records how the board is used: pages viewed and
+            controls clicked, on an anonymous random id. It shows us what
+            confuses people; it does not know who you are, and we never link
+            it to anything that could.
           </li>
           <li>
             <span className="font-medium text-black dark:text-white">

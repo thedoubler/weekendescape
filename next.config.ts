@@ -34,11 +34,15 @@ const CSP = [
   "object-src 'none'",
   "form-action 'self'",
   "frame-ancestors 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://widget.getyourguide.com",
+  // *.posthog.com in script-src as well as connect-src: posthog-js is bundled,
+  // but it lazily loads extension scripts (session replay's recorder, the
+  // toolbar) from PostHog's assets host at runtime. Blocking those fails
+  // silently and turns a project-settings toggle into a mystery.
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://widget.getyourguide.com https://*.posthog.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.kiwi.com https://tiles.openfreemap.org https://widget.getyourguide.com https://*.getyourguide.com https://www.googletagmanager.com https://*.google-analytics.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://tiles.openfreemap.org https://widget.getyourguide.com https://*.getyourguide.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
+  "connect-src 'self' https://tiles.openfreemap.org https://widget.getyourguide.com https://*.getyourguide.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.posthog.com",
   "worker-src 'self' blob:",
   "frame-src https://widget.getyourguide.com https://*.getyourguide.com",
   // No upgrade-insecure-requests. On the https production origin it is a no-op
