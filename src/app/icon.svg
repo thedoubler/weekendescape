@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="weekend.flights">
+  <!-- The mark the OG card already uses, so the tab, the share preview and the
+       board agree on one identity instead of three. Orange ground with the
+       glyph knocked out in the app's own near-black, which keeps it readable
+       against a light or a dark browser chrome without a second asset.
+       Drawn at 32 with a 7px radius so the corners still read as rounded when
+       the browser scales it down to 16. -->
+  <rect width="32" height="32" rx="7" fill="#f97316"/>
+  <g fill="#14161c" transform="translate(3.6 3.6) scale(1.033)">
+    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+    <circle cx="19.6" cy="4.4" r="1.7"/>
+  </g>
+</svg>

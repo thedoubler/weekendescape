@@ -209,6 +209,7 @@ export function DealCard({
   onHover,
   idPrefix = "",
   hideStops = false,
+  hideDays = false,
 }: {
   deal: Deal;
   cheapest?: { style: WeekendStyle; months: number; direct: boolean; adults: number };
@@ -229,6 +230,11 @@ export function DealCard({
    *  card. A connecting trip still prints its stops even with this set —
    *  that would be the one card where the word carries information. */
   hideStops?: boolean;
+  /** Drop the Fri/Sat/Sun strip. The origin pages want the quiet version of the
+   *  card — dates, price and the booking hand-off — because they are read, not
+   *  operated, and 23 day strips in a column is a lot of furniture for a page
+   *  whose job is to be scanned. */
+  hideDays?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Real per-flight emissions, fetched on first expand. Null until it lands, or
@@ -464,25 +470,27 @@ export function DealCard({
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-controls={panelId}
-        aria-label={open ? "Hide details" : "Show details"}
-        className="mt-3 block w-full text-left"
-      >
-        <DayBlocks
-          cells={cells}
-          arrival={arrival}
-          departure={departure}
-          holiday={deal.destHoliday}
-          cityTo={deal.cityTo}
-          homeHolidays={deal.homeHolidays}
-          daysOff={deal.ptoDates}
-          legs={legs}
-        />
-      </button>
+      {!hideDays && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={open ? "Hide details" : "Show details"}
+          className="mt-3 block w-full text-left"
+        >
+          <DayBlocks
+            cells={cells}
+            arrival={arrival}
+            departure={departure}
+            holiday={deal.destHoliday}
+            cityTo={deal.cityTo}
+            homeHolidays={deal.homeHolidays}
+            daysOff={deal.ptoDates}
+            legs={legs}
+          />
+        </button>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">

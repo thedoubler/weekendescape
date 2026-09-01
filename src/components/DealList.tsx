@@ -82,6 +82,7 @@ export function DealList({
   onRetry,
   onHover,
   hideStops,
+  hideDays,
 }: {
   deals: Deal[];
   // When the map asks for a specific card, that card opens.
@@ -107,6 +108,8 @@ export function DealList({
   onHover?: (flyTo: string | null) => void;
   /** See DealCard.hideStops. */
   hideStops?: boolean;
+  /** See DealCard.hideDays. */
+  hideDays?: boolean;
 }) {
   if (loading)
     return (
@@ -172,6 +175,7 @@ export function DealList({
       focusSeq={dealDomId(deal) === focusId ? focusSeq : undefined}
       onHover={onHover}
       hideStops={hideStops}
+      hideDays={hideDays}
     />
   );
 

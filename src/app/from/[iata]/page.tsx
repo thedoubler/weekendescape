@@ -174,13 +174,16 @@ export default async function OriginPage({
       </p>
 
       {/* The one thing this page has that the board does not, and the reason it
-          exists: a sentence a crawler and an assistant can quote. It sits below
-          the masthead so the page still reads as the product, not as a document
-          wearing the product's logo. */}
+          exists: a sentence a crawler or an assistant can quote. It was set in
+          display serif italic, which made a document out of a page that is
+          meant to be the product — so it is now the board's own sans at reading
+          size. The words are what matter here; the styling was the part that
+          did not belong. */}
       <h1 className="sr-only">Cheap weekend flights from {city}</h1>
-      <p className="max-w-[34ch] font-serif text-[clamp(1.6rem,4.4vw,2.3rem)] italic leading-[1.2] tracking-[-0.015em] text-balance">
-        The cheapest weekend from {city} is {cheapest.cityTo}, at{" "}
-        <span className="whitespace-nowrap not-italic text-orange-600 dark:text-orange-400">
+      <p className="max-w-prose text-[15px] leading-relaxed">
+        The cheapest weekend from {city} is{" "}
+        <span className="font-semibold">{cheapest.cityTo}</span>, at{" "}
+        <span className="font-semibold whitespace-nowrap text-orange-600 dark:text-orange-400">
           {money(cheapest.price)}
         </span>{" "}
         return.
@@ -207,6 +210,7 @@ export default async function OriginPage({
         error={null}
         groupByMonth
         hideStops
+        hideDays
       />
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-black/10 p-5 dark:border-white/10">
