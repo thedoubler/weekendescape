@@ -81,11 +81,14 @@ export function CalendarView({
           // reader had to guess whether that meant "empty" or "broken".
           // Deliberately not a ghost grid of thirty greyed numerals: drawing a
           // whole month to say nothing is there gives the emptiest column the
-          // most ink. The one serif-italic line in the dialog — the display
-          // voice used the way the brand uses it, as a single quiet aside.
+          // most ink. Plain UI sans, same as every other status line — the
+          // serif-italic version tried to make a moment of it, and an empty
+          // month is not a moment, it is an answer. No border either: a dashed
+          // box drew a frame around nothing; a quiet filled well holds the
+          // month's place in the grid without asking to be looked at.
           <section key={m.key} className="flex flex-col gap-2">
             {title}
-            <p className="flex min-h-[112px] items-center justify-center rounded-[10px] border border-dashed border-black/12 px-3 text-center font-serif text-[15px] italic text-muted dark:border-white/15">
+            <p className="flex min-h-[112px] items-center justify-center rounded-[10px] bg-black/[0.03] px-3 text-center text-[12.5px] text-muted dark:bg-white/[0.04]">
               No weekend flights this month.
             </p>
           </section>
@@ -130,7 +133,19 @@ export function CalendarView({
                     const trio = [week[4], week[5], week[6]];
                     const real = trio.filter((x) => x.date);
                     const key = real.find((x) => x.weekend)?.weekend ?? "";
-                    const trips = key ? byWeekend.get(key) : undefined;
+                    // A straddling weekend renders ONCE, in the month that owns
+                    // its Saturday (weekendKey's anchor, chosen for exactly this
+                    // reason). It used to render in both grids — the full block
+                    // here AND a one-day orphan in the neighbour, a ~44px cell
+                    // trying to hold a flag, a clipped city and a repeated fare,
+                    // with selection ringing both. Two blocks for one bookable
+                    // thing looked like two things, and the sliver looked
+                    // broken. Now the other month's spill-over days are plain
+                    // dim numerals, and this block's date range names the whole
+                    // weekend — "30–1" across the boundary — so nothing is
+                    // hidden, it is just said once.
+                    const owned = key.slice(0, 7) === m.key;
+                    const trips = key && owned ? byWeekend.get(key) : undefined;
                     if (!trips || real.length === 0) {
                       for (const [j, x] of trio.entries())
                         out.push(
@@ -152,10 +167,14 @@ export function CalendarView({
                     // dashes in an 11px line that only has to say where the
                     // weekend starts and ends. A one-day sliver (a straddling
                     // weekend's orphan) still prints the bare day.
-                    const days =
-                      real.length > 1
-                        ? `${real[0].day}–${real[real.length - 1].day}`
-                        : `${real[0].day}`;
+                    // The range covers the WEEKEND, not just this grid's days:
+                    // Fri and Sun derived from the anchor Saturday, so a block
+                    // that owns a straddler reads "30–1" rather than "30–31"
+                    // with the Sunday silently elsewhere.
+                    const satMs = Date.parse(key + "T00:00:00Z");
+                    const fri = new Date(satMs - 86400000).getUTCDate();
+                    const sun = new Date(satMs + 86400000).getUTCDate();
+                    const days = fri === sun ? `${fri}` : `${fri}–${sun}`;
                     out.push(
                       <button
                         key={`${wi}-4`}
