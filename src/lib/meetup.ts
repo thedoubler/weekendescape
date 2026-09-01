@@ -16,6 +16,11 @@ export interface MeetupLeg {
   currency: string;
   deepLink: string;
   outDepart: string;
+  /** Landing at the destination — the together-window opens at the LATEST
+   *  of these across the party. */
+  outArrive: string;
+  /** Departure from the destination — the together-window closes at the
+   *  EARLIEST of these. */
   backDepart: string;
 }
 
@@ -43,6 +48,17 @@ export function combineMeetup(perOrigin: Deal[][]): Deal[] {
     const partners = rest.map((m) => m.get(key));
     if (partners.some((p) => !p)) continue;
     const legs = [seed, ...(partners as Deal[])];
+    // Same weekend is necessary but not sufficient: if the last person to
+    // land arrives after the first person flies home, they never coexist and
+    // calling it a meet-up would be false. All legs share the destination's
+    // timezone, so lexicographic ISO comparison is a real time comparison.
+    // Six hours is the floor — enough for a dinner, which is the least a
+    // trip sold as "meet up" can honestly deliver.
+    const MIN_TOGETHER_MS = 6 * 3600000;
+    const allLanded = legs.map((l) => l.outArrive).sort().at(-1)!;
+    const firstLeaves = legs.map((l) => l.backDepart).sort()[0];
+    if (Date.parse(firstLeaves) - Date.parse(allLanded) < MIN_TOGETHER_MS)
+      continue;
     const total = legs.reduce((s, l) => s + l.price, 0);
     const city = seed.cityTo;
     const cur = perCity.get(city);
@@ -63,6 +79,7 @@ export function combineMeetup(perOrigin: Deal[][]): Deal[] {
           currency: l.currency,
           deepLink: l.deepLink,
           outDepart: l.outDepart,
+          outArrive: l.outArrive,
           backDepart: l.backDepart,
         }))
         .sort((a, b) => a.flyFrom.localeCompare(b.flyFrom)),

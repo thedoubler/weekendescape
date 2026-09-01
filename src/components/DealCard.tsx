@@ -308,8 +308,27 @@ export function DealCard({
       .finally(() => setWeatherLoading(false));
   }, [open, deal.flyTo, deal.outArrive, deal.backDepart]);
 
-  const cells = dayBlocks(deal.outArrive, deal.backDepart);
-  const stay = durationLabel(deal.stayMinutes);
+  // Meet-up: the strip stops belonging to any one traveller. Drawing the
+  // cheapest leg's times read as THE trip while the other person was still in
+  // the air — so the timeline becomes the TOGETHER-window, the one this mode
+  // actually sells: it opens when the last person lands and closes when the
+  // first person flies home. Individual times stay on the per-person rows.
+  // All legs share the destination's timezone, so ISO sort is a time sort.
+  const together = deal.meetup
+    ? {
+        arrive: deal.meetup.map((l) => l.outArrive).sort().at(-1)!,
+        depart: deal.meetup.map((l) => l.backDepart).sort()[0],
+      }
+    : null;
+  const cells = dayBlocks(
+    together?.arrive ?? deal.outArrive,
+    together?.depart ?? deal.backDepart
+  );
+  const stay = durationLabel(
+    together
+      ? Math.round((Date.parse(together.depart) - Date.parse(together.arrive)) / 60000)
+      : deal.stayMinutes
+  );
   // Reserve the positive green for stays that actually earn it — a day and a
   // half or more at the destination. Shorter (red-eye) stays get a neutral pill
   // so the colour isn't a false "good" signal.
@@ -324,26 +343,44 @@ export function DealCard({
   const panelId = `${idPrefix}deal-panel-${deal.flyTo}-${deal.outDepart.slice(0, 10)}`;
   const flags = layoverFlags(deal);
   const cost = costRows(deal, adults);
-  const arrival = {
-    time: timeLabel(deal.outArrive),
-    night: isNightHour(deal.outArrive),
-    plusOne: crossesMidnight(deal.outDepart, deal.outArrive),
-  };
-  const departure = {
-    time: timeLabel(deal.backDepart),
-    night: isNightHour(deal.backDepart),
-  };
+  const arrival = together
+    ? {
+        // The moment everyone has landed. plusOne is a per-itinerary fact
+        // (did MY flight cross midnight) and has no group meaning.
+        time: timeLabel(together.arrive),
+        night: isNightHour(together.arrive),
+        plusOne: false,
+      }
+    : {
+        time: timeLabel(deal.outArrive),
+        night: isNightHour(deal.outArrive),
+        plusOne: crossesMidnight(deal.outDepart, deal.outArrive),
+      };
+  const departure = together
+    ? {
+        time: timeLabel(together.depart),
+        night: isNightHour(together.depart),
+      }
+    : {
+        time: timeLabel(deal.backDepart),
+        night: isNightHour(deal.backDepart),
+      };
   // The two flight legs, for the day-strip hover. These carry the one fact the
   // strip cannot: when you leave home and when you get back, which differ from
   // the first and last cells whenever the itinerary crosses midnight.
-  const legs = {
-    arrive: `Leaves ${deal.cityFrom} ${dateWithMonth(deal.outDepart)} ${timeLabel(
-      deal.outDepart
-    )} · lands ${timeLabel(deal.outArrive)}`,
-    leave: `Leaves ${deal.cityTo} ${timeLabel(deal.backDepart)} · home ${dateWithMonth(
-      deal.backArrive
-    )} ${timeLabel(deal.backArrive)}`,
-  };
+  const legs = together
+    ? {
+        arrive: `Everyone has landed by ${timeLabel(together.arrive)}`,
+        leave: `First flight home leaves ${timeLabel(together.depart)}`,
+      }
+    : {
+        arrive: `Leaves ${deal.cityFrom} ${dateWithMonth(deal.outDepart)} ${timeLabel(
+          deal.outDepart
+        )} · lands ${timeLabel(deal.outArrive)}`,
+        leave: `Leaves ${deal.cityTo} ${timeLabel(deal.backDepart)} · home ${dateWithMonth(
+          deal.backArrive
+        )} ${timeLabel(deal.backArrive)}`,
+      };
   const returnPlusOne = crossesMidnight(deal.backDepart, deal.backArrive);
   const direct = deal.outStops === 0 && deal.backStops === 0;
   const stops = stopsSummary(deal.outStops, deal.backStops);
@@ -436,8 +473,10 @@ export function DealCard({
               </>
             )}
             {/* With several home airports a bare price is ambiguous — which one
-                does this leave from? Only shown when it's actually in question. */}
-            {showOrigin && (
+                does this leave from? Only shown when it's actually in question.
+                Meet-up answers it better: the per-person rows name every
+                origin, so a single "from CLJ" here would just crown one. */}
+            {showOrigin && !deal.meetup && (
               <>
                 <span className="text-black/35 dark:text-white/35"> · </span>
                 <span className="font-medium text-black/70 dark:text-white/70">
@@ -522,7 +561,8 @@ export function DealCard({
               /55 in light mode: at /70 it was the blackest small text on a
               pastel-washed card and read as odd emphasis. Dark stays white. */}
           <span className="text-sm text-black/55 dark:text-white">
-            <span className="font-medium">{stay}</span> to explore
+            <span className="font-medium">{stay}</span>{" "}
+            {deal.meetup ? "together" : "to explore"}
           </span>
         </div>
         {/* Visible in BOTH card states — restored by request after a

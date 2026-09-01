@@ -7,14 +7,16 @@ function deal(
   flyFrom: string,
   cityTo: string,
   outDate: string,
-  price: number
+  price: number,
+  times: { land?: string; leave?: string; leaveDate?: string } = {}
 ): Deal {
   return {
     flyFrom,
     cityFrom: `city-${flyFrom}`,
     cityTo,
     outDepart: `${outDate}T08:00:00.000Z`,
-    backDepart: `${outDate}T20:00:00.000Z`,
+    outArrive: `${outDate}T${times.land ?? "10:00"}:00.000Z`,
+    backDepart: `${times.leaveDate ?? outDate}T${times.leave ?? "20:00"}:00.000Z`,
     price,
     currency: "EUR",
     deepLink: `https://kiwi/${flyFrom}-${cityTo}-${outDate}`,
@@ -24,7 +26,8 @@ function deal(
 describe("combineMeetup", () => {
   it("keeps only destinations every origin reaches on the same weekend", () => {
     const cluj = [
-      deal("CLJ", "Rome", "2026-10-09", 40), // Fri, weekend of Sat 10 Oct
+      // Fri, weekend of Sat 10 Oct — stays until Sunday, so it overlaps.
+      deal("CLJ", "Rome", "2026-10-09", 40, { leaveDate: "2026-10-11" }),
       deal("CLJ", "Malta", "2026-10-09", 60),
     ];
     const vienna = [
@@ -66,11 +69,29 @@ describe("combineMeetup", () => {
   it("uses the cheapest fare per origin per weekend before summing", () => {
     const a = [
       deal("CLJ", "Rome", "2026-10-09", 90),
-      deal("CLJ", "Rome", "2026-10-10", 35), // same weekend, cheaper
+      // Same weekend, cheaper — and still overlapping the partner's window
+      // (lands Sat morning, partner stays until Sun evening).
+      deal("CLJ", "Rome", "2026-10-10", 35, { leaveDate: "2026-10-11" }),
     ];
-    const b = [deal("VIE", "Rome", "2026-10-09", 50)];
+    const b = [
+      deal("VIE", "Rome", "2026-10-09", 50, { leaveDate: "2026-10-11" }),
+    ];
     const out = combineMeetup([a, b]);
     expect(out[0].price).toBe(85);
+  });
+
+  it("rejects a shared weekend where the party never coexists", () => {
+    // A lands Sunday afternoon; B flew home Saturday night. Same weekend on
+    // the calendar, zero time together — not a meet-up.
+    const a = [deal("CLJ", "Rome", "2026-10-11", 40, { land: "15:00" })];
+    const b = [
+      deal("VIE", "Rome", "2026-10-09", 50, { leaveDate: "2026-10-10", leave: "22:00" }),
+    ];
+    expect(combineMeetup([a, b])).toEqual([]);
+    // And a sliver under six hours together fails the floor too.
+    const c = [deal("CLJ", "Rome", "2026-10-10", 40, { land: "16:00" })];
+    const d = [deal("VIE", "Rome", "2026-10-10", 50, { leave: "19:00" })];
+    expect(combineMeetup([c, d])).toEqual([]);
   });
 
   it("three origins intersect all three", () => {

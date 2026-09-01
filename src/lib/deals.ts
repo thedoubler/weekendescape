@@ -83,6 +83,7 @@ export interface Deal {
     currency: string;
     deepLink: string;
     outDepart: string;
+    outArrive: string;
     backDepart: string;
   }[];
   // Gate-to-gate journey time for the direction, in minutes, from upstream's
