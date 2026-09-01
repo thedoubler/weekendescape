@@ -58,6 +58,119 @@ function MapPinIcon({ className }: { className?: string }) {
   );
 }
 
+// The meet-up timeline: several people, one chart. The single-itinerary strip
+// above narrates one flight (a landing glyph, a takeoff glyph, one fill), so
+// meet-up cards use this instead — a shared day axis, one presence lane per
+// traveller labelled by airport, and an orange lane for the intersection,
+// which is the thing the mode sells. Purely visual (aria-hidden): the exact
+// times live as text in the Together header and the per-person rows beside
+// this, so a screen reader hears the facts once instead of a chart's worth
+// of coordinates.
+export function MeetupLanes({
+  lanes,
+  together,
+}: {
+  lanes: { code: string; outArrive: string; backDepart: string }[];
+  together: { arrive: string; depart: string };
+}) {
+  const dateOf = (iso: string) => iso.slice(0, 10);
+  const frac = (iso: string) => {
+    const h = Number(iso.slice(11, 13));
+    const m = Number(iso.slice(14, 16));
+    return Number.isFinite(h) && Number.isFinite(m) ? (h + m / 60) / 24 : 0;
+  };
+  const DAY = 86400000;
+  const allIso = [
+    ...lanes.flatMap((l) => [l.outArrive, l.backDepart]),
+    together.arrive,
+    together.depart,
+  ];
+  const startMs = Math.min(...allIso.map((i) => Date.parse(dateOf(i))));
+  const endMs = Math.max(...allIso.map((i) => Date.parse(dateOf(i))));
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+  const n = Math.round((endMs - startMs) / DAY) + 1;
+  if (n < 1 || n > 10) return null;
+  const days = Array.from({ length: n }, (_, i) => new Date(startMs + i * DAY));
+  const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const pos = (iso: string) => {
+    const idx = Math.round((Date.parse(dateOf(iso)) - startMs) / DAY);
+    return Math.min(1, Math.max(0, (idx + frac(iso)) / n));
+  };
+  const track = (
+    from: string,
+    to: string,
+    fill: string,
+    key: string,
+    label: string
+  ) => (
+    <div key={key} className="flex items-center gap-2">
+      <span className="w-8 shrink-0 text-right text-[9px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+        {label}
+      </span>
+      <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
+        {/* Day boundaries, so the lanes stay readable against the axis. */}
+        {days.slice(1).map((_, i) => (
+          <span
+            key={i}
+            className="absolute inset-y-0 w-px bg-white dark:bg-[#1b1e26]"
+            style={{ left: `${((i + 1) / n) * 100}%` }}
+          />
+        ))}
+        <div
+          className={`absolute inset-y-0 rounded-full ${fill}`}
+          style={{
+            left: `${pos(from) * 100}%`,
+            width: `${Math.max(0, pos(to) - pos(from)) * 100}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+  return (
+    <div aria-hidden className="flex flex-col gap-1.5">
+      {/* The axis: same day-label voice as the single-trip strip. The month
+          sits in the gutter — "Mid January" in the header is a distance, not
+          a date, and the axis is where the card finally commits to one. */}
+      <div className="flex items-center gap-2">
+        <span className="w-8 shrink-0 text-right text-[9px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+          {(() => {
+            const MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const a = MO[days[0].getUTCMonth()];
+            const b = MO[days[days.length - 1].getUTCMonth()];
+            return a === b ? a : `${a}–${b}`;
+          })()}
+        </span>
+        <div className="flex flex-1">
+          {days.map((d, i) => (
+            <span key={i} className="flex-1 text-center">
+              <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                {WD[d.getUTCDay()]}
+              </span>{" "}
+              <span className="text-[11px] font-bold">{d.getUTCDate()}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      {lanes.map((l) =>
+        track(
+          l.outArrive,
+          l.backDepart,
+          "bg-black/35 dark:bg-white/45",
+          l.code,
+          l.code
+        )
+      )}
+      {track(
+        together.arrive,
+        together.depart,
+        "bg-orange-600 dark:bg-orange-400",
+        "__together",
+        "all"
+      )}
+    </div>
+  );
+}
+
 export function DayBlocks({
   cells,
   arrival,

@@ -30,7 +30,7 @@ import { baggageInfo } from "@/lib/baggage";
 import { legAirMinutes, layoverFlags, costRows } from "@/lib/trip-facts";
 import { legSummary, type LegInput } from "@/lib/leg-summary";
 import { daylightNote } from "@/lib/daylight";
-import { DayBlocks } from "@/components/DayBlocks";
+import { DayBlocks, MeetupLanes } from "@/components/DayBlocks";
 
 // Below this the airport is "in town" enough not to warrant a caveat; above it
 // (Charleroi/Brussels, Beauvais/Paris…) the transfer is worth surfacing.
@@ -643,9 +643,20 @@ export function DealCard({
           itinerary; each row names its own departure and return day-times. */}
       {deal.meetup && (
         <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-black/10 p-3 dark:border-white/10">
-          {/* The mode's own timeline, in words: when the window you're all
-              there opens and closes, and how long it holds. Replaces the day
-              tiles this card no longer shows. */}
+          {/* The mode's own timeline: a shared day axis, one presence lane
+              per traveller, and the orange lane where they overlap — then the
+              same window in words. Replaces the single-itinerary day tiles
+              this card no longer shows. */}
+          {together && (
+            <MeetupLanes
+              lanes={deal.meetup.map((l) => ({
+                code: l.flyFrom,
+                outArrive: l.outArrive,
+                backDepart: l.backDepart,
+              }))}
+              together={together}
+            />
+          )}
           {together && (
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-black/10 pb-2 dark:border-white/10">
               <span className="text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
