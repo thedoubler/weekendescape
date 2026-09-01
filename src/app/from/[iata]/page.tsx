@@ -125,8 +125,19 @@ export default async function OriginPage({
     currency = r.currency;
     fetchedAt = r.fetchedAt;
   } catch (e) {
-    // A page that cannot answer its own question should not exist as a 200.
-    if (e instanceof MissingApiKeyError) throw e;
+    // A page that cannot answer its own question should not exist as a 200 —
+    // including when the reason is a missing key.
+    //
+    // This used to rethrow MissingApiKeyError, which is correct at runtime and
+    // catastrophic at build time: if anything ever prerenders this route without
+    // the runtime Secret, the throw escapes as "Export encountered an error" and
+    // takes the WHOLE deploy down — rate limiting, CSP, SEO fixes and all. There
+    // is no generateStaticParams any more, so that should never happen; this is
+    // the belt to that braces, because the cost of being wrong is asymmetric. A
+    // 404 on one origin page is a bad page. A failed build is no site at all.
+    if (e instanceof MissingApiKeyError) {
+      console.error("Origin page: TEQUILA_API_KEY missing at render time");
+    }
     notFound();
   }
   if (deals.length === 0) notFound();

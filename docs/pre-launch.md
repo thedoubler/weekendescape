@@ -52,7 +52,8 @@ and belong in the second group. Every `NEXT_PUBLIC_` one belongs in the first.
       attacker. This is the difference between "cheap" and "surprising bill".
 - [ ] **Confirm GA4 actually fires.** It is gated to `NODE_ENV === "production"`,
       so it has never run locally. Load the live site and check Realtime.
-- [ ] **Look at light mode.** Every visual check this session ran in dark mode
+- [x] ~~**Look at light mode.**~~ Verified 2026-09-01 on a production build:
+      zero contrast failures, --muted resolving to #5f6368. Previously: Every visual check this session ran in dark mode
       because that is the machine's setting. The tokens are computed correct
       (`#5f6368` is 6.05:1 on white) but nobody has actually looked at it.
 - [ ] **Rotate `TEQUILA_API_KEY`.** It was pasted into a chat transcript on

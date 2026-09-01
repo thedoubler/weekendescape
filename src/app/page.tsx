@@ -720,13 +720,19 @@ export default function Home() {
             ranking. This is the deal being offered, not a description of the
             board.
 
-            One line, not two: centred, a hard break mid-sentence made a
-            deliberate stack look like a wrap. The second half stays muted, so
-            the reader's job and ours still separate. */}
+            The two halves split at the SENTENCE, not mid-clause, and only
+            where they have to. The promise now names what the product actually
+            answers — when you can go, and where — which at 17px is 490px of
+            text against 358px of phone. It has to break somewhere, and the
+            original rule ("one line, not two") was really about the KIND of
+            break: a hard wrap mid-clause read as an accident. Breaking between
+            "your job" and "our job" reads as a deliberate stack, and it lands on
+            the boundary the muted colour already marks. One line again from
+            `sm`, where the whole sentence fits. */}
         <p className="mt-0.5 text-[17px] leading-snug font-semibold tracking-[-0.01em] text-balance sm:text-[20px]">
           Pick your airport.{" "}
-          <span className="font-medium text-muted">
-            We&rsquo;ll find the weekend.
+          <span className="block font-medium text-muted sm:inline">
+            We&rsquo;ll tell you when and where you can go.
           </span>
         </p>
       </header>
