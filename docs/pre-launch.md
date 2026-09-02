@@ -56,6 +56,28 @@ cache before suspecting the ref.
       override for a fork or staging project. US cloud (project 588833) is
       the default host.
 
+## The deploy that "succeeds" can still hang one route
+
+Observed live 2026-09-02: a deployment came up with `/` hanging forever
+(zero bytes, every query variant) while `/about`, `/from/*`, the 404 and all
+APIs served normally. The code was healthy — the identical build served `/`
+in 0.15s under local workerd, and redeploying the same commit fixed
+production in ~80s — so the deployment artifact itself was bad, most
+plausibly a corrupt cache/asset entry for the root HTML. Cloudflare's build
+reported success; nothing on their side checks that routes actually answer.
+
+**The drill, if the site "is down" but only sort of:** curl `/`, `/about`,
+`/from/OTP` and an API route separately. One route hanging while the rest
+serve = wedged deployment, not code — push an empty commit to roll a fresh
+deployment over it (`git commit --allow-empty`), and expect stragglers for a
+minute while old isolates drain. All routes failing = look at DNS/Cloudflare
+status first.
+
+- [ ] **Post-deploy smoke check** so this class is caught by a machine, not a
+      visitor: an uptime ping on `https://weekend.flights/` expecting 200
+      within a few seconds (UptimeRobot free tier, or a Worker cron that
+      fetches `/` and alerts). Dashboard-side, five minutes of setup.
+
 ## Worth doing before the first real traffic
 
 - [ ] **Create the KV namespace.** The code is done; the BINDING is commented out
