@@ -165,22 +165,39 @@ export function OriginSheet({
 
         {/* Meet-up belongs here, not in the receipt: it is a statement about
             the airports above it ("these are two PEOPLE, not one person with
-            two options"), and it only appears once a second airport gives it
-            meaning. A native checkbox — this is a setting, not a search. */}
-        {origins.length >= 2 && onMeetUpChange && (
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-black/10 p-3 dark:border-white/15">
+            two options"). A native checkbox — this is a setting, not a search.
+
+            ALWAYS rendered, not gated on a second airport. Gated, the feature
+            was undiscoverable by exactly the people it exists for — nobody
+            adds a second airport to unlock a toggle they've never seen. With
+            one airport the card is the teaser: checkbox disabled, and the
+            copy names the unlock instead of describing behaviour that can't
+            happen yet. */}
+        {onMeetUpChange && (
+          <label
+            className={`flex items-start gap-2.5 rounded-xl border border-black/10 p-3 dark:border-white/15 ${
+              origins.length >= 2 ? "cursor-pointer" : "cursor-default"
+            }`}
+          >
             <input
               type="checkbox"
               checked={meetUp}
+              disabled={origins.length < 2}
               onChange={(e) => onMeetUpChange(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-orange-600 dark:accent-orange-400"
+              className="mt-0.5 h-4 w-4 accent-orange-600 disabled:opacity-40 dark:accent-orange-400"
             />
             <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">Meet up</span>
+              <span
+                className={`text-sm font-medium ${
+                  origins.length >= 2 ? "" : "text-muted-foreground"
+                }`}
+              >
+                Meet up
+              </span>
               <span className="text-[12.5px] leading-snug text-muted-foreground">
-                Fly from different cities to the same place, the same weekend.
-                The board shows only places everyone can reach, priced as one
-                fare each.
+                {origins.length >= 2
+                  ? "Fly from different cities to the same place, the same weekend. The board shows only places everyone can reach, priced as one fare each."
+                  : "Add a friend's airport above and the board shows only places you can both reach, the same weekend — one fare each."}
               </span>
             </span>
           </label>

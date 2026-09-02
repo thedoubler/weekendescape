@@ -51,3 +51,4 @@ assets/.next/
 # Cloudflare / OpenNext build output
 .open-next/
 .wrangler/
+.claude/worktrees/

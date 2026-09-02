@@ -9,20 +9,13 @@ import { weekendKey } from "@/lib/calendar";
 // priced as the TOTAL of one fare per person, with a leg row per origin so
 // each traveller books their own flight.
 
-export interface MeetupLeg {
-  flyFrom: string;
-  cityFrom: string;
-  price: number;
-  currency: string;
-  deepLink: string;
-  outDepart: string;
-  /** Landing at the destination — the together-window opens at the LATEST
-   *  of these across the party. */
-  outArrive: string;
-  /** Departure from the destination — the together-window closes at the
-   *  EARLIEST of these. */
-  backDepart: string;
-}
+// Each meet-up row is the traveller's FULL itinerary. It started as a slim
+// projection (code, price, times, link) and grew back: the expanded panel
+// shows every traveller's legs, layovers, carriers and bags, and a slim row
+// can't answer any of that. The together-window derives from outArrive (it
+// opens at the LATEST landing) and backDepart (closes at the EARLIEST
+// departure home).
+export type MeetupLeg = Deal;
 
 /** cityTo|weekend → cheapest deal, for one origin's results. */
 function byCityWeekend(deals: Deal[]): Map<string, Deal> {
@@ -72,16 +65,7 @@ export function combineMeetup(perOrigin: Deal[][]): Deal[] {
       ...primary,
       price: total,
       meetup: legs
-        .map((l) => ({
-          flyFrom: l.flyFrom,
-          cityFrom: l.cityFrom,
-          price: l.price,
-          currency: l.currency,
-          deepLink: l.deepLink,
-          outDepart: l.outDepart,
-          outArrive: l.outArrive,
-          backDepart: l.backDepart,
-        }))
+        .map((l) => ({ ...l }))
         .sort((a, b) => a.flyFrom.localeCompare(b.flyFrom)),
     });
   }

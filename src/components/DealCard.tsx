@@ -482,18 +482,6 @@ export function DealCard({
                 </span>
               </>
             )}
-            {/* With several home airports a bare price is ambiguous — which one
-                does this leave from? Only shown when it's actually in question.
-                Meet-up answers it better: the per-person rows name every
-                origin, so a single "from CLJ" here would just crown one. */}
-            {showOrigin && !deal.meetup && (
-              <>
-                <span className="text-black/35 dark:text-white/35"> · </span>
-                <span className="font-medium text-black/70 dark:text-white/70">
-                  from {deal.flyFrom}
-                </span>
-              </>
-            )}
           </div>
         </button>
         <div className="shrink-0 text-right">
@@ -503,6 +491,23 @@ export function DealCard({
           <div className="text-lg font-semibold tabular-nums">
             {deal.price} {deal.currency}
           </div>
+          {/* With several home airports a bare price is ambiguous — which one
+              does this fare leave from? The origin is a qualifier OF THE
+              PRICE, so it sits directly under it: the eye scanning the price
+              column reads the number and its airport in one stop, no jump to
+              the far side of the card. Small-caps label vocabulary (same as
+              the section labels and the open panel's "FROM CLUJ (CLJ)") keeps
+              it legible without competing with the two facts that outrank it.
+              It lived buried mid-subtitle before; an eyebrow above the city
+              was rejected because it would read before the destination and
+              add a line of height to every card. Only shown when actually in
+              question. Meet-up answers it better: the per-person rows name
+              every origin, so a single "from CLJ" here would just crown one. */}
+          {showOrigin && !deal.meetup && (
+            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              from {deal.flyFrom}
+            </div>
+          )}
           {/* Meet-up: the headline is the whole party's total (see meetup.ts),
               and saying so beats a per-person misreading. PEOPLE, not legs:
               each leg is priced for `adults` travellers from its city, so two
@@ -592,6 +597,10 @@ export function DealCard({
             live at this spot on every card on the board, and links that
             vanish when a card opens read as taken away. */}
         <div className="flex items-center gap-3">
+            {/* Meet-up collapsed cards keep their footer to the facts that
+                sell the match (by request): Hotels appears once the card is
+                open, next to the details it belongs with. */}
+            {(!deal.meetup || open) && (
             <a
               href={hotelUrl(deal, adults)}
               onClick={() =>
@@ -611,6 +620,7 @@ export function DealCard({
               <span className="underline underline-offset-2">Hotels</span>
               <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
             </a>
+            )}
             {/* In meet-up mode each traveller books their own leg from the
                 rows below — a single "Book flight" here would book ONE
                 person's trip while wearing the whole party's price. */}
@@ -644,7 +654,11 @@ export function DealCard({
           pretend otherwise. The day strip above shows the cheapest leg's
           itinerary; each row names its own departure and return day-times. */}
       {deal.meetup && (
-        <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-black/10 p-3 dark:border-white/10">
+        // No box of its own (removed by request): a border-in-a-border spent
+        // ~26px of card width saying nothing. The TOGETHER row's hairline
+        // already separates the chart from the rows, and the card's edge is
+        // the only frame this content needs.
+        <div className="mt-3 flex flex-col gap-1.5">
           {/* The mode's own timeline: a shared day axis, one presence lane
               per traveller, and the orange lane where they overlap — then the
               same window in words. Replaces the single-itinerary day tiles
@@ -791,67 +805,101 @@ export function DealCard({
           <section className="flex flex-col gap-2.5">
             <div className="flex items-baseline justify-between gap-3">
               <SectionLabel>The flights</SectionLabel>
-              {showOrigin && deal.cityFrom && (
+              {showOrigin && !deal.meetup && deal.cityFrom && (
                 <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                   From {deal.cityFrom} ({deal.flyFrom})
                 </span>
               )}
             </div>
-            {/* A grid, not a wrap: Out and Back share column edges, so the
-                eye can drop vertically to compare times — which is the actual
-                task here. Wrapped flex put the duration and carrier at
-                arbitrary x positions on every card. */}
-            <ul className="grid grid-cols-[2.25rem_1fr_auto] gap-x-2 gap-y-2">
-            <Leg
-              label="Out"
-              depIso={deal.outDepart}
-              arrIso={deal.outArrive}
-              depCode={deal.flyFrom}
-              arrCode={deal.flyTo}
-              depCity={deal.cityFrom}
-              arrCity={deal.cityTo}
-              plusOne={arrival.plusOne}
-              minutes={legAirMinutes(
-                deal.outDurationMin,
-                deal.outDepart,
-                deal.outArrive
-              )}
-              stops={deal.outStops}
-              layovers={deal.outLayovers}
-              hideDirect={hideStops}
-              carriers={(deal.outAirlines ?? []).map((code) => ({
-                code,
-                name: airlineName(code),
-              }))}
-            />
-            <Leg
-              label="Back"
-              depIso={deal.backDepart}
-              arrIso={deal.backArrive}
-              depCode={deal.flyTo}
-              arrCode={deal.flyFrom}
-              depCity={deal.cityTo}
-              arrCity={deal.cityFrom}
-              plusOne={returnPlusOne}
-              minutes={legAirMinutes(
-                deal.backDurationMin,
-                deal.backDepart,
-                deal.backArrive
-              )}
-              stops={deal.backStops}
-              layovers={deal.backLayovers}
-              hideDirect={hideStops}
-              carriers={(deal.backAirlines ?? []).map((code) => ({
-                code,
-                name: airlineName(code),
-              }))}
-            />
-            </ul>
+            {/* One flights block per traveller. On a normal card that's the
+                deal itself; in meet-up mode every row's FULL itinerary
+                renders (the panel used to show only the cheapest person's
+                flights — reported as wrong, and it was). Each block derives
+                its own midnight-crossing flags from its own legs. */}
+            {(deal.meetup ?? [deal]).map((flight) => (
+              <div key={flight.flyFrom} className="flex flex-col gap-2.5">
+                {deal.meetup && (
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                      From {flight.cityFrom} ({flight.flyFrom})
+                    </span>
+                    <span className="text-[12.5px] font-semibold whitespace-nowrap">
+                      {flight.price} {flight.currency}
+                    </span>
+                  </div>
+                )}
+                {/* A grid, not a wrap: Out and Back share column edges, so
+                    the eye can drop vertically to compare times — which is
+                    the actual task here. */}
+                <ul className="grid grid-cols-[2.25rem_1fr_auto] gap-x-2 gap-y-2">
+                  <Leg
+                    label="Out"
+                    depIso={flight.outDepart}
+                    arrIso={flight.outArrive}
+                    depCode={flight.flyFrom}
+                    arrCode={flight.flyTo}
+                    depCity={flight.cityFrom}
+                    arrCity={flight.cityTo}
+                    plusOne={crossesMidnight(flight.outDepart, flight.outArrive)}
+                    minutes={legAirMinutes(
+                      flight.outDurationMin,
+                      flight.outDepart,
+                      flight.outArrive
+                    )}
+                    stops={flight.outStops}
+                    layovers={flight.outLayovers}
+                    hideDirect={hideStops}
+                    carriers={(flight.outAirlines ?? []).map((code) => ({
+                      code,
+                      name: airlineName(code),
+                    }))}
+                  />
+                  <Leg
+                    label="Back"
+                    depIso={flight.backDepart}
+                    arrIso={flight.backArrive}
+                    depCode={flight.flyTo}
+                    arrCode={flight.flyFrom}
+                    depCity={flight.cityTo}
+                    arrCity={flight.cityFrom}
+                    plusOne={crossesMidnight(flight.backDepart, flight.backArrive)}
+                    minutes={legAirMinutes(
+                      flight.backDurationMin,
+                      flight.backDepart,
+                      flight.backArrive
+                    )}
+                    stops={flight.backStops}
+                    layovers={flight.backLayovers}
+                    hideDirect={hideStops}
+                    carriers={(flight.backAirlines ?? []).map((code) => ({
+                      code,
+                      name: airlineName(code),
+                    }))}
+                  />
+                </ul>
+                {deal.meetup &&
+                  layoverFlags(flight).map((f) => (
+                    <p
+                      key={`${f.at}-${f.minutes}-${f.kind}`}
+                      className="flex items-start gap-1.5 text-[13px] text-amber-700 dark:text-amber-400"
+                    >
+                      <span aria-hidden className="mt-[1px] shrink-0">
+                        ⚑
+                      </span>
+                      <span>
+                        {f.kind === "tight"
+                          ? `Tight connection — ${durationLabel(f.minutes)} in ${f.at}, little room if anything slips.`
+                          : `Long stop — ${durationLabel(f.minutes)} in ${f.at}.`}
+                      </span>
+                    </p>
+                  ))}
+              </div>
+            ))}
 
 
             {/* Conditional warnings only. Most trips show none, which is what
                 makes their absence meaningful and their presence worth reading. */}
-            {flags.map((f) => (
+            {!deal.meetup && flags.map((f) => (
               <p
                 key={`${f.at}-${f.minutes}-${f.kind}`}
                 className="flex items-start gap-1.5 text-[13px] text-amber-700 dark:text-amber-400"
@@ -1055,7 +1103,11 @@ export function DealCard({
 
             {/* Full-width CTA at the foot of the panel. The header Book link
                 scrolls off-screen on a phone once the card is open, so the user
-                read all of this and then had to scroll back up to act. */}
+                read all of this and then had to scroll back up to act.
+                Hidden in meet-up mode for the same reason as the header link:
+                one button would book ONE person's flight while wearing the
+                whole party's card — each traveller books from their own row. */}
+            {!deal.meetup && (
             <a
               href={deal.deepLink}
               onClick={() =>
@@ -1081,6 +1133,7 @@ export function DealCard({
               Book on Kiwi
               <ExternalLinkIcon className="h-3.5 w-3.5" />
             </a>
+            )}
 
             {/* One footnote instead of three trailing caveats, each of which
                 diluted its own row. Absorbs the CO₂ figure, which was a
