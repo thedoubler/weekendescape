@@ -72,10 +72,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Dev only: lets HMR and hydration work through a Cloudflare quick tunnel.
-  // It is a wildcard over anyone's quick tunnel, so it must not outlive the
-  // tunnelling it enables.
-  allowedDevOrigins: ["*.trycloudflare.com"],
+  // allowedDevOrigins for *.trycloudflare.com lived here while the board was
+  // demoed through a quick tunnel. The tunnel is gone and the wildcard went
+  // with it (it covered ANYONE's quick tunnel, so it must never outlive the
+  // tunnelling it enables). Re-add it only for the next tunnel session, and
+  // remove it again after.
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

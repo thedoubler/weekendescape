@@ -31,11 +31,10 @@ cache before suspecting the ref.
 
 ## Blockers
 
-- [ ] **Deploy current `main`.** Production has repeatedly built a stale ref —
-      on 2026-09-01 it served `4a6ca21` while `main` was three commits ahead, and
-      it had previously served a NEWER build and then gone backwards. Check the
-      branch under Workers Builds → Git configuration. Everything below assumes
-      the deploy actually tracks `main`.
+- [x] ~~**Deploy current `main`.**~~ Resolved 2026-09-01: the stale-ref
+      mystery was Cloudflare's restored build cache, fixed by the `rm -rf
+      .next .open-next` prefix in the build script. Deploys have tracked
+      `main` faithfully since (dozens verified live through 2026-09-02).
 - [x] ~~**Rate limiting on `/api/*`.**~~ Done — Cloudflare's native rate-limit
       bindings, 20/min on the weekend search and 120/min on the cheap routes,
       keyed on `CF-Connecting-IP`. Verified in workerd: exactly 20 pass, then
@@ -46,10 +45,10 @@ cache before suspecting the ref.
       search. On Cloudflare this is a WAF Rate Limiting rule, not code — the free
       plan includes one, which is enough: something like 30 requests / 10s per IP
       on `/api/*`.
-- [ ] **`NEXT_PUBLIC_SITE_URL=https://weekend.flights`** as a *build* variable.
-      Unset, canonical URLs, OG images, `robots.txt` and the sitemap all fall
-      back to a Vercel domain or localhost. Link previews and every SEO signal
-      depend on it, so this is a launch blocker rather than a nicety.
+- [x] ~~**`NEXT_PUBLIC_SITE_URL` as a build variable.**~~ No longer a
+      blocker: `src/lib/site.ts` defaults to `https://weekend.flights` in
+      production (verified live — canonical, OG and sitemap all correct).
+      Setting the variable remains optional belt-and-braces for forks.
 - [x] **PostHog needs no variable any more.** The public project token is
       inline in `src/instrumentation-client.ts` (same reasoning as the GA id
       in layout.tsx); `NEXT_PUBLIC_POSTHOG_KEY` remains as an optional
@@ -92,7 +91,12 @@ status first.
       long-lived Node server, so the real hit rate will be well below what local
       testing suggests and quota burn will exceed expectations even with no
       attacker. This is the difference between "cheap" and "surprising bill".
-- [ ] **Confirm GA4 actually fires.** It is gated to `NODE_ENV === "production"`,
+- [x] ~~**Confirm GA4 actually fires.**~~ Verified live 2026-09-01: a real
+      page_view hit reaches google-analytics.com with tid=G-BVSSW686DH, and
+      the paired snippet sits at the top of the document. If the GA console
+      still says "not detected", check the DATA STREAM URL: it must be
+      https://weekend.flights — www has no DNS record and a www stream URL
+      dials a dead host forever. Original note: It is gated to `NODE_ENV === "production"`,
       so it has never run locally. Load the live site and check Realtime.
 - [x] ~~**Look at light mode.**~~ Verified 2026-09-01 on a production build:
       zero contrast failures, --muted resolving to #5f6368. Previously: Every visual check this session ran in dark mode
@@ -103,13 +107,26 @@ status first.
 
 ## Housekeeping
 
-- [ ] Kill the public Cloudflare quick tunnel still pointed at localhost:3001.
-- [ ] Drop `allowedDevOrigins: ["*.trycloudflare.com"]` from `next.config.ts`
+- [x] ~~Kill the public Cloudflare quick tunnel at localhost:3001.~~ Gone —
+      verified 2026-09-02, no cloudflared targets 3001 any more. (Five OTHER
+      projects' quick tunnels were still running on this machine at the time;
+      not this repo's to kill, but worth their owner's attention.)
+- [x] ~~Drop `allowedDevOrigins` from `next.config.ts`~~ Done 2026-09-02,
+      same commit as this edit. Original note: drop it
       once tunnelling stops — it is dev-only, but it is a wildcard over anyone's
       quick tunnel.
 - [ ] `NEXT_PUBLIC_BOOKING_AID` (build variable) if the hotel links should earn.
       They work unmonetized without it.
 - [ ] `GOOGLE_TIM_API_KEY` (secret) if the CO2 figures should be live.
+- [ ] **"Always Use HTTPS"** in Cloudflare (SSL/TLS → Edge Certificates):
+      verified 2026-09-01 that `http://weekend.flights` serves the page with
+      no redirect. One toggle.
+- [ ] **HSTS** (same screen), after Always-Use-HTTPS has soaked: start with a
+      modest max-age before committing to preload.
+- [ ] **A `www` record + redirect to the apex.** `www.weekend.flights` has no
+      DNS record at all — every typed-www visit and any www link dead-ends,
+      and a www GA4 stream URL can never verify. DNS → add `www` (proxied,
+      AAAA 100:: is fine) → Bulk Redirects or a redirect rule to the apex.
 
 ## Not blockers, but they are the growth plan
 
