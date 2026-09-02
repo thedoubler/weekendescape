@@ -58,6 +58,11 @@ export function CalendarDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // Phone only: the tapped weekend's flights rise as a bottom sheet OVER the
+  // calendar instead of splitting the screen with it (removed by request —
+  // the split gave the calendar half a phone and the list a cramped band).
+  // Desktop keeps the side panel; this flag never renders there.
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     const d = ref.current;
@@ -93,14 +98,22 @@ export function CalendarDialog({
         // at the earliest weekend — rather than wherever a previous visit
         // happened to end.
         setSelected(null);
+        setSheetOpen(false);
         onClose();
+      }}
+      onCancel={(e) => {
+        // Escape peels one layer: sheet first, dialog second.
+        if (sheetOpen) {
+          e.preventDefault();
+          setSheetOpen(false);
+        }
       }}
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
       }}
       className="m-0 h-dvh max-h-none w-screen max-w-none rounded-none border-0 bg-white p-0 text-black backdrop:bg-black/45 dark:bg-[#14161c] dark:text-white"
     >
-      <div className="flex h-full flex-col">
+      <div className="relative flex h-full flex-col">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black/[0.07] px-4 py-3 sm:px-6 dark:border-white/10">
           <div>
             <h2 className="text-[17px] leading-tight font-bold tracking-tight">
@@ -141,14 +154,19 @@ export function CalendarDialog({
                 currency={currency}
                 window={window}
                 selected={shownKey}
-                onSelect={setSelected}
+                onSelect={(k) => {
+                  setSelected(k);
+                  // Only the phone sheet cares; on desktop the side panel is
+                  // already showing this key and the flag renders nothing.
+                  setSheetOpen(true);
+                }}
               />
             </div>
           </div>
 
           <aside
             aria-label="Flights for the selected weekend"
-            className="flex min-h-0 shrink-0 basis-[45%] flex-col border-t border-black/[0.07] sm:h-auto sm:w-[420px] sm:basis-auto sm:border-t-0 sm:border-l dark:border-white/10"
+            className="hidden min-h-0 shrink-0 flex-col border-black/[0.07] sm:flex sm:w-[420px] sm:border-l dark:border-white/10"
           >
             {first ? (
               <>
@@ -189,6 +207,59 @@ export function CalendarDialog({
               </p>
             )}
           </aside>
+
+          {/* PHONE: the weekend's flights as a bottom sheet over the
+              calendar. The calendar keeps the whole screen (the split view
+              gave it half and was removed by request); the sheet takes up to
+              ~three quarters, scrolls its own list, and every way back —
+              backdrop, ✕, Escape — peels to the calendar with the selection
+              still highlighted. */}
+          {sheetOpen && first && (
+            <div className="absolute inset-0 z-10 flex flex-col justify-end sm:hidden">
+              <button
+                type="button"
+                aria-label="Back to the calendar"
+                onClick={() => setSheetOpen(false)}
+                className="absolute inset-0 bg-black/40"
+                data-no-focus-ring
+              />
+              <div
+                role="region"
+                aria-label="Flights for the selected weekend"
+                className="animate-fade-in relative flex max-h-[78dvh] min-h-0 flex-col rounded-t-2xl border-t border-black/10 bg-white shadow-[0_-18px_40px_-20px_rgba(0,0,0,0.4)] dark:border-white/15 dark:bg-[#14161c]"
+              >
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/[0.07] bg-amber-400/[0.08] px-4 py-3 dark:border-white/10 dark:bg-amber-300/[0.06]">
+                  <div>
+                    <h3 className="text-[15px] leading-tight font-bold tracking-tight">
+                      {weekendRange(first.outDepart, first.backDepart)}
+                    </h3>
+                    <p className="text-[12.5px] text-muted-foreground">
+                      {trips.length} flight{trips.length === 1 ? "" : "s"} this
+                      weekend, cheapest first
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSheetOpen(false)}
+                    aria-label="Back to the calendar"
+                    className="-m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+                  >
+                    <span aria-hidden>✕</span>
+                  </button>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain p-3 [&>*]:shrink-0">
+                  {trips.map((d) => (
+                    <DealCard
+                      key={d.deepLink}
+                      deal={d}
+                      idPrefix="dates-sheet-"
+                      hideStops={hideStops}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </dialog>
