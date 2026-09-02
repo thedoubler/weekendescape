@@ -1413,9 +1413,19 @@ export default function Home() {
             cap < bounds.max
               ? "No escapes match these filters — try widening them."
               : rawDeals.length === 0
-                ? bridges
-                  ? `No bridge-day escapes from ${home || "that airport"} in this window — try a longer window, or turn off "Hunt for bridge days".`
-                  : `No weekend routes found from ${home || "that airport"} — try a longer window or a different airport.`
+                ? (() => {
+                    // Name EVERY airport the search actually ran with — an
+                    // empty meet-up from CLJ + VIE blamed on "CLJ" alone sent
+                    // the reader fixing the wrong thing.
+                    const from =
+                      (applied?.origins ?? origins).join(" + ") ||
+                      "that airport";
+                    if (applied?.meetUp ?? meetUp)
+                      return `No place everyone can reach on the same weekend from ${from} — try Fri–Mon, different airports, or turn off Meet up.`;
+                    if (bridges)
+                      return `No long-weekend escapes from ${from} in this window — try a longer window, or switch trip length back to Fri–Sun.`;
+                    return `No weekend routes found from ${from} — try a longer window or a different airport.`;
+                  })()
                 : undefined
           }
         />
