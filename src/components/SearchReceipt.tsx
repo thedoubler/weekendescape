@@ -360,10 +360,14 @@ export function SearchReceipt({
               the trigger again) cancels. The old amber "reloads when you
               close this" line explained dismissal-as-commit — a rule that
               needed a caption is the tell it was the wrong rule. */}
+          {/* Outlined, not ink: the SELECTED chip above is the panel's one
+              solid element, and an ink Apply beside it made two things claim
+              primacy — reported. The action still anchors the panel by being
+              the only full-width control in it. */}
           <button
             type="button"
             onClick={() => close(true)}
-            className="mt-0.5 inline-flex h-9 w-full items-center justify-center rounded-full bg-neutral-900 text-sm font-medium text-white transition hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            className="mt-0.5 inline-flex h-9 w-full items-center justify-center rounded-full border border-black/15 text-sm font-medium text-black transition hover:bg-black/[0.04] dark:border-white/25 dark:text-white dark:hover:bg-white/[0.06]"
           >
             Apply
           </button>
