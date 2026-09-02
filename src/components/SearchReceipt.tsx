@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { WeekendStyle } from "@/lib/weekend";
 
 export type StopMode = "any" | "direct";
@@ -110,16 +115,6 @@ export function SearchReceipt({
   onEditOrigins,
 }: Props) {
   const [open, setOpen] = useState<FacetKey | null>(null);
-  // Where the popover's tail should point, as a signed pixel offset from the
-  // ROW'S CENTRE. Read from the button at click time rather than in a layout
-  // effect, so the tail never renders in the wrong place for a frame.
-  //
-  // Measured from the centre rather than the left edge because the popover is
-  // now centred on the row (the whole masthead is centred). Storing the offset
-  // from the centre means the tail can be placed with `calc(50% + offset)` and
-  // never needs the popover's own width measured.
-  const [tailOffset, setTailOffset] = useState(0);
-  const rowRef = useRef<HTMLDivElement>(null);
   // The values as they were when the popover opened. Closing compares against
   // this, so opening a facet and picking what was already selected costs
   // nothing.
@@ -131,9 +126,15 @@ export function SearchReceipt({
   // to be explicit about the pending patch: Apply commits it and reloads;
   // Escape, the backdrop and re-tapping the facet all CANCEL — they put the
   // opening values back, which is what dismissal means everywhere else on
-  // the web. Switching to another facet keeps the pending edits (openedWith
-  // is captured once, on first open), so one Apply can commit a style AND an
-  // adults change together.
+  // the web. (Radix owns dismissal now, so switching facets is an
+  // outside-click on the open one: it cancels that facet's pending edit
+  // before the next opens. One popover, one editing session.)
+  //
+  // Positioning is Radix's too — this replaced a hand-rolled version that
+  // centred the panel on the ROW and computed its own tail offset because a
+  // per-button anchor could push past the viewport edge. Collision shifting
+  // is the actual fix for that problem, and it comes free here; the "off"
+  // placements the owner saw were the workaround's residue.
   const close = useCallback(
     (commit = true) => {
       const before = openedWith.current;
@@ -159,40 +160,15 @@ export function SearchReceipt({
     [values, onChange, onCommit]
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!rowRef.current?.contains(e.target as Node)) close(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open, close]);
-
-  function toggle(key: FacetKey, e: React.MouseEvent<HTMLButtonElement>) {
-    if (open === key) {
-      // Re-tapping the trigger is a dismissal, and dismissal cancels now.
+  // Radix drives open state: `true` from a trigger click opens (capturing
+  // the before-image), `false` from any dismissal cancels.
+  function onOpenChange(key: FacetKey, next: boolean) {
+    if (next) {
+      openedWith.current = { ...values };
+      setOpen(key);
+    } else {
       close(false);
-      return;
     }
-    const btn = e.currentTarget;
-    const row = rowRef.current;
-    if (row) {
-      const r = btn.getBoundingClientRect();
-      const rowRect = row.getBoundingClientRect();
-      const btnCentre = r.left - rowRect.left + r.width / 2;
-      setTailOffset(btnCentre - rowRect.width / 2);
-    }
-    // Captured once per editing session, not per facet: switching facets
-    // keeps pending edits, so one Apply can commit several at once.
-    if (!openedWith.current) openedWith.current = { ...values };
-    setOpen(key);
   }
 
   const cityOf = (code: string) => originCities?.[code] ?? code;
@@ -203,26 +179,102 @@ export function SearchReceipt({
         ? cityOf(origins[0])
         : origins.map(cityOf).join(" + ");
 
+  function panel(key: FacetKey) {
+    if (key === "style")
+      return (
+        <Options
+          title="Trip length"
+          options={STYLE_OPTS}
+          value={values.bridges ? "bridges" : values.style}
+          // Picking a shape turns bridge-hunting off; picking bridges keeps
+          // the shape underneath, so switching back lands where you were.
+          onPick={(v) =>
+            onChange(
+              v === "bridges" ? { bridges: true } : { style: v, bridges: false }
+            )
+          }
+          hint={{ value: "bridges", text: BRIDGE_HELP }}
+        />
+      );
+    if (key === "region" && homeRegion)
+      return (
+        <Options
+          title="Whose holidays count"
+          options={[
+            { value: "national", label: "National only" },
+            ...homeRegion.options.map((o) => ({
+              value: o.code,
+              label: o.name,
+            })),
+          ]}
+          // While the user hasn't chosen (region null), highlight what the
+          // server actually used — the inferred region, or national.
+          value={values.region ?? homeRegion.used ?? "national"}
+          onPick={(v) => onChange({ region: v })}
+          hint={{ value: "national", text: REGION_HELP }}
+        />
+      );
+    if (key === "stops")
+      return (
+        <Options
+          title="Stops"
+          options={STOP_OPTS}
+          value={values.stopMode}
+          onPick={(v) => onChange({ stopMode: v })}
+        />
+      );
+    if (key === "adults")
+      return (
+        <Options
+          title={meetUp && origins.length > 1 ? "Adults from each city" : "Adults"}
+          options={ADULT_OPTS.map((n) => ({ value: n, label: String(n) }))}
+          value={values.adults}
+          onPick={(v) => onChange({ adults: v })}
+        />
+      );
+    return null;
+  }
+
+  // One Radix popover per facet: the trigger is the receipt word, the
+  // content is that facet's panel plus Apply. aria-expanded/haspopup come
+  // from Radix now, so the button no longer sets its own.
   const facet = (key: FacetKey, label: string) => (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      aria-expanded={open === key}
-      aria-label={reloadHint(label)}
-      onClick={(e) => toggle(key, e)}
-      className={`relative -mx-0.5 rounded px-0.5 pb-0.5 font-semibold whitespace-nowrap transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] ${
-        open === key
-          ? "bg-amber-500/10 text-black dark:bg-amber-300/15 dark:text-white"
-          : "text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white"
-      } border-b-2 border-dotted border-amber-700 dark:border-amber-400`}
-    >
-      {label}
-    </button>
+    <Popover open={open === key} onOpenChange={(o) => onOpenChange(key, o)}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={reloadHint(label)}
+          className={`relative -mx-0.5 rounded px-0.5 pb-0.5 font-semibold whitespace-nowrap transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] ${
+            open === key
+              ? "bg-amber-500/10 text-black dark:bg-amber-300/15 dark:text-white"
+              : "text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white"
+          } border-b-2 border-dotted border-amber-700 dark:border-amber-400`}
+        >
+          {label}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        sideOffset={8}
+        collisionPadding={12}
+        className="w-max min-w-[260px] max-w-[min(92vw,26rem)] rounded-xl border border-black/10 bg-white p-3 text-center shadow-[0_18px_40px_-14px_rgba(0,0,0,0.35)] ring-0 motion-reduce:animate-none dark:border-white/15 dark:bg-[#1b1e26]"
+      >
+        {panel(key)}
+        {/* Outlined, not ink: the SELECTED chip above is the panel's one
+            solid element. Apply anchors by being the only full-width
+            control. */}
+        <button
+          type="button"
+          onClick={() => close(true)}
+          className="mt-0.5 inline-flex h-9 w-full items-center justify-center rounded-full border border-black/15 text-sm font-medium text-black transition hover:bg-black/[0.04] dark:border-white/25 dark:text-white dark:hover:bg-white/[0.06]"
+        >
+          Apply
+        </button>
+      </PopoverContent>
+    </Popover>
   );
 
   return (
     <div
-      ref={rowRef}
       // 15px, up from 13. This line is the only statement of what the board is
       // currently showing — origin, trip shape, party size — and every value in
       // it is a control. At 13px it read as fine print beside a 46px wordmark,
@@ -306,73 +358,7 @@ export function SearchReceipt({
         </span>
       ))}
 
-      {open && (
-        <Popover tailOffset={tailOffset}>
-          {open === "style" && (
-            <Options
-              title="Trip length"
-              options={STYLE_OPTS}
-              value={values.bridges ? "bridges" : values.style}
-              // Picking a shape turns bridge-hunting off; picking bridges keeps
-              // the shape underneath, so switching back lands where you were.
-              onPick={(v) =>
-                onChange(
-                  v === "bridges" ? { bridges: true } : { style: v, bridges: false }
-                )
-              }
-              hint={{ value: "bridges", text: BRIDGE_HELP }}
-            />
-          )}
-          {open === "region" && homeRegion && (
-            <Options
-              title="Whose holidays count"
-              options={[
-                { value: "national", label: "National only" },
-                ...homeRegion.options.map((o) => ({
-                  value: o.code,
-                  label: o.name,
-                })),
-              ]}
-              // While the user hasn't chosen (region null), highlight what the
-              // server actually used — the inferred region, or national.
-              value={values.region ?? homeRegion.used ?? "national"}
-              onPick={(v) => onChange({ region: v })}
-              hint={{ value: "national", text: REGION_HELP }}
-            />
-          )}
-          {open === "stops" && (
-            <Options
-              title="Stops"
-              options={STOP_OPTS}
-              value={values.stopMode}
-              onPick={(v) => onChange({ stopMode: v })}
-            />
-          )}
-          {open === "adults" && (
-            <Options
-              title={meetUp && origins.length > 1 ? "Adults from each city" : "Adults"}
-              options={ADULT_OPTS.map((n) => ({ value: n, label: String(n) }))}
-              value={values.adults}
-              onPick={(v) => onChange({ adults: v })}
-            />
-          )}
-          {/* Apply commits and reloads; everything else (Escape, backdrop,
-              the trigger again) cancels. The old amber "reloads when you
-              close this" line explained dismissal-as-commit — a rule that
-              needed a caption is the tell it was the wrong rule. */}
-          {/* Outlined, not ink: the SELECTED chip above is the panel's one
-              solid element, and an ink Apply beside it made two things claim
-              primacy — reported. The action still anchors the panel by being
-              the only full-width control in it. */}
-          <button
-            type="button"
-            onClick={() => close(true)}
-            className="mt-0.5 inline-flex h-9 w-full items-center justify-center rounded-full border border-black/15 text-sm font-medium text-black transition hover:bg-black/[0.04] dark:border-white/25 dark:text-white dark:hover:bg-white/[0.06]"
-          >
-            Apply
-          </button>
-        </Popover>
-      )}
+
     </div>
   );
 }
@@ -411,40 +397,6 @@ function Sep() {
 // visible label, which is what WCAG 2.5.3 (Label in Name) requires.
 function reloadHint(label: string): string {
   return `${label} — changing this reloads results`;
-}
-
-function Popover({
-  tailOffset,
-  children,
-}: {
-  tailOffset: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      role="dialog"
-      // CENTRED ON THE ROW. Still anchored to the row and not to the button —
-      // that is what stops a facet near the right edge of a 390px phone from
-      // pushing its own popover off screen — but centred rather than flush
-      // left, because the row it hangs from is now centred itself. Left-0 under
-      // a centred row put the panel visibly off to one side.
-      // min-w 260 (was 190): at 190 the chip rows wrapped into a tall,
-      // stretched column — reported. max-w keeps it inside a phone.
-      className="absolute top-full left-1/2 z-40 mt-2 flex w-max min-w-[260px] max-w-[min(92vw,26rem)] -translate-x-1/2 flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.35)] dark:border-white/15 dark:bg-[#1b1e26]"
-    >
-      <span
-        aria-hidden
-        className="absolute -top-[5px] h-2 w-2 rotate-45 border-t border-l border-black/10 bg-white dark:border-white/15 dark:bg-[#1b1e26]"
-        // `clamp` keeps the tail inside its own panel without measuring the
-        // panel: the middle term places it under the button, and the two bounds
-        // stop it escaping a rounded corner when the button is far off centre.
-        style={{
-          left: `clamp(10px, calc(50% + ${Math.round(tailOffset)}px - 4px), calc(100% - 18px))`,
-        }}
-      />
-      {children}
-    </div>
-  );
 }
 
 function Options<T extends string | number>({
