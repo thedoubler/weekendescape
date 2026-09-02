@@ -57,7 +57,19 @@ function mockFetch() {
   });
 }
 
+// The boot flow reads the Permissions API before it will touch geolocation
+// (the soft-ask rule: page load never summons the browser dialog), so the
+// mocks set BOTH: the permission state and the geolocation behaviour behind
+// it.
+function mockPermissionState(state: "granted" | "denied" | "prompt") {
+  Object.defineProperty(global.navigator, "permissions", {
+    configurable: true,
+    value: { query: async () => ({ state }) },
+  });
+}
+
 function grantGeolocation(lat = 41.4, lon = 2.1) {
+  mockPermissionState("granted");
   Object.defineProperty(global.navigator, "geolocation", {
     configurable: true,
     value: {
@@ -68,6 +80,7 @@ function grantGeolocation(lat = 41.4, lon = 2.1) {
 }
 
 function denyGeolocation() {
+  mockPermissionState("denied");
   Object.defineProperty(global.navigator, "geolocation", {
     configurable: true,
     value: {
@@ -135,6 +148,49 @@ describe("Home page", () => {
       String(c[0]).includes("/api/weekends")
     );
     expect(weekendsCalls.length).toBe(1);
+    expect(String(weekendsCalls[0][0])).toContain("flyFrom=MAD");
+  });
+
+  it("soft-asks on undecided permission: sheet opens, the dialog is never summoned", async () => {
+    // The heart of the soft-ask rule: permission state "prompt" + nothing
+    // saved must open the origin sheet WITHOUT calling getCurrentPosition —
+    // the browser dialog stays behind the "Find my airport" tap.
+    mockPermissionState("prompt");
+    const getPos = vi.fn();
+    Object.defineProperty(global.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition: getPos },
+    });
+    const fetchMock = mockFetch();
+    vi.spyOn(global, "fetch").mockImplementation(fetchMock as any);
+
+    render(<Home />);
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/airport or city/i)).toBeInTheDocument()
+    );
+    expect(getPos).not.toHaveBeenCalled();
+    expect(
+      fetchMock.mock.calls.filter((c) => String(c[0]).includes("/api/"))
+    ).toHaveLength(0);
+  });
+
+  it("never prompts a returning visitor: a saved home wins before any permission check", async () => {
+    localStorage.setItem("weekendescape:home", "MAD");
+    mockPermissionState("prompt");
+    const getPos = vi.fn();
+    Object.defineProperty(global.navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition: getPos },
+    });
+    const fetchMock = mockFetch();
+    vi.spyOn(global, "fetch").mockImplementation(fetchMock as any);
+
+    render(<Home />);
+    await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
+    expect(getPos).not.toHaveBeenCalled();
+    const weekendsCalls = fetchMock.mock.calls.filter((c) =>
+      String(c[0]).includes("/api/weekends")
+    );
     expect(String(weekendsCalls[0][0])).toContain("flyFrom=MAD");
   });
 

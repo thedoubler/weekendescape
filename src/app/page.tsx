@@ -373,10 +373,13 @@ export default function Home() {
     // path out of that trap, and `settled` keeps a late real answer from
     // firing a second search over whatever the user did meanwhile.
     let settled = false;
+    // `let`, not const-after-use: the old shape had settle() clearing a timer
+    // declared later, which threw on the no-geolocation path.
+    let guard: ReturnType<typeof setTimeout> | undefined;
     const settle = (fn: () => void) => {
       if (settled) return;
       settled = true;
-      clearTimeout(guard);
+      if (guard !== undefined) clearTimeout(guard);
       setDetecting(false);
       fn();
     };
@@ -406,40 +409,90 @@ export default function Home() {
       "Location is blocked for this site — type your airport instead.";
     const MSG_UNFOUND =
       "Couldn't find your location — type your airport instead.";
-    if (!navigator.geolocation) {
-      fail(MSG_UNFOUND);
+    const start = () => {
+      if (!navigator.geolocation) {
+        fail(MSG_UNFOUND);
+        return;
+      }
+      setDetecting(true);
+      guard = setTimeout(() => fail(MSG_UNFOUND), 12000);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const res = await fetchWithTimeout(
+              `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`,
+              8000
+            );
+            const body = res.ok ? await res.json() : null;
+            const code = body?.airports?.[0]?.code;
+            if (code)
+              settle(() => {
+                setGeoNotice(null);
+                if (fromSheet) {
+                  setSheetOpen(false);
+                  originsAtOpen.current = null;
+                }
+                runSearch(code);
+              });
+            else fail(MSG_UNFOUND);
+          } catch {
+            fail(MSG_UNFOUND);
+          }
+        },
+        // code 1 is PERMISSION_DENIED — the one failure the visitor themselves
+        // chose, so the message can honestly point at the setting. Everything
+        // else (unavailable, timeout) is just "couldn't".
+        (err) => fail(err?.code === 1 ? MSG_BLOCKED : MSG_UNFOUND),
+        { timeout: 8000 }
+      );
+    };
+
+    if (fromSheet) {
+      // An explicit tap on "Find my airport" IS the user gesture the browser
+      // prompt should follow. Fire directly.
+      start();
       return;
     }
-    setDetecting(true);
-    const guard = setTimeout(() => fail(MSG_UNFOUND), 12000);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await fetchWithTimeout(
-            `/api/airports?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`,
-            8000
-          );
-          const body = res.ok ? await res.json() : null;
-          const code = body?.airports?.[0]?.code;
-          if (code)
-            settle(() => {
-              setGeoNotice(null);
-              if (fromSheet) {
-                setSheetOpen(false);
-                originsAtOpen.current = null;
-              }
-              runSearch(code);
-            });
-          else fail(MSG_UNFOUND);
-        } catch {
-          fail(MSG_UNFOUND);
-        }
+
+    // BOOT — the page load must never summon the permission dialog. A
+    // load-time prompt is the pattern browsers punish (Chrome demotes it to
+    // quiet UI) and users deny reflexively, and a browser-level denial is
+    // permanent in a way our own UI's never is. So:
+    //   · a remembered board wins outright — returning visitors are never
+    //     prompted again just to reconfirm airports they already chose;
+    //   · with permission already GRANTED, geolocate silently (no dialog
+    //     exists to show — the magic stays for people who said yes);
+    //   · DENIED skips straight to the sheet, with the notice saying why;
+    //   · undecided ("prompt", or a browser whose Permissions API can't say)
+    //     gets the SOFT ASK: the origin sheet, which explains itself and
+    //     offers "Find my airport" — the real dialog then only ever appears
+    //     behind that tap, where acceptance is a decision, not a reflex.
+    const saved = loadHomes();
+    if (saved.length) {
+      settle(() => runSearch(saved));
+      return;
+    }
+    const soft = (notice: string | null) =>
+      settle(() => {
+        if (notice) setGeoNotice(notice);
+        setBooting(false);
+        openOriginSheet();
+      });
+    if (!navigator.geolocation) {
+      soft(null);
+      return;
+    }
+    const query = navigator.permissions?.query?.bind(navigator.permissions);
+    if (!query) {
+      soft(null);
+      return;
+    }
+    query({ name: "geolocation" }).then(
+      (status) => {
+        if (status.state === "granted") start();
+        else soft(status.state === "denied" ? MSG_BLOCKED : null);
       },
-      // code 1 is PERMISSION_DENIED — the one failure the visitor themselves
-      // chose, so the message can honestly point at the setting. Everything
-      // else (unavailable, timeout) is just "couldn't".
-      (err) => fail(err?.code === 1 ? MSG_BLOCKED : MSG_UNFOUND),
-      { timeout: 8000 }
+      () => soft(null)
     );
   }
 
@@ -873,10 +926,12 @@ export default function Home() {
             >
               <path d="M12 3a9 9 0 1 1-6.36 2.64" />
             </svg>
-            <span>
-              Finding your nearest airport — used only for this. Decline and
-              type it in.
-            </span>
+            {/* No more "Decline and type it in": since the soft-ask flow, no
+                permission dialog ever appears at page load — this spinner
+                only runs for visitors who already granted location, or while
+                a remembered board loads. The privacy half of the sentence
+                stays, because a location IS being read right now. */}
+            <span>Finding your nearest airport — used only for this.</span>
           </div>
           <div
             className="flex flex-col gap-3"
