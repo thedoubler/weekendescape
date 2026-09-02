@@ -108,14 +108,16 @@ function Leg(props: LegInput & { hideDirect?: boolean }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={c.code}
-                src={`https://images.kiwi.com/airlines/64/${c.code}.png`}
+                src={`/api/airline-logo/${c.code}`}
                 // Decorative — the name follows as text, so alt would make a
                 // screen reader announce every carrier twice.
                 alt=""
                 width={16}
                 height={16}
-                loading="lazy"
-                className="h-4 w-4 rounded-[3px] object-contain"
+                className="h-4 w-4 rounded-[3px] object-contain opacity-0 transition-opacity duration-150 data-[loaded]:opacity-100"
+                onLoad={(e) => {
+                  e.currentTarget.setAttribute("data-loaded", "");
+                }}
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
@@ -240,9 +242,16 @@ export function DealCard({
   hideDays?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // The panel stays in the DOM once it has been opened (hidden, not
+  // unmounted, on collapse). Remounting was the reported logo flicker: every
+  // expand rebuilt the <img> elements, and even cached bytes repaint a frame
+  // late. It also preserves the weather and activities state across
+  // collapses for free.
+  const [everOpened, setEverOpened] = useState(false);
   // Intent signal: fires on the closed->open transition only. Repeat opens of
   // the same card in one visit are separate intents and deliberately count.
   function toggleOpen() {
+    if (!open) setEverOpened(true);
     if (!open)
       track("deal_expanded", {
         to: deal.flyTo,
@@ -782,9 +791,10 @@ export function DealCard({
         </div>
       )}
 
-      {open && (
+      {everOpened && (
         <div
           id={panelId}
+          hidden={!open}
           // One column at every width, costs underneath the itinerary — by
           // request. A two-column split (itinerary left, cost rail right, per
           // Google Flights) shipped briefly and was rolled back: the vertical
