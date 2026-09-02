@@ -30,11 +30,18 @@ export function Masthead() {
               coloured from the first frame. Colour only — no movement, no
               reflow, so the CLS budget stays zero and reduced-motion gets the
               finished state. */}
-          <span aria-hidden>
-            weekend<span className="wordmark-hi">.flights</span>
-          </span>
-          {/* The word intact for assistive tech and for copy-paste. */}
-          <span className="sr-only">weekend.flights</span>
+          {/* A LINK, because a logo that does nothing is a dead tap — the
+              universal convention is logo-goes-home. On the board itself,
+              bare "/" doubles as the reset: a fresh boot with the remembered
+              airports and every setting back to default. A plain <a>, not
+              next/link: the point on the board is the full reload. */}
+          <a href="/" className="text-inherit no-underline">
+            <span aria-hidden>
+              weekend<span className="wordmark-hi">.flights</span>
+            </span>
+            {/* The word intact for assistive tech and for copy-paste. */}
+            <span className="sr-only">weekend.flights — start over</span>
+          </a>
         </h1>
         {/* The promise, and only the promise.
             "Pick your airport." was an instruction, and it was the half doing
