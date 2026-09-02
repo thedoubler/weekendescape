@@ -61,6 +61,14 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Content-Security-Policy", value: CSP },
   { key: "X-Content-Type-Options", value: "nosniff" },
+  // HSTS pairs with the http→https redirect in src/proxy.ts — the redirect
+  // moves visitors, this keeps their browsers from ever asking over http
+  // again. A year, no includeSubDomains (nothing else lives on the zone yet
+  // and a future subdomain must not inherit a promise it can't keep), no
+  // preload (that is a browser-list commitment to make deliberately, later).
+  // Browsers ignore the header over plain http, so serving it everywhere is
+  // harmless.
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
   // Send the origin to affiliate partners (they attribute on it) but never the
   // full URL, which carries the visitor's airport and dates.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

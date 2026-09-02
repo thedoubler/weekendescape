@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "weekendescape",
-  "main": ".open-next/worker.js",
+  "main": "worker-entry.js", // thin https-redirect shell around .open-next/worker.js
   "compatibility_date": "2026-08-28",
   // OpenNext's server bundle uses Node APIs; without these two the Worker
   // fails at runtime rather than at build time.
