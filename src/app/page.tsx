@@ -351,6 +351,11 @@ export default function Home() {
       setSelectedMonths([]);
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "AbortError";
+      // Health signal, not behaviour: how often real visitors see a failed
+      // board, and why, without waiting for someone to email about it.
+      track("error_shown", {
+        kind: timedOut ? "timeout" : "search_failed",
+      });
       setError(
         timedOut
           ? "Search timed out — check your connection and try again."
@@ -765,12 +770,14 @@ export default function Home() {
   }
 
   function toggleMonth(m: string) {
+    track("filter_used", { facet: "month" });
     setSelectedMonths((cur) =>
       cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]
     );
   }
 
   function toggleContinent(c: string) {
+    track("filter_used", { facet: "region" });
     setSelectedContinents((cur) =>
       cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]
     );
@@ -1179,14 +1186,20 @@ export default function Home() {
                     { value: "cheapest" as SortKey, label: "Cheapest" },
                   ]}
                   value={sort}
-                  onChange={setSort}
+                  onChange={(v) => {
+                    track("sort_changed", { to: v });
+                    setSort(v);
+                  }}
                   ariaLabel="Sort"
                 />
               )}
               {!loading && !error && calendarDeals.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowCalendar(true)}
+                  onClick={() => {
+                    setShowCalendar(true);
+                    track("calendar_opened");
+                  }}
                   // A dialog now, not a disclosure: haspopup replaces the
                   // expanded/controls pair, and the chevron — which promised
                   // an inline reveal — goes with them.
@@ -1200,7 +1213,10 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowMap((v) => !v);
+                    setShowMap((v) => {
+                      if (!v) track("map_opened");
+                      return !v;
+                    });
                     setShowCalendar(false);
                   }}
                   aria-expanded={showMap}
@@ -1248,7 +1264,10 @@ export default function Home() {
                   max={bounds.max}
                   value={cap}
                   currency={currency}
-                  onChange={setMaxPrice}
+                  onChange={(v) => {
+                    track("filter_used", { facet: "price" });
+                    setMaxPrice(v);
+                  }}
                 />
               </div>
             )}

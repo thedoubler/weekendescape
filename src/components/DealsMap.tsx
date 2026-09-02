@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import type { Deal } from "@/lib/deals";
 
 const HEIGHT = 280;
@@ -103,7 +104,10 @@ export function DealsMap(props: {
       {!fullscreen && (
         <DealsMapGL
           {...shared}
-          onToggleFullscreen={() => setFullscreen(true)}
+          onToggleFullscreen={() => {
+            track("map_fullscreen");
+            setFullscreen(true);
+          }}
         />
       )}
       <dialog

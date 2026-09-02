@@ -5,6 +5,7 @@ import type { Deal } from "@/lib/deals";
 import { dealsByWeekend } from "@/lib/calendar";
 import { weekendRange } from "@/lib/format";
 import { CalendarView } from "@/components/CalendarView";
+import { track } from "@/lib/analytics";
 import { DealCard } from "@/components/DealCard";
 
 // The calendar as a FULLSCREEN dialog, not an inline section.
@@ -155,6 +156,7 @@ export function CalendarDialog({
                 window={window}
                 selected={shownKey}
                 onSelect={(k) => {
+                  track("calendar_weekend_picked", { weekend: k });
                   setSelected(k);
                   // Only the phone sheet cares; on desktop the side panel is
                   // already showing this key and the flag renders nothing.
