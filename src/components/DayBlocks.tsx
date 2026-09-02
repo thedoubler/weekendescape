@@ -116,7 +116,7 @@ export function MeetupLanes({
           />
         ))}
         <div
-          className="absolute inset-y-0 rounded-full bg-black/35 dark:bg-white/45"
+          className="absolute inset-y-0 rounded-full bg-black/20 dark:bg-white/30"
           style={{
             left: `${pos(from) * 100}%`,
             width: `${Math.max(0, pos(to) - pos(from)) * 100}%`,
@@ -286,7 +286,7 @@ export function DayBlocks({
                   // A bar reads as a proportion from its LENGTH; neither colour
                   // nor weight adds anything, and at 8px a full-day bar read as
                   // a horizontal rule cutting the cell in half. 4px.
-                  className="absolute inset-y-0 rounded-full bg-black/35 dark:bg-white/45"
+                  className="absolute inset-y-0 rounded-full bg-black/20 dark:bg-white/30"
                   style={{
                     left: `${c.fillStart * 100}%`,
                     width: `${(c.fillEnd - c.fillStart) * 100}%`,
