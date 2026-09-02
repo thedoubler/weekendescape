@@ -8,7 +8,13 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // "none", because the default html_handling 307s any *.html URL to its
+    // extensionless twin — which broke Google's site-verification file
+    // (their checker needs a 200 at the EXACT .html URL, and got a redirect
+    // into a 404). No page on this site is reached via an .html path, so
+    // exact-match serving costs nothing.
+    "html_handling": "none"
   },
   // Per-IP rate limiting, counted at the edge before a request costs anything.
   // Two tiers because the routes are not equally expensive: a weekend search is
