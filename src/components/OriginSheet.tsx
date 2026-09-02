@@ -124,12 +124,14 @@ export function OriginSheet({
               Up to {MAX_ORIGINS} airports. Closing this reloads the board.
             </p>
           </div>
-          {/* -m-2 p-2 keeps the visual size while giving it a 44px tap target. */}
+          {/* -m-2 p-2 keeps the layout size while giving it a 48px tap target.
+              text-2xl (was xl): the tap box was fine but the GLYPH read as
+              fine print on a full-screen sheet — reported too small. */}
           <button
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close"
-            className="-m-2 shrink-0 rounded-full p-2 text-xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
+            className="-m-2 shrink-0 rounded-full p-2 text-2xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
           >
             <span aria-hidden>✕</span>
           </button>

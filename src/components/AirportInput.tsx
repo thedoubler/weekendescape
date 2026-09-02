@@ -253,7 +253,11 @@ export function AirportInput({
                   onRemoveChip(code);
                 }}
                 aria-label={`Remove ${code}`}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-muted-foreground transition hover:bg-black/10 hover:text-black dark:hover:bg-white/15 dark:hover:text-white"
+                // h-7 w-7 with -my-1: a 28px target (was a 20px speck —
+                // reported too small to hit) whose negative margin keeps the
+                // chip's height exactly as it was. text-lg scales the glyph
+                // with the box.
+                className="-my-1 flex h-7 w-7 items-center justify-center rounded-full text-lg leading-none text-muted-foreground transition hover:bg-black/10 hover:text-black dark:hover:bg-white/15 dark:hover:text-white"
               >
                 ×
               </button>
