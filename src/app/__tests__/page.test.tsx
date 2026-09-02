@@ -375,7 +375,7 @@ describe("Home page", () => {
     // alongside it. Like every facet, it commits when the popover closes.
     fireEvent.click(screen.getByRole("button", { name: /^Fri–Sun/ }));
     fireEvent.click(screen.getByRole("button", { name: /^Long weekends/ }));
-    fireEvent.mouseDown(document.body);
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     await waitFor(() => expect(screen.getByText("Searching…")).toBeInTheDocument());
     // Scoped to the results heading — the switch itself says "Long weekends"
@@ -417,10 +417,10 @@ describe("Home page", () => {
   });
 
   it("runs one search per edit, not one per tap", async () => {
-    // The commit bar is gone: a facet applies when its popover closes. That is
-    // the whole reason the popover exists — tapping through 1→2→3→4 adults
-    // must cost one upstream call, not three, and the call must carry the value
-    // it was closed on rather than the one the refs held a tick earlier.
+    // Apply is the commit: tapping through 1→2→3→4 adults must cost one
+    // upstream call, not three, and the call must carry the value showing
+    // when Apply was pressed rather than the one the refs held a tick
+    // earlier. (Dismissal — Escape, backdrop, the trigger — cancels.)
     grantGeolocation();
     const fetchMock = mockFetch();
     vi.spyOn(global, "fetch").mockImplementation(fetchMock as any);
@@ -438,7 +438,7 @@ describe("Home page", () => {
     // Still nothing: the popover is open, so the edit is not finished.
     expect(weekends().length).toBe(before);
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() => expect(weekends().length).toBe(before + 1));
     expect(String(weekends()[before][0])).toContain("adults=4");
   });

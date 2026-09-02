@@ -125,13 +125,15 @@ export function SearchReceipt({
   // nothing.
   const openedWith = useRef<ReceiptValues | null>(null);
 
-  // Dismissal is the commit — EXCEPT for Escape, which is the one gesture that
-  // means the opposite everywhere else on the web. It used to run this same
-  // path, so cancelling an edit fired the search it was cancelling: tap "2
-  // adults", think better of it, press Escape, and the board reloads for two
-  // adults anyway. The popover edits live (that is what makes the label update
-  // as you pick), so backing out cannot just drop a pending patch — it has to
-  // put the opening values back.
+  // APPLY is the commit — reversed from the original dismiss-commits design
+  // by request ("apply button works better"). The popover still edits live
+  // (that is what makes the label update as you pick), so both ways out have
+  // to be explicit about the pending patch: Apply commits it and reloads;
+  // Escape, the backdrop and re-tapping the facet all CANCEL — they put the
+  // opening values back, which is what dismissal means everywhere else on
+  // the web. Switching to another facet keeps the pending edits (openedWith
+  // is captured once, on first open), so one Apply can commit a style AND an
+  // adults change together.
   const close = useCallback(
     (commit = true) => {
       const before = openedWith.current;
@@ -160,7 +162,7 @@ export function SearchReceipt({
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!rowRef.current?.contains(e.target as Node)) close();
+      if (!rowRef.current?.contains(e.target as Node)) close(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close(false);
@@ -175,11 +177,10 @@ export function SearchReceipt({
 
   function toggle(key: FacetKey, e: React.MouseEvent<HTMLButtonElement>) {
     if (open === key) {
-      close();
+      // Re-tapping the trigger is a dismissal, and dismissal cancels now.
+      close(false);
       return;
     }
-    // Another facet may be open; commit it before switching.
-    if (open) close();
     const btn = e.currentTarget;
     const row = rowRef.current;
     if (row) {
@@ -188,7 +189,9 @@ export function SearchReceipt({
       const btnCentre = r.left - rowRect.left + r.width / 2;
       setTailOffset(btnCentre - rowRect.width / 2);
     }
-    openedWith.current = { ...values };
+    // Captured once per editing session, not per facet: switching facets
+    // keeps pending edits, so one Apply can commit several at once.
+    if (!openedWith.current) openedWith.current = { ...values };
     setOpen(key);
   }
 
@@ -353,9 +356,17 @@ export function SearchReceipt({
               onPick={(v) => onChange({ adults: v })}
             />
           )}
-          <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300/90">
-            Reloads the board when you close this
-          </p>
+          {/* Apply commits and reloads; everything else (Escape, backdrop,
+              the trigger again) cancels. The old amber "reloads when you
+              close this" line explained dismissal-as-commit — a rule that
+              needed a caption is the tell it was the wrong rule. */}
+          <button
+            type="button"
+            onClick={() => close(true)}
+            className="mt-0.5 inline-flex h-9 w-full items-center justify-center rounded-full bg-neutral-900 text-sm font-medium text-white transition hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+          >
+            Apply
+          </button>
         </Popover>
       )}
     </div>
@@ -413,7 +424,9 @@ function Popover({
       // pushing its own popover off screen — but centred rather than flush
       // left, because the row it hangs from is now centred itself. Left-0 under
       // a centred row put the panel visibly off to one side.
-      className="absolute top-full left-1/2 z-40 mt-2 flex min-w-[190px] max-w-full -translate-x-1/2 flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.35)] dark:border-white/15 dark:bg-[#1b1e26]"
+      // min-w 260 (was 190): at 190 the chip rows wrapped into a tall,
+      // stretched column — reported. max-w keeps it inside a phone.
+      className="absolute top-full left-1/2 z-40 mt-2 flex w-max min-w-[260px] max-w-[min(92vw,26rem)] -translate-x-1/2 flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.35)] dark:border-white/15 dark:bg-[#1b1e26]"
     >
       <span
         aria-hidden
