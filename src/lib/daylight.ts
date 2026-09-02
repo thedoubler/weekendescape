@@ -137,7 +137,13 @@ export function daylightNote(
     return `You land after sunset — sunrise ${clockLabel(t.sunriseMin)} the next day.`;
   }
   if (arriveMin != null && t.sunsetMin - arriveMin < TIGHT_ARRIVAL_MIN) {
-    const left = Math.round((t.sunsetMin - arriveMin) / 60);
+    const mins = t.sunsetMin - arriveMin;
+    // Under ~45 minutes the hour rounding printed "About 0h of daylight" —
+    // astronomically true, textually broken. Landing at dusk is the
+    // after-sunset story, so it borrows that copy's shape.
+    if (mins < 45)
+      return `You land at sunset (${clockLabel(t.sunsetMin)}) — sunrise ${clockLabel(t.sunriseMin)} the next day.`;
+    const left = Math.round(mins / 60);
     return `About ${left}h of daylight after you land — sunset ${clockLabel(t.sunsetMin)}.`;
   }
   // Short day, but you land with most of it ahead of you — nothing to say.

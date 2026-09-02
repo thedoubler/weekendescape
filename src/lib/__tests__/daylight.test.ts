@@ -68,6 +68,16 @@ describe("daylightNote", () => {
     expect(n).toMatch(/sunset 15:5/);
   });
 
+  it("never says '0h of daylight' — a dusk landing gets the sunset copy", () => {
+    // Landing ~20 minutes before a 15:53 sunset used to round to "About 0h
+    // of daylight after you land" (reported live). True astronomy, broken
+    // sentence: under an hour it borrows the after-sunset shape instead.
+    const n = daylightNote(LONDON, "2026-12-21T15:30", 0)!;
+    expect(n).not.toMatch(/0h/);
+    expect(n).toMatch(/land at sunset/i);
+    expect(n).toMatch(/sunrise 08:0/);
+  });
+
   it("stays silent on a short day you land early into", () => {
     // The winter day is short either way — that's the season, not this flight.
     // Only what the ARRIVAL costs you is worth a row.
