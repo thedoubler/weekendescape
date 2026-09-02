@@ -131,7 +131,7 @@ export function OriginSheet({
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close"
-            className="-m-2 shrink-0 rounded-full p-2 text-2xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
+            className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl leading-none text-muted-foreground transition hover:bg-black/5 hover:text-black sm:hidden dark:hover:bg-white/10 dark:hover:text-white"
           >
             <span aria-hidden>✕</span>
           </button>
