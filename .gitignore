@@ -52,3 +52,5 @@ assets/.next/
 .open-next/
 .wrangler/
 .claude/worktrees/
+# Private outreach material — never commit to the public repo.
+press-outreach.md
