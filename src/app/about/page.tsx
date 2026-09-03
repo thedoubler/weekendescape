@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { AboutContent } from "@/components/AboutContent";
+import { OriginLinks } from "@/components/OriginLinks";
 
 // One page carrying About + how it works + affiliate disclosure + privacy +
 // contact. Deliberately NOT a marketing page: the board sells itself, and a
@@ -36,6 +37,9 @@ export default function AboutPage() {
         </h1>
       </header>
       <AboutContent />
+      <div className="mt-2 border-t border-black/10 pt-6 dark:border-white/10">
+        <OriginLinks />
+      </div>
     </main>
   );
 }

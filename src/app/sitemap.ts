@@ -8,7 +8,11 @@ import { siteUrl } from "@/lib/site";
 // The origins that get a server-rendered page. Kept in step with
 // generateStaticParams in from/[iata]/page.tsx — a sitemap that lists a URL
 // nothing renders is worse than one that lists fewer.
-const ORIGIN_PAGES = ["BCN", "MAD", "LON", "CLJ", "BER"];
+import { ORIGIN_PAGES as ORIGIN_LIST } from "@/lib/origin-pages";
+
+// The full curated origin list — one module feeds the sitemap, the link
+// blocks and the /from titles, so they can never disagree.
+const ORIGIN_PAGES = ORIGIN_LIST.map((o) => o.code);
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

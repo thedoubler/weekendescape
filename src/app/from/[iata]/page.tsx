@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { originPageCity } from "@/lib/origin-pages";
+import { OriginLinks } from "@/components/OriginLinks";
 import { airportCity } from "@/lib/airport-city";
 import { weekendKey } from "@/lib/calendar";
 import { searchWeekends, MissingApiKeyError } from "@/lib/weekend-search";
@@ -55,7 +57,12 @@ export const dynamicParams = true;
 const IATA_RE = /^[A-Za-z]{3}$/;
 
 function label(iata: string): string {
-  return airportCity(iata.toUpperCase()) ?? iata.toUpperCase();
+  // Curated names first: metro codes (LON, PAR) have no airport-city entry,
+  // and several airports carry names no page title should wear ("Mulhouse"
+  // for Basel). The live /from/lon was titled "…from LON" until this.
+  return (
+    originPageCity(iata) ?? airportCity(iata.toUpperCase()) ?? iata.toUpperCase()
+  );
 }
 
 export async function generateMetadata({
@@ -227,6 +234,12 @@ export default async function OriginPage({
         >
           Search live from {city}
         </Link>
+      </div>
+
+      {/* Every other origin board, crawlable from this one — see
+          OriginLinks. */}
+      <div className="mt-2 border-t border-black/10 pt-4 dark:border-white/10">
+        <OriginLinks exclude={code} />
       </div>
 
       <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted-foreground dark:border-white/10">
