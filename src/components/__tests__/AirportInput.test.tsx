@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { AirportInput } from "@/components/AirportInput";
 
 describe("AirportInput", () => {
@@ -30,7 +30,11 @@ describe("AirportInput", () => {
     expect(onSearch).toHaveBeenCalledWith("BCN");
   });
 
-  it("searches the typed code on Enter", () => {
+  it("never searches a code the autocomplete has not confirmed", () => {
+    // The XXX bug: any three letters used to fire a search as a trusted
+    // IATA code. The airports table is server-only, so the client cannot
+    // tell MAD from keyboard mash — the autocomplete is the validator, and
+    // an unconfirmed code must stay in the field.
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({ airports: [] }),
@@ -39,9 +43,11 @@ describe("AirportInput", () => {
 
     render(<AirportInput value="" onSearch={onSearch} />);
     const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "xxx" } });
+    fireEvent.keyDown(input, { key: "Enter" });
     fireEvent.change(input, { target: { value: "mad" } });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(onSearch).toHaveBeenCalledWith("MAD");
+    expect(onSearch).not.toHaveBeenCalled();
   });
 
   const vienna = {
@@ -75,10 +81,9 @@ describe("AirportInput", () => {
     vi.useRealTimers();
   });
 
-  it("still commits an unambiguous code when focus leaves", async () => {
-    // The other half of the rule: blur never GUESSES, but text that resolves
-    // with no interpretation is not a guess, so tabbing away from a typed IATA
-    // code keeps working.
+  it("commits a typed code once the autocomplete has confirmed it", async () => {
+    // The fast-typist path survives, one beat later: the code fires as soon
+    // as the suggestions contain it — confirmation, not blind trust.
     vi.useFakeTimers();
     vi.spyOn(global, "fetch").mockResolvedValue(vienna);
     const onSearch = vi.fn();
@@ -86,8 +91,16 @@ describe("AirportInput", () => {
     render(<AirportInput value="" onSearch={onSearch} />);
     const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: "vie" } });
-    fireEvent.blur(input);
-    await vi.advanceTimersByTimeAsync(300);
+    // Let the debounced suggestions fetch land first (act: the resolution
+    // sets React state)…
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    // …then committing resolves against the confirmed list.
+    fireEvent.keyDown(input, { key: "Enter" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
 
     expect(onSearch).toHaveBeenCalledWith("VIE");
     vi.useRealTimers();

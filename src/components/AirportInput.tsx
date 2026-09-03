@@ -179,7 +179,12 @@ export function AirportInput({
     if (upper === lastSearched.current) return;
     const exact = suggestions.find((s) => s.code.toUpperCase() === upper);
     if (exact) return fire(exact.code);
-    if (/^[A-Z]{3}$/.test(upper)) return fire(upper);
+    // NO bare-IATA fast path (removed as a bug): it fired a search for any
+    // three letters — "XXX" included — because the airports table is
+    // server-only and the client cannot tell a code from keyboard mash. The
+    // autocomplete is the validator now: a real code the user types will be
+    // in the suggestions by the time they commit, and junk never leaves the
+    // field.
     if (!guess) return;
     if (shown.length > 0) return fire(shown[0].code);
     // Unresolvable — keep the field open with the no-results hint, don't search.
