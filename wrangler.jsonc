@@ -40,11 +40,11 @@
   //
   //   npx wrangler kv namespace create API_CACHE
   //
-  // then paste the returned id and uncomment:
-  //
-  //   "kv_namespaces": [
-  //     { "binding": "API_CACHE", "id": "<the id it printed>" }
-  //   ],
+  // then paste the returned id and uncomment (done 2026-09-03 — namespace
+  // created against the account, id below is real):
+  "kv_namespaces": [
+    { "binding": "API_CACHE", "id": "531bb78e499840b1b50d5e018a7aae2f" }
+  ],
   //
   // It ships commented out because a placeholder id is not inert: wrangler
   // validates namespace ids at deploy time and refuses the whole deploy with
