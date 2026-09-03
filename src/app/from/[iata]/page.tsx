@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { originPageCity } from "@/lib/origin-pages";
 import { OriginLinks } from "@/components/OriginLinks";
+import { DestinationLinks } from "@/components/DestinationLinks";
 import { airportCity } from "@/lib/airport-city";
 import { weekendKey } from "@/lib/calendar";
 import { searchWeekends, MissingApiKeyError } from "@/lib/weekend-search";
@@ -347,8 +348,9 @@ export default async function OriginPage({
 
       {/* Every other origin board, crawlable from this one — see
           OriginLinks. */}
-      <div className="mt-2 border-t border-black/10 pt-4 dark:border-white/10">
+      <div className="mt-2 flex flex-col gap-4 border-t border-black/10 pt-4 dark:border-white/10">
         <OriginLinks exclude={code} />
+        <DestinationLinks />
       </div>
 
       <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted-foreground dark:border-white/10">

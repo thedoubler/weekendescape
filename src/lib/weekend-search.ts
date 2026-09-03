@@ -45,6 +45,15 @@ export interface WeekendSearchOptions {
   origins: string[];
   /** A single destination, for the cheapest-weekend lookup. */
   flyTo?: string | null;
+  /** With flyTo: keep EVERY weekend option instead of slicing to the single
+   *  cheapest — the destination pages want the whole season. */
+  flyToKeepAll?: boolean;
+  /** Kiwi's one_per_date: one (cheapest) result per departure date. The
+   *  destination pages pair one such call (the full weekend spine — measured
+   *  51 dates vs 31 without) with one plain call (origin variety), because
+   *  price-sorted rows otherwise drown in time-variants of the same cheap
+   *  weekends. */
+  onePerDate?: boolean;
   direct?: boolean;
   /** Holiday-anchored long weekends only. */
   bridgeMode?: boolean;
@@ -86,6 +95,8 @@ export interface WeekendSearchResult {
 export async function searchWeekends({
   origins,
   flyTo = null,
+  flyToKeepAll = false,
+  onePerDate = false,
   direct = false,
   bridgeMode = false,
   meetUp = false,
@@ -124,10 +135,13 @@ export async function searchWeekends({
     // true cheapest weekend for that destination.
     ...(flyTo ? { fly_to: flyTo, one_for_city: 0 } : { one_for_city: 1 }),
     ...(direct ? { max_stopovers: 0 } : {}),
+    ...(onePerDate ? { one_per_date: 1 } : {}),
     adults,
     sort: "price",
     curr: currency,
-    limit: 200,
+    // Destination pages keep the whole season across ~20 origins; the
+    // price-sorted default would truncate their weekend grid.
+    limit: flyToKeepAll ? 600 : 200,
     ...(maxPrice ? { price_to: maxPrice } : {}),
   };
 
@@ -136,7 +150,7 @@ export async function searchWeekends({
   // window) gets its own suffix so they cache independently.
   const cacheKeyBase = `weekends:${originsCacheKey(origins)}:${flyTo ?? ""}:${style}:${months}:${
     direct ? 1 : 0
-  }:${adults}:${maxPrice ?? ""}:${currency}:${dateFrom}`;
+  }:${adults}:${maxPrice ?? ""}:${currency}:${dateFrom}:${onePerDate ? "opd" : ""}`;
 
   async function searchDeals(
     overrides: Record<string, unknown>,
@@ -229,7 +243,7 @@ export async function searchWeekends({
     }
   } else {
     const mainDeals = await searchDeals({}, "main");
-    deals = flyTo ? mainDeals.slice(0, 1) : mainDeals;
+    deals = flyTo && !flyToKeepAll ? mainDeals.slice(0, 1) : mainDeals;
   }
 
   let homeRegionInfo: WeekendSearchResult["homeRegion"];
