@@ -156,6 +156,73 @@ export default async function OriginPage({
   const money = (n: number) =>
     new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
+  // Everything below derives from the search result this page ALREADY holds —
+  // the content-depth pass costs zero extra upstream calls by construction.
+  const monthName = (sat: string) =>
+    new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC" }).format(
+      Date.parse(sat)
+    );
+  // Cheapest month: the month whose best weekend fare is lowest.
+  const byMonth = new Map<string, number>();
+  for (const w of weekends) {
+    const m = w.sat.slice(0, 7);
+    byMonth.set(m, Math.min(byMonth.get(m) ?? Infinity, w.best.price));
+  }
+  const cheapestMonth = [...byMonth.entries()].sort((a, b) => a[1] - b[1])[0];
+  // "Most weekends have something under X": the median of per-weekend bests,
+  // rounded up to a clean number — a claim the list below visibly supports.
+  const prices = weekends.map((w) => w.best.price).sort((a, b) => a - b);
+  const median = prices[Math.floor(prices.length / 2)];
+  // The cities that keep being the weekend's cheapest — the regulars.
+  const cityCounts = new Map<string, number>();
+  for (const w of weekends)
+    cityCounts.set(w.best.cityTo, (cityCounts.get(w.best.cityTo) ?? 0) + 1);
+  const regulars = [...cityCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([c]) => c);
+  const listNames = (xs: string[]) =>
+    xs.length <= 1
+      ? (xs[0] ?? "")
+      : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+  const checkedOn = new Intl.DateTimeFormat("en", {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(fetchedAt);
+
+  // One array feeds both the visible FAQ and the FAQPage JSON-LD, so the
+  // schema can never claim something the page doesn't say. Every number in
+  // here is computed from today's data above; nothing is hand-written that
+  // could go stale. (Google rarely shows FAQ rich results for ordinary sites
+  // since 2023 — the schema is a freebie; the answers exist because they are
+  // the quotable, structured text assistants lift, and real content depth.)
+  const faq: { q: string; a: string }[] = [
+    {
+      q: `How cheap is a weekend flight from ${city}?`,
+      a: `Right now the cheapest is ${money(cheapest.price)} return to ${cheapest.cityTo}. Across the next six months, half of all weekends have a trip at ${money(median)} or less.`,
+    },
+    ...(cheapestMonth
+      ? [
+          {
+            q: `What is the cheapest month for a weekend trip from ${city}?`,
+            a: `${monthName(cheapestMonth[0] + "-15")}, where the best weekend fare is ${money(cheapestMonth[1])} return.`,
+          },
+        ]
+      : []),
+    {
+      q: `Where can you fly for a weekend from ${city}?`,
+      a: `${destinations} destinations in ${countries} countries have direct Friday-to-Sunday round trips in the months ahead. ${listNames(regulars)} come up as the cheapest most often.`,
+    },
+    {
+      q: `Do I need to take days off work?`,
+      a: `No. Every trip on this page leaves on Friday and returns on Sunday. For longer breaks, the live board has a Long weekends option that searches around public holidays instead.`,
+    },
+    {
+      q: `How fresh are these prices?`,
+      a: `This page was rebuilt on ${checkedOn} and refreshes daily. Fares are from Kiwi.com; the final price is always the one at checkout.`,
+    },
+  ];
+
 
   return (
     // The board's own wrapper, verbatim: same max width, same padding, same
@@ -196,6 +263,13 @@ export default async function OriginPage({
           {money(cheapest.price)}
         </span>{" "}
         return.
+        {cheapestMonth && (
+          <>
+            {" "}
+            {monthName(cheapestMonth[0] + "-15")} is the cheapest month, and{" "}
+            {listNames(regulars)} turn up as the best fare most often.
+          </>
+        )}
       </p>
 
       <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[15px] font-semibold tracking-tight tabular-nums">
@@ -235,6 +309,38 @@ export default async function OriginPage({
           Search live from {city}
         </Link>
       </div>
+
+      {/* The questions a searcher (or an assistant) actually has, answered
+          from today's data. Same array feeds the JSON-LD below. */}
+      <section className="mt-2 flex flex-col gap-4 border-t border-black/10 pt-5 dark:border-white/10">
+        <h2 className="text-base font-semibold tracking-tight">
+          Weekend flights from {city}: quick answers
+        </h2>
+        {faq.map((f) => (
+          <div key={f.q} className="flex flex-col gap-1">
+            <h3 className="text-sm font-semibold">{f.q}</h3>
+            <p className="max-w-prose text-sm leading-relaxed text-black/70 dark:text-white/70">
+              {f.a}
+            </p>
+          </div>
+        ))}
+      </section>
+      <script
+        type="application/ld+json"
+        // Built from the same array as the visible FAQ — local data, no user
+        // input, nothing injectable.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faq.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        }}
+      />
 
       {/* Every other origin board, crawlable from this one — see
           OriginLinks. */}
