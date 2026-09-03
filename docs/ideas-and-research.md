@@ -45,6 +45,19 @@ options` in `src/app/__tests__/page.test.tsx`.
 
 Roughly ordered by leverage. Items marked ✅ shipped this session.
 
+- [ ] **GBP for UK origin boards** (decided 2026-09-03, small). NOT a currency
+      selector — that was weighed and rejected: ranking is currency-invariant,
+      the automatic per-origin mapping already gives USD to US boards, and a
+      user toggle would double the cache/quota per origin for a preference
+      that changes no decision. The real gap: `currencyForOrigin` maps all of
+      Europe to EUR, so the LONDON board prices in euros for an audience that
+      thinks in pounds. Fix = map UK origins (LON, MAN, EDI…) to GBP in
+      `src/lib/currency.ts`, then verify £ formatting flows through cards,
+      the price filter buckets, and /from/lon's opener + FAQ. Same one search
+      per origin, no cache growth. CHF/PLN/SEK are candidates for the same
+      treatment later if those markets grow; RON deliberately not — Romanian
+      deal culture quotes EUR.
+
 ### Highest leverage
 1. **Make the new data actionable** — weather, airport-distance, and airline are
    currently *display only*. Turn them into filters/sorts: "warmest & driest
