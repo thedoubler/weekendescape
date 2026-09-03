@@ -73,6 +73,40 @@ export const ORIGIN_PAGES: { code: string; city: string }[] = [
   { code: "VLC", city: "Valencia" },
   { code: "PMI", city: "Palma de Mallorca" },
   { code: "IBZ", city: "Ibiza" },
+  // Beyond Europe (added by request): metro codes where one exists, so the
+  // page covers every airport the city flies from. Weekend shape stays
+  // Fri–Sun — honest everywhere here (Dubai moved to a Sat–Sun weekend in
+  // 2022; origins whose weekend genuinely differs, like Tel Aviv, are
+  // deliberately absent until per-country weekends ship).
+  { code: "NYC", city: "New York" },
+  { code: "MIA", city: "Miami" },
+  { code: "LAX", city: "Los Angeles" },
+  { code: "SFO", city: "San Francisco" },
+  { code: "CHI", city: "Chicago" },
+  { code: "BOS", city: "Boston" },
+  { code: "YTO", city: "Toronto" },
+  { code: "YVR", city: "Vancouver" },
+  { code: "MEX", city: "Mexico City" },
+  { code: "SAO", city: "São Paulo" },
+  { code: "BUE", city: "Buenos Aires" },
+  { code: "BOG", city: "Bogotá" },
+  { code: "SCL", city: "Santiago" },
+  { code: "LIM", city: "Lima" },
+  { code: "TYO", city: "Tokyo" },
+  { code: "SEL", city: "Seoul" },
+  { code: "SIN", city: "Singapore" },
+  { code: "BKK", city: "Bangkok" },
+  { code: "HKG", city: "Hong Kong" },
+  { code: "DXB", city: "Dubai" },
+];
+
+// The homepage footer's curated mix — Europe still leads (it is the
+// audience), with the world represented rather than buried below the fold of
+// a 24-link alphabet. Origin pages and /about keep the full list.
+export const FEATURED_HOME = [
+  "LON", "PAR", "AMS", "MAD", "BCN", "ROM", "MIL", "BER", "MUC", "VIE",
+  "ZRH", "BRU", "CPH", "DUB", "LIS", "ATH", "PRG", "BUD", "WAW", "OTP",
+  "NYC", "MIA", "YTO", "MEX", "SAO", "BUE", "TYO", "SIN", "BKK", "DXB",
 ];
 
 const BY_CODE = new Map(ORIGIN_PAGES.map((o) => [o.code, o.city]));

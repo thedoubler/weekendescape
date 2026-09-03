@@ -45,6 +45,7 @@ import { CalendarDialog } from "@/components/CalendarDialog";
 import { Masthead } from "@/components/Masthead";
 import { AboutDialog } from "@/components/AboutDialog";
 import { OriginLinks } from "@/components/OriginLinks";
+import { FEATURED_HOME } from "@/lib/origin-pages";
 // Dev-only. The runtime cost was already nil without ?debug=overflow, but the
 // component still shipped in every visitor's JS; the constant lets the bundler
 // drop it from the production build entirely.
@@ -1484,7 +1485,7 @@ export default function Home() {
           site's indexable surface and used to be linked from nowhere. A
           SUBSET here; each origin page links the full set. */}
       <div className="border-t border-black/[0.07] pt-4 dark:border-white/10">
-        <OriginLinks limit={24} />
+        <OriginLinks codes={FEATURED_HOME} />
       </div>
 
       <footer className="mt-2 flex flex-col items-center gap-2 border-t border-black/10 pt-4 text-center text-xs leading-relaxed text-muted-foreground dark:border-white/10">

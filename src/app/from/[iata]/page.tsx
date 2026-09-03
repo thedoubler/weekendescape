@@ -215,7 +215,10 @@ export default async function OriginPage({
     },
     {
       q: `Do I need to take days off work?`,
-      a: `No. Every trip on this page leaves on Friday and returns on Sunday. For longer breaks, the live board has a Long weekends option that searches around public holidays instead.`,
+      // "Perhaps" is the honest word (the owner's correction): the shape
+      // protects the work week, but a midday Friday departure still costs an
+      // afternoon.
+      a: `Usually not: every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact. An early Friday departure can still mean leaving work after lunch, so check the times on the card. For longer breaks, the live board has a Long weekends option that searches around public holidays.`,
     },
     {
       q: `How fresh are these prices?`,

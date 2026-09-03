@@ -1,5 +1,7 @@
 import { ORIGIN_PAGES } from "@/lib/origin-pages";
 
+const BY_CODE = new Map(ORIGIN_PAGES.map((o) => [o.code, o]));
+
 // The crawl graph, made visible. The origin boards are the site's indexable
 // surface, and until this existed they were islands: nothing linked between
 // them and the homepage linked to none of them. A crawler (or an LLM
@@ -8,17 +10,18 @@ import { ORIGIN_PAGES } from "@/lib/origin-pages";
 // No "use client": plain markup, so it lands in the PRERENDERED HTML of the
 // board page too — which is the whole point.
 export function OriginLinks({
-  limit,
+  codes,
   exclude,
 }: {
-  /** Cap the list (the homepage shows a subset; origin pages show all). */
-  limit?: number;
+  /** A curated subset in display order (the homepage's mix); omit for all. */
+  codes?: string[];
   /** The current page's own code — a page linking to itself is noise. */
   exclude?: string;
 }) {
-  const shown = ORIGIN_PAGES.filter(
-    (o) => o.code !== exclude?.toUpperCase()
-  ).slice(0, limit);
+  const base = codes
+    ? codes.map((c) => BY_CODE.get(c)).filter((o): o is NonNullable<typeof o> => !!o)
+    : ORIGIN_PAGES;
+  const shown = base.filter((o) => o.code !== exclude?.toUpperCase());
   return (
     <nav
       aria-label="Weekend boards for other airports"
