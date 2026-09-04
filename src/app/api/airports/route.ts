@@ -103,7 +103,11 @@ export async function GET(request: NextRequest) {
     interface TequilaLocation {
       code?: string;
       name?: string;
-      city?: { name?: string };
+      // For location_types=airport the country hangs off the CITY object —
+      // airport → city → country. The top-level `country` only exists on
+      // city/country location types, which this route never requests; reading
+      // it here is why every suggestion shipped with country: "".
+      city?: { name?: string; country?: { name?: string } };
       city_name?: string;
       country?: { name?: string };
       country_name?: string;
@@ -115,7 +119,8 @@ export async function GET(request: NextRequest) {
       code: a.code,
       name: a.name,
       city: a.city?.name ?? a.city_name ?? "",
-      country: a.country?.name ?? a.country_name ?? "",
+      country:
+        a.city?.country?.name ?? a.country?.name ?? a.country_name ?? "",
     }));
 
     return NextResponse.json(
