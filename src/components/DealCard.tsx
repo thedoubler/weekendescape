@@ -444,21 +444,34 @@ export function DealCard({
           onClick={toggleOpen}
           className="min-w-0 flex-1 text-left"
         >
-          <div className="flex min-w-0 items-baseline gap-2">
+          <div
+            className={`flex min-w-0 items-baseline gap-x-2 ${open ? "flex-wrap" : ""}`}
+          >
             <span className="shrink-0 text-xl leading-tight" aria-hidden>
               {deal.flag}
             </span>
-            {/* ONE line, boxed. The wrap-and-clamp version let a long country
-                spill under the city ("Edinburgh United / Kingdom", and with
-                overflow-wrap:anywhere even mid-word) into the row below —
-                reported on the phone board. Now the city truncates with an
-                ellipsis and the country keeps a nowrap box capped at 45% of
-                the row, so neither can ever start a second line. */}
-            <span className="min-w-0 truncate text-lg font-semibold leading-tight">
+            {/* Collapsed: ONE line, boxed. The wrap-and-clamp version let a
+                long country spill under the city ("Edinburgh United /
+                Kingdom", and with overflow-wrap:anywhere even mid-word) into
+                the row below — reported on the phone board. So while browsing,
+                the city truncates and the country keeps a nowrap box capped
+                at 45% of the row, and neither can start a second line.
+                OPEN: the boxes come off — full names, wrapping if they must,
+                because an expanded card is tall and a second header line just
+                pushes content down instead of colliding with the strip. */}
+            <span
+              className={`min-w-0 text-lg font-semibold leading-tight ${
+                open ? "" : "truncate"
+              }`}
+            >
               {deal.cityTo}
             </span>
             {deal.countryTo && (
-              <span className="max-w-[45%] shrink-0 truncate text-sm font-normal text-muted-foreground">
+              <span
+                className={`text-sm font-normal text-muted-foreground ${
+                  open ? "" : "max-w-[45%] shrink-0 truncate"
+                }`}
+              >
                 {deal.countryTo}
               </span>
             )}
