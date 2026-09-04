@@ -45,6 +45,20 @@ options` in `src/app/__tests__/page.test.tsx`.
 
 Roughly ordered by leverage. Items marked ✅ shipped this session.
 
+- [ ] **"Experiences" / micro-personalization direction (owner's idea,
+      2026-09-04 — research commissioned, decision pending).** The concept:
+      users onboard with preferences (trip shape — long weekends vs strict
+      Fri–Sun; interests — city breaks, live music, etc.) and the product
+      proactively surfaces PAID-FOR experiences anchored to real events:
+      "Jay-Z in London in two weeks, here's the cheap weekend around it."
+      Bookings stay on third parties (no payment integration, probably);
+      the open question is what users pay for and how. Needs: accounts +
+      an email/notification channel (the site has neither today — that is
+      the biggest architectural break with the current no-accounts ethos),
+      an event-data source, and a personalization layer. Two research
+      agents dispatched (business analysis; product/technical feasibility);
+      their findings + the objective synthesis land in this file when done.
+
 - [ ] **GBP for UK origin boards** (decided 2026-09-03, small). NOT a currency
       selector — that was weighed and rejected: ranking is currency-invariant,
       the automatic per-origin mapping already gives USD to US boards, and a
