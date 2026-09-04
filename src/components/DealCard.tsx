@@ -444,18 +444,24 @@ export function DealCard({
           onClick={toggleOpen}
           className="min-w-0 flex-1 text-left"
         >
-          <div className="flex items-start gap-2">
-            <span className="text-xl leading-tight" aria-hidden>
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="shrink-0 text-xl leading-tight" aria-hidden>
               {deal.flag}
             </span>
-            <span className="text-lg font-semibold leading-tight [overflow-wrap:anywhere] line-clamp-2">
+            {/* ONE line, boxed. The wrap-and-clamp version let a long country
+                spill under the city ("Edinburgh United / Kingdom", and with
+                overflow-wrap:anywhere even mid-word) into the row below —
+                reported on the phone board. Now the city truncates with an
+                ellipsis and the country keeps a nowrap box capped at 45% of
+                the row, so neither can ever start a second line. */}
+            <span className="min-w-0 truncate text-lg font-semibold leading-tight">
               {deal.cityTo}
-              {deal.countryTo && (
-                <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-                  {deal.countryTo}
-                </span>
-              )}
             </span>
+            {deal.countryTo && (
+              <span className="max-w-[45%] shrink-0 truncate text-sm font-normal text-muted-foreground">
+                {deal.countryTo}
+              </span>
+            )}
           </div>
           <div className="mt-0.5 text-xs">
             <span className="font-medium text-black/70 dark:text-white/70">

@@ -386,13 +386,25 @@ export function AirportInput({
                 e.preventDefault();
                 choose(s);
               }}
-              className={`min-h-11 cursor-pointer px-3 py-2.5 text-sm ${
+              // One line per suggestion, always. As inline spans the row used
+              // to wrap once country names landed (AMS · Amsterdam Schiphol ·
+              // Netherlands), spilling a fragment under the airport name. Flex
+              // instead: the NAME is the truncatable part (min-w-0), the code
+              // and country never break — though a marathon country still caps
+              // at half the row so the name can't be squeezed to nothing.
+              className={`flex min-h-11 cursor-pointer items-baseline px-3 py-2.5 text-sm ${
                 i === active ? "bg-black/5 dark:bg-white/10" : ""
               }`}
             >
-              <span className="font-medium">{s.code}</span>
-              <span className="opacity-70"> · {s.city || s.name}</span>
-              {s.country && <span className="opacity-45"> · {s.country}</span>}
+              <span className="shrink-0 font-medium">{s.code}</span>
+              <span className="min-w-0 truncate opacity-70">
+                &nbsp;· {s.city || s.name}
+              </span>
+              {s.country && (
+                <span className="max-w-[50%] shrink-0 truncate opacity-45">
+                  &nbsp;· {s.country}
+                </span>
+              )}
             </li>
           ))}
         </ul>
