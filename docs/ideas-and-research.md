@@ -436,6 +436,30 @@ shrink to badges on covered cities only.
   artist-level data source to do "artist X" properly. **Do not start until
   B's numbers say so.**
 
+### Broadening (owner, 2026-09-04): reason-anchored, not concert-anchored
+
+The board answers *when and where is cheap*; this direction answers *why go*.
+The anchor is any time-bound reason to fly — an exhibition on loan, a
+conference, a football match, a food festival, a marathon — not just concerts.
+"Cheap weekend" + "a reason that expires" is the full pitch. The architecture
+is unchanged (an "on that weekend" layer joined on city + weekend works for
+any event type); what changes per vertical is the data problem:
+
+| Vertical | Data | Automation |
+|---|---|---|
+| Concerts, sports, theatre, family | Ticketmaster segments | API (rung ① gets 4 verticals free) |
+| Conferences | no open API; PredictHQ paid; 10times scrape-shaped | hardcode ~50 big recurring ones (Web Summit, MWC, IFA…) like the festivals |
+| Exhibitions / museums | no API exists anywhere | hand-curate ~20 blockbuster shows per season — a differentiator *because* it can't be scraped |
+| Food festivals, races | mixed | research pending |
+
+The interest taxonomy users would onboard with (music, sports, art,
+conferences, food) is really this table — a list of data sources of
+descending automation. Personalization ("I'm a museum fan") only becomes
+meaningful once several verticals exist to filter between. A dedicated
+research pass on the non-concert verticals (sources, affiliate paths, demand
+evidence, fixture-list copyright for football) ran 2026-09-04 — findings
+below when in.
+
 ### Honest risks
 
 - Cold start: personalization would personalize for nobody — zero users, zero
