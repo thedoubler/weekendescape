@@ -55,9 +55,14 @@ Roughly ordered by leverage. Items marked ✅ shipped this session.
       the open question is what users pay for and how. Needs: accounts +
       an email/notification channel (the site has neither today — that is
       the biggest architectural break with the current no-accounts ethos),
-      an event-data source, and a personalization layer. Two research
-      agents dispatched (business analysis; product/technical feasibility);
-      their findings + the objective synthesis land in this file when done.
+      an event-data source, and a personalization layer. **Research done
+      2026-09-04 — see "Experiences / event-anchored weekends — synthesis"
+      below. Verdict: later-bet on the paywall, now-bet on the anchor.
+      Build order: (1) event-anchored tour pages + "events that weekend"
+      on destination pages (no accounts, days of work), (2) weekly
+      gig-trips email on a hosted newsletter (tests proactive demand),
+      (3) fake-door €49/yr price test inside that email; accounts and
+      personalization only if (2)–(3) earn it.**
 
 - [ ] **GBP for UK origin boards** (decided 2026-09-03, small). NOT a currency
       selector — that was weighed and rejected: ranking is currency-invariant,
@@ -305,19 +310,156 @@ Tie this to the still-open default-posture decision above.
 
 ---
 
+## Experiences / event-anchored weekends — synthesis (2026-09-04)
+
+Two research agents ran on the owner's "micro-personalization experiences" idea
+(one on the business side, one on product/technical feasibility). This is the
+objective synthesis; the load-bearing numbers were web-verified 2026-09-04.
+
+### The verdict
+
+**Later-bet on the paywall, now-bet on the anchor.** Demand for event-anchored
+weekend travel is the best-evidenced trend in the research; the asset-light
+affiliate version of it is genuinely unoccupied. But everything the category
+demonstrably charges for — alert scope and speed, backed by a trusted brand —
+is what weekend.flights doesn't have yet (no list, no brand, pre-traffic).
+Building accounts, onboarding and personalization now would be building the
+paywall before the queue. Build the event *anchor* into the free product first;
+test paid *push* with zero new architecture; only then decide on accounts.
+
+### What people actually pay for in this category (verified pricing)
+
+- Going $49–199/yr (historical free→paid conversion 10–12% — the category's
+  best published number, earned over a decade); Jack's Flight Club ~£48/yr
+  (Travelzoo filings: ~$5M/yr, premium subs **flat** YoY); Thrifty Traveler
+  $129–190/yr; Pomelo $49/yr selling literally a 30–60-min head start;
+  Dollar Flight Club perpetually discounted to lifetime deals (weak retention
+  signal); Secret Flying **retreated from paid tiers back to free** (Jan 2026).
+- Paywalls sell, in order: volume/scope gating, timeliness (SMS, head starts),
+  and a savings-ROI story ("$550 saved vs $49/yr"). **Personalization appears
+  only as a retention feature (2025 vintage), never as the thing that
+  converts.** Nobody has demonstrated WTP for personalization itself.
+- Benchmarks: median free→paid newsletter conversion 0.62% (beehiiv); freemium
+  ~4%; paid-sub churn 3–5%/mo.
+
+### Demand for event-anchored travel is real (five independent sources)
+
+Expedia Unpack '24 (30% would travel because tickets are cheaper elsewhere);
+Skyscanner "Gig Tripping" (44% would fly short-haul for an artist; 60% would
+consider overseas if it saved money); Booking.com 2025 (60% plan trips around
+entertainment/sport); Amadeus/YouGov (44–49% of Brits/Germans/Spaniards have
+travelled for a concert). Natural experiment: the Oasis '25 announcement —
+eDreams flight searches +30x in a day, satellite-town Airbnb searches +7,500%
+(fans priced out of host cities booking the cheap weekend around the event —
+exactly this product's shape). Eras-tour fare arbitrage was documented, not
+folklore (NYC→Stockholm all-in $1,300 vs $2k–8.5k US resale).
+
+**Festicket died (2022, £22.5M owed) of merchant-of-record working capital —
+spending ticket money as float — not of absent demand.** Same for Pollen
+(~$200M raised). Our stated constraint (bookings stay on third parties) is
+precisely the immunity to what killed them. Today's event-travel packagers are
+all rightsholders selling their own inventory (Live Nation's Vibee, On
+Location/IOC, Ticketmaster Travel); the independent affiliate "cheapest
+weekend around this event" aggregator **does not exist**. No flight-deal
+incumbent has shipped it either — though they're circling (Kayak's Apr-2026 AI
+launch framed around World Cup trips; Mindtrip shipped Events Dec 2025;
+Expedia acquired Layla Jul 2026). A solo founder wins a wedge race
+(origin-anchored + weekend-shaped + cheap), not a feature race.
+
+### Business models, ranked
+
+1. **Affiliate stacking — the correct near-term model.** Realistic per-trip
+   affiliate stack ≈ €8–12 (flight 3% + hotel 4% + GetYourGuide 8% + ticket
+   ~1%); at blended €0.40 eCPC: 10k MAU ≈ €6–9k/yr, 100k ≈ €60–90k/yr.
+   Caveats that must hold: Booking.com culled all affiliates under ~€1k/mo in
+   June 2025; Kiwi's Tequila closed to new self-serve keys in May 2024 (our
+   key is grandfathered — a real concentration risk, Travelpayouts 3% is the
+   fallback); Ticketmaster pays ~1% and **zero on presales + first 24h of
+   onsale** — exactly the hot drops an alert product would surface.
+2. **Freemium subscription (€49/yr anchor) — right long-term, wrong first.**
+   1k free users × 2–4% new-brand conversion = €1–2k/yr; viable solo business
+   at 30–50k subscribers. Worthless before a list exists.
+3. **Pay-per-experience curation fee — skip.** Micropayment friction against a
+   googleable free alternative, zero precedent in the niche; Secret Flying's
+   retreat shows even recurring paywalls on replicable curation collapse.
+4. **B2B/API — year-2+ optionality, not a bet.** Real money exists (Hopper is
+   ~90% B2B) but it's a sales business, and PredictHQ owns event-demand data.
+
+### Data source (feasibility agent's finding, supersedes the stale note below)
+
+**Ticketmaster Discovery API is the one sanctioned stack**: free self-serve
+key, 5,000 calls/day (budget 2 req/s), and its ToS carve-out for monetization
+IS the affiliate program (Impact publisher ID attached to API deep links —
+~1%, 30-day cookie). Coverage is broader than our 2026 note below claimed —
+the Discovery Feed list now includes **IT, FR, CZ, CH, TR** alongside
+GB/IE/DE/ES/NL/AT/BE/DK/FI/NO/PL/SE; still missing PT, GR, HR, HU, RO
+(hardcode the famous recurring festivals there, as already planned).
+**Skiddle** is the UK bolt-on: free API, affiliate pays **30% of Skiddle's
+revenue** — worth wiring for the London/Edinburgh boards specifically.
+Dead ends re-verified: Songkick closed to new apps; Bandsintown events-by-city
+requires a partnership (artist-scoped keys don't cover our use); DICE/RA have
+no official APIs; PredictHQ is pay-to-play with no revenue back; SeatGeek is
+US/CA-heavy.
+
+Matching fits the stack as-is: one range-fetch per destination city per day
+through the existing `cached()`/KV tier, keyed `events:{city}:{dateFrom}`,
+24h TTL (inside TM's "reasonable period" caching clause), sliced into the
+same `weekendKey` the destination pages already join on. ~37–110 calls/day =
+2–4% of quota. Precondition unchanged: run the hit-rate validation script
+first (below); if fewer than ~10 of the top 15 destinations return events,
+shrink to badges on covered cities only.
+
+### The build ladder
+
+- **Rung A (build: S–M, zero architectural break): event anchor in the free
+  product.** (1) ~10 hand-picked event-anchored pages for big 2026–27
+  European tours/sport: "See [artist] in [3 cities] — cheapest weekend around
+  each date, from your airport" — existing search + Discovery links with
+  Impact tracking; monetizes immediately, generates the SEO traffic every
+  later option needs. (2) An "On that weekend" line on destination-page cards
+  + genre badges, degrading to nothing where coverage is thin (same honesty
+  rule as ThingsToDo). Analytics already in place to measure whether
+  event-flagged weekends convert better.
+- **Rung B (S infra, M recurring): weekly "gig-trips from your airport"
+  email** on a hosted newsletter (beehiiv/Buttondown — GDPR handled, no
+  accounts; or Resend Broadcasts $0–20/mo). Email + home airport only; the
+  unsubscribe link is the entire account system. Open/click rates are the
+  whole experiment. Preferences, if any, stay in localStorage
+  (`home-storage.ts` exists for exactly this).
+- **The price test (hours):** a fake-door inside that email — "get these 3
+  days early + every artist, €49/yr" → waitlist. Above ~2% of the list =
+  green light; the 0.62% newsletter median is the floor to beat.
+- **Rung C (L): accounts + preference alerts.** Magic-link auth on
+  Workers/D1/KV is cheap in infra (email $0–20/mo at 10k subs via Resend —
+  note MailChannels' free Workers path is dead since Aug 2024) but expensive
+  in surface: auth, deliverability ops, GDPR, and a paid/partner-gated
+  artist-level data source to do "artist X" properly. **Do not start until
+  B's numbers say so.**
+
+### Honest risks
+
+- Cold start: personalization would personalize for nobody — zero users, zero
+  preference data; no published proof preference-onboarding beats price-led
+  browsing on conversion (Skift 2025: 95% *say* it matters, 14% deliver).
+- The no-accounts ethos is a brand asset; rung C spends it. That's a decision,
+  not a default.
+- Kiwi single-source concentration is a bigger existential risk than anything
+  in this idea — the provider-ladder TODO above matters more.
+
+---
+
 ## Events integration (concerts / festivals)
 
 Goal: "Oktoberfest is on during your trip" — pairs with the holiday feature and
 makes a weekend *worth* booking.
 
 ### Ticketmaster Discovery API — **free**, but partial for us
-- Free with registration: ~5,000 calls/day, 5 req/sec. Query by city + date range.
-- **European coverage:** AT, BE, DE, DK, ES, FI, FR, GB, IE, NL, NO, PL, SE.
-- **Gap:** Italy, Portugal, Greece, Croatia, Czechia, Hungary, Romania and most
-  of Southern/Eastern Europe — i.e. many prime weekend spots (Rome, Lisbon,
-  Porto, Athens, Split, Prague, Budapest) return nothing.
-- **Verdict:** good as a *bonus* "what's on" section for northern/western cities;
-  don't build a core feature on it given the Southern-Europe gaps.
+*(Coverage note SUPERSEDED 2026-09-04 by the synthesis above: the Discovery
+Feed list now includes IT, FR, CZ, CH, TR too; still missing PT, GR, HR, HU,
+RO. Rate is 2 req/s per the current FAQ, not 5.)*
+- Free with registration: ~5,000 calls/day. Query by city + date range.
+- **Verdict:** good enough to build the "what's on" layer on — with hardcoded
+  famous festivals covering the remaining Southern/Eastern-Europe gaps.
 
 ### PredictHQ — **paid** (free trial only)
 - Global coverage, attendance forecasts, festivals, "is this weekend busy".
