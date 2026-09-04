@@ -445,20 +445,36 @@ conference, a football match, a food festival, a marathon — not just concerts.
 is unchanged (an "on that weekend" layer joined on city + weekend works for
 any event type); what changes per vertical is the data problem:
 
-| Vertical | Data | Automation |
-|---|---|---|
-| Concerts, sports, theatre, family | Ticketmaster segments | API (rung ① gets 4 verticals free) |
-| Conferences | no open API; PredictHQ paid; 10times scrape-shaped | hardcode ~50 big recurring ones (Web Summit, MWC, IFA…) like the festivals |
-| Exhibitions / museums | no API exists anywhere | hand-curate ~20 blockbuster shows per season — a differentiator *because* it can't be scraped |
-| Food festivals, races | mixed | research pending |
-
 The interest taxonomy users would onboard with (music, sports, art,
-conferences, food) is really this table — a list of data sources of
-descending automation. Personalization ("I'm a museum fan") only becomes
-meaningful once several verticals exist to filter between. A dedicated
-research pass on the non-concert verticals (sources, affiliate paths, demand
-evidence, fixture-list copyright for football) ran 2026-09-04 — findings
-below when in.
+conferences, food) is really a list of data sources of descending automation.
+Personalization ("I'm a museum fan") only becomes meaningful once several
+verticals exist to filter between. A dedicated research pass on the
+non-concert verticals ran 2026-09-04; verdict table (claims web-verified):
+
+| Vertical | Best source | Automation | Affiliate | Demand | Call |
+|---|---|---|---|---|---|
+| Concerts, sports, theatre, family | Ticketmaster segments | API | Impact ~1% | strong | rung ① |
+| **Football fixtures** | football-data.org free tier (CL + big-five leagues, future kickoffs, "free forever") | **API** | **yes** — P1 Travel (official reseller for Barça/Real/PSG/ManU, Partnerize) or Sports Events 365 (8%, 45-day cookie); **never viagogo/StubHub for FR/IT** (criminal in France, €3.7M fine in Italy) | strong (football = 37.6% of a $646B sports-tourism market; VisitBritain: match-goers spend £909 vs £696 avg) | **rung ① include** |
+| **Museum blockbusters** | none exists — manual curation from the January roundups (Time Out/Euronews name ~15–20 trip-worthy shows/season, hours per quarter); e-flux's undocumented JSON API for monitoring only; Artsy API is being retired | **curated** | none verified (check Tiqets/GYG museum tickets) | strong per-event (Vermeer '23: 650k from 113 countries; Bayeux at the BM: £2.5M tickets day one, 9-hour queues) | **curated layer — include** |
+| **Marathons / races** | hand-curate the ~50 flagship European city races; Ahotu/WSG is partnership-gated but warm ("80% of our bookings are international participants"); Let's Do This has a real API, UK-strong | curated → partnership | grey — negotiable with Ahotu; none self-serve | strongest trend of any vertical (Valencia '24: 63% of 32k runners international, €39.9M; Berlin: €469M in 4 days; Airbnb×Strava "run-cation" campaign Oct 2025). Ballot results (London: 1.33M applicants, ~7%) land 5–6 months out — exactly our search horizon | **curated layer — include** |
+| Food/cultural festivals | hand list of ~50 rule-computable annuals (Oktoberfest = Sat after Sep 15…); DZT (DE) + DATAtourisme (FR) open APIs for depth later | hardcode | none | medium | ride along in the curated table |
+| Conferences / fairs | AUMA .ics (3,500 fairs, reuse needs a request) + confs.tech (tech only); 10times has no API, Eventbrite discovery dead since 2020 | partial | **none, confirmed** | weak as B2C reason-to-fly; strong **inverted**: MWC weeks spike Barcelona hotels +27.7% ADR | **skip** — revisit as a "why is this weekend expensive" warning layer |
+
+Legal note (football): CJEU *Football Dataco v Yahoo!* (C-604/10, 2012)
+killed database copyright on fixture lists; Stats Perform's own FDC terms say
+no licence is needed in EU member states. UK post-Brexit is the residual
+grey. "Barcelona at home Sat 20:00" is about as low-risk as sports data gets.
+
+Competitor check: nobody joins "what's on" to FLIGHTS. Fever/Time Out are
+local-only; GetYourGuide/Viator sell undated activities; Skyscanner/Kayak/
+Google Explore are price-only; the two who packaged events+travel (Festicket,
+Pollen) died holding inventory and payments — the opposite of our overlay.
+
+**First "on that weekend" layer = Ticketmaster's four segments (API) +
+football fixtures (API) + one curated table (blockbuster shows, flagship
+races, famous festivals).** Open follow-ups: football-data.org attribution
+terms (their /terms 404s), AUMA + Ahotu partnership emails, Tiqets/GYG
+exhibition-ticket affiliate check.
 
 ### Honest risks
 
