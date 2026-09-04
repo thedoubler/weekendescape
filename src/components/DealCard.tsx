@@ -9,7 +9,6 @@ import { type WeatherResult, packingCue } from "@/lib/weather";
 import type { WeekendStyle } from "@/lib/weekend";
 import { CheapestWeekend } from "@/components/CheapestWeekend";
 import ThingsToDo from "@/components/ThingsToDo";
-import CityPhoto from "@/components/CityPhoto";
 import PlaceLinks from "@/components/PlaceLinks";
 import {
   timeLabel,
@@ -958,7 +957,6 @@ export function DealCard({
               <SectionLabel>In {deal.cityTo}</SectionLabel>
               <PlaceLinks city={deal.cityTo} country={deal.countryTo} />
             </div>
-            <CityPhoto city={deal.cityTo} country={deal.countryTo} />
           {weatherLoading && !weather && (
             // Two bars: the resolved row is always two lines, so a one-line
             // skeleton would still reflow the panel when it lands.
