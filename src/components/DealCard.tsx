@@ -519,8 +519,11 @@ export function DealCard({
               question. Meet-up answers it better: the per-person rows name
               every origin, so a single "from CLJ" here would just crown one. */}
           {showOrigin && !deal.meetup && (
-            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              from {deal.flyFrom}
+            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] whitespace-nowrap text-muted-foreground">
+              {/* City first, code in brackets — "FROM MAD" alone assumed the
+                  reader speaks IATA (owner's report, Marrakesh page). Same
+                  vocabulary as the open panel's "From Madrid (MAD)". */}
+              from {deal.cityFrom ? `${deal.cityFrom} (${deal.flyFrom})` : deal.flyFrom}
             </div>
           )}
           {/* Meet-up: the headline is the whole party's total (see meetup.ts),
