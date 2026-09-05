@@ -216,10 +216,10 @@ export default async function OriginPage({
     },
     {
       q: `Do I need to take days off work?`,
-      // "Perhaps" is the honest word (the owner's correction): the shape
-      // protects the work week, but a midday Friday departure still costs an
-      // afternoon.
-      a: `Usually not: every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact. An early Friday departure can still mean leaving work after lunch, so check the times on the card. For longer breaks, the live board has a Long weekends option that searches around public holidays.`,
+      // "It depends" is the honest opener (the owner's correction, twice
+      // refined): this PAGE is strict Fri to Sun, but the live board also
+      // sells Thu-Mon shapes and bridge-day hunts, and those cost leave.
+      a: `It depends on the weekend you pick. Every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact, though an early Friday departure can still mean leaving work after lunch. On the live board you can also choose Long weekends (Thursday to Monday shapes) or hunt bridge days around public holidays, and those do cost a day or two of leave.`,
     },
     {
       q: `How fresh are these prices?`,

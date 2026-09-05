@@ -150,7 +150,7 @@ export default async function DestinationPage({
     },
     {
       q: `Do I need to take days off work?`,
-      a: `Usually not: every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact. An early Friday departure can still mean leaving work after lunch, so check the times on the card.`,
+      a: `It depends on the weekend you pick. Every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact, though an early Friday departure can still mean leaving work after lunch. On the live board you can also choose Long weekends (Thursday to Monday shapes) or hunt bridge days around public holidays, and those do cost a day or two of leave.`,
     },
     {
       q: `How fresh are these prices?`,
