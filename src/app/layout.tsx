@@ -21,7 +21,7 @@ const title = `${SITE_NAME} — cheapest weekend flights`;
 // bridge-day hunting, meet-up mode. The generic one-liner sold none of what
 // makes this board different from a search engine.
 const description =
-  "Cheapest weekend round trips from your home airport — one per weekend, six months ahead. Hunt bridge-day long weekends, or meet a friend flying from another city.";
+  "Cheapest weekend round trips from your home airport, one per weekend for six months ahead. Hunt bridge-day long weekends, or meet a friend flying from another city.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
