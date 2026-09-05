@@ -17,8 +17,11 @@ const instrumentSerif = Instrument_Serif({
 
 import { siteUrl, SITE_NAME } from "@/lib/site";
 const title = `${SITE_NAME} — cheapest weekend flights`;
+// ~160 chars, and every clause is a real feature: the one-per-weekend board,
+// bridge-day hunting, meet-up mode. The generic one-liner sold none of what
+// makes this board different from a search engine.
 const description =
-  "Find the cheapest weekend round-trips from your home airport.";
+  "Cheapest weekend round trips from your home airport — one per weekend, six months ahead. Hunt bridge-day long weekends, or meet a friend flying from another city.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -53,6 +56,14 @@ const jsonLd = {
   applicationCategory: "TravelApplication",
   operatingSystem: "Any",
   browserRequirements: "Requires JavaScript.",
+  // Still minimal and truthful — each entry is a shipped, user-facing mode,
+  // named in the product's own words.
+  featureList: [
+    "Cheapest fare for every weekend, six months ahead",
+    "Bridge-day long weekend hunting around public holidays",
+    "Meet-up search: two or three cities, one destination, same weekend",
+    "Search up to three home airports at once",
+  ],
 };
 
 export default function RootLayout({
