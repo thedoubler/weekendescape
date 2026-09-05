@@ -1,0 +1,1 @@
+weekend.flights: a glowing calendar with the weekend lit up and a plane departing from Friday.

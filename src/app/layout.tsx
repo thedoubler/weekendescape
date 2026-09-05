@@ -29,7 +29,11 @@ export const metadata: Metadata = {
   description,
   applicationName: SITE_NAME,
   alternates: { canonical: "/" },
-  // og:image / twitter:image are added automatically from src/app/opengraph-image.tsx
+  // og:image / twitter:image are added automatically from
+  // src/app/opengraph-image.jpg — a designed static card (the glass calendar
+  // with the weekend lit and a plane departing Friday), which replaced the
+  // satori-rendered component: the design uses glow, gradients and 3D
+  // transforms satori cannot express, and a static file cannot 500.
   openGraph: {
     title,
     description,
