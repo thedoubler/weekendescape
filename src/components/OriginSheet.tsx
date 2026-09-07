@@ -4,6 +4,27 @@ import { useEffect, useRef } from "react";
 import { AirportInput } from "@/components/AirportInput";
 import { MAX_ORIGINS, addOrigin, removeOrigin } from "@/lib/origins";
 
+// Inline Lucide (currentColor), same dialect as DealCard's icons.
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 // The one control that could not become a facet. Weekend length, stops and
 // adults are each a short list of values, so they fit in a popover; the origin
 // needs a text field, autocomplete, up to three chips and a location prompt —
@@ -190,10 +211,14 @@ export function OriginSheet({
             />
             <span className="flex flex-col gap-0.5">
               <span
-                className={`text-sm font-medium ${
+                className={`inline-flex items-center gap-1.5 text-sm font-medium ${
                   origins.length >= 2 ? "" : "text-muted-foreground"
                 }`}
               >
+                {/* The mode's mark: two people, because the mode is about
+                    who's coming, not where. Same glyph on the receipt's
+                    "meeting up" chip, so the pair reads as one feature. */}
+                <UsersIcon className="h-4 w-4" />
                 Meet up
               </span>
               <span className="text-[12.5px] leading-snug text-muted-foreground">
