@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   description,
   applicationName: SITE_NAME,
   alternates: { canonical: "/" },
+  // Bing Webmaster Tools — the meta twin of public/BingSiteAuth.xml. Both
+  // verification routes live so neither can silently lapse.
+  verification: { other: { "msvalidate.01": "9914C74EDCE7F014FA84B0CB8F90E2EC" } },
   // og:image / twitter:image are added automatically from
   // src/app/opengraph-image.jpg — a designed static card (the glass calendar
   // with the weekend lit and a plane departing Friday), which replaced the
