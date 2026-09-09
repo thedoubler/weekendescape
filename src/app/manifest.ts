@@ -15,6 +15,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // address bar don't flash a colour the app never uses.
     background_color: "#14161c",
     theme_color: "#f97316",
-    icons: [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon" }],
+    // /favicon.ico never existed (it 404ed since launch — found while
+    // shipping the calendar mark); the real assets are the app-router icon
+    // files.
+    icons: [
+      { src: "/icon.png", sizes: "1024x1024", type: "image/png" },
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+    ],
   };
 }

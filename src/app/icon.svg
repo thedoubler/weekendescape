@@ -1,13 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="weekend.flights">
-  <!-- The mark the OG card already uses, so the tab, the share preview and the
-       board agree on one identity instead of three. Orange ground with the
-       glyph knocked out in the app's own near-black, which keeps it readable
-       against a light or a dark browser chrome without a second asset.
-       Drawn at 32 with a 7px radius so the corners still read as rounded when
-       the browser scales it down to 16. -->
-  <rect width="32" height="32" rx="7" fill="#f97316"/>
-  <g fill="#14161c" transform="translate(3.6 3.6) scale(1.033)">
-    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-    <circle cx="19.6" cy="4.4" r="1.7"/>
+  <!-- The weekend column: a calendar tile with Fri/Sat/Sun lit in the brand
+       orange — the product itself as the mark, and the same story the OG
+       card tells. Dark ground so it holds on light AND dark tab bars; the
+       muted cells are white at 22% so they read as "calendar" without
+       competing with the lit column. Chosen over a plane (every third
+       travel tab) and a "w." monogram (means nothing to a stranger) —
+       owner picked A from the 2026-09-09 review. -->
+  <rect width="32" height="32" rx="7" fill="#14161c"/>
+  <g>
+    <rect x="4.5"   y="4.5"   width="6.5" height="6.5" rx="1.8" fill="#ffffff" opacity=".22"/>
+    <rect x="12.75" y="4.5"   width="6.5" height="6.5" rx="1.8" fill="#ffffff" opacity=".22"/>
+    <rect x="21"    y="4.5"   width="6.5" height="6.5" rx="1.8" fill="#f97316"/>
+    <rect x="4.5"   y="12.75" width="6.5" height="6.5" rx="1.8" fill="#ffffff" opacity=".22"/>
+    <rect x="12.75" y="12.75" width="6.5" height="6.5" rx="1.8" fill="#ffffff" opacity=".22"/>
+    <rect x="21"    y="12.75" width="6.5" height="6.5" rx="1.8" fill="#f97316"/>
+    <rect x="4.5"   y="21"    width="6.5" height="6.5" rx="1.8" fill="#ffffff" opacity=".22"/>
+    <rect x="12.75" y="21"    width="6.5" height="6.5" rx="1.8" fill="#ffffff" opacity=".22"/>
+    <rect x="21"    y="21"    width="6.5" height="6.5" rx="1.8" fill="#f97316"/>
   </g>
 </svg>
