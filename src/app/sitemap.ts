@@ -16,9 +16,17 @@ import { DESTINATION_PAGES } from "@/lib/destination-pages";
 const ORIGIN_PAGES = ORIGIN_LIST.map((o) => o.code);
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // lastModified is the one field here Google actually reads (its docs say
+  // changefreq/priority are largely ignored). The boards genuinely rebuild
+  // daily, so "the sitemap's own render date" is an honest lastmod for them;
+  // it re-bakes on every deploy, which happens at least that often. /about
+  // deliberately carries none — claiming daily changes on static prose is
+  // the kind of lie that gets the whole sitemap's lastmod distrusted.
+  const rebuilt = new Date();
   return [
     {
       url: siteUrl,
+      lastModified: rebuilt,
       changeFrequency: "daily",
       priority: 1,
     },
@@ -32,11 +40,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // fares — and are rebuilt daily, which is what changeFrequency claims.
     ...ORIGIN_PAGES.map((iata) => ({
       url: `${siteUrl}/from/${iata.toLowerCase()}`,
+      lastModified: rebuilt,
       changeFrequency: "daily" as const,
       priority: 0.8,
     })),
     ...DESTINATION_PAGES.map((d) => ({
       url: `${siteUrl}/weekends-in/${d.slug}`,
+      lastModified: rebuilt,
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),
