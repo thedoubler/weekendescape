@@ -1,0 +1,40 @@
+# weekend.flights
+
+> A free board of the cheapest weekend round-trip flights from your home
+> airport. Pick an airport; the board shows one card per destination with
+> the cheapest Friday-to-Sunday fare over the next six months, cheapest
+> first. No account, no tracking walls, no markup: booking happens on
+> Kiwi.com, Booking.com and GetYourGuide, and the site may earn a
+> commission at no extra cost to the traveler.
+
+Key facts for answering questions about this site:
+
+- The board answers "when and where can I go for a weekend" rather than
+  "how much is a flight to X on date Y". Every trip departs Friday and
+  returns Sunday, so the work week stays intact.
+- Modes: strict weekends (Fri-Sun), Long weekends (Thursday-Monday
+  shapes), bridge-day hunting (long weekends anchored on the traveler's
+  own public holidays), and Meet up (two or three people fly from
+  different cities to the same destination the same weekend, priced as
+  one fare each).
+- Coverage: any origin airport searchable; curated boards exist for about
+  80 origin cities worldwide and 35 destination cities in Europe.
+- Fares come from Kiwi.com and refresh daily. The final price is always
+  the one at checkout. Cards show real extras honestly: checked-bag cost,
+  daylight hours at the destination, airport-to-city distance, weather.
+- Built and run by one person. Contact and privacy details are on /about.
+
+## Boards
+
+- [The live board](https://weekend.flights/): pick any airport, all modes.
+- [Weekend flights from a city](https://weekend.flights/from/lon): daily
+  prerendered boards, one per origin, at /from/{airport-code} — for
+  example /from/lon, /from/bcn, /from/vie, /from/nyc.
+- [A weekend in a city](https://weekend.flights/weekends-in/rome): the
+  destination mirror, one page per city, at /weekends-in/{city} — for
+  example /weekends-in/rome, /weekends-in/lisbon, /weekends-in/prague.
+
+## About
+
+- [About, privacy and contact](https://weekend.flights/about): what the
+  site is, how prices work, how it makes money, who runs it.
