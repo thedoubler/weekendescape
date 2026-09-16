@@ -61,31 +61,39 @@ export function LocationPrimer({
         <svg
           aria-hidden
           viewBox="0 0 96 96"
-          className="h-20 w-20"
+          className="h-24 w-24"
           fill="none"
         >
-          <circle cx="48" cy="48" r="18" className="stroke-black/15 dark:stroke-white/20" strokeWidth="1.5" />
-          <circle cx="48" cy="48" r="30" className="stroke-black/10 dark:stroke-white/15" strokeWidth="1.5" />
-          <circle cx="48" cy="48" r="42" className="stroke-black/[0.07] dark:stroke-white/10" strokeWidth="1.5" />
+          {/* The story in one picture: a pulse leaves your pin and the
+              airports around you light up. (A plane glyph was tried on the
+              ring and read as a rocket at this size — owner's report — so
+              the cast is rings, dots, pin, pulse.) */}
+          <circle cx="48" cy="48" r="20" className="stroke-black/[0.13] dark:stroke-white/[0.18]" strokeWidth="1.5" />
+          <circle cx="48" cy="48" r="34" className="stroke-black/[0.08] dark:stroke-white/[0.12]" strokeWidth="1.5" />
+          {/* The pulse — searching. Tailwind's ping, anchored to the pin. */}
           <circle
             cx="48"
             cy="48"
-            r="30"
+            r="15"
             stroke="#f97316"
-            strokeWidth="1.5"
-            strokeDasharray="10 178"
-            strokeLinecap="round"
-            className="motion-safe:animate-spin"
-            style={{ transformOrigin: "48px 48px", animationDuration: "6s" }}
+            strokeWidth="2"
+            className="motion-safe:animate-ping"
+            style={{ transformOrigin: "48px 48px", animationDuration: "2.2s" }}
           />
-          {/* The pin — you. Just the radar and the pin: a plane glyph rode
-              the outer ring briefly and read as a rocket at this size
-              (owner's report), so the sweep alone carries "searching". */}
+          {/* Airports around you: quiet dots on the rings, and the nearest
+              one already lit — the promise, not just the search. */}
+          <circle cx="68.5" cy="41.5" r="4.2" fill="#f97316" />
+          <circle cx="68.5" cy="41.5" r="1.7" fill="white" />
+          <circle cx="31" cy="33" r="2.6" className="fill-black/25 dark:fill-white/30" />
+          <circle cx="59" cy="70.5" r="2.6" className="fill-black/25 dark:fill-white/30" />
+          <circle cx="21.5" cy="59" r="2.2" className="fill-black/20 dark:fill-white/25" />
+          {/* The pin — you. Grounded by its own soft shadow. */}
+          <ellipse cx="48" cy="67.5" rx="7.5" ry="2.2" className="fill-black/[0.10] dark:fill-white/[0.12]" />
           <path
-            d="M48 34c-6.6 0-12 5.4-12 12 0 8.4 12 20 12 20s12-11.6 12-20c0-6.6-5.4-12-12-12Z"
+            d="M48 32c-7 0-12.7 5.7-12.7 12.7 0 8.9 12.7 21.3 12.7 21.3s12.7-12.4 12.7-21.3C60.7 37.7 55 32 48 32Z"
             fill="#f97316"
           />
-          <circle cx="48" cy="46" r="4.5" fill="white" />
+          <circle cx="48" cy="44.7" r="4.8" fill="white" />
         </svg>
 
         <h2 id="loc-primer-title" className="text-lg font-bold tracking-tight text-balance">
