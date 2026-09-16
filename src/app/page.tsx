@@ -35,6 +35,7 @@ import {
 } from "@/components/SearchReceipt";
 import { FacetTrigger } from "@/components/FacetTrigger";
 import { OriginSheet } from "@/components/OriginSheet";
+import { LocationPrimer } from "@/components/LocationPrimer";
 import { parseOrigins, serializeOrigins } from "@/lib/origins";
 import { MonthFilter } from "@/components/MonthFilter";
 import { ContinentFilter } from "@/components/ContinentFilter";
@@ -205,6 +206,9 @@ export default function Home() {
   // sheet, cleared on close or on a later successful detection. Without it a
   // declined permission prompt was answered by an unexplained modal.
   const [geoNotice, setGeoNotice] = useState<string | null>(null);
+  // The location primer (soft ask before the native prompt). Only ever true
+  // while the browser permission is undecided — see the sheet's onDetect.
+  const [primerOpen, setPrimerOpen] = useState(false);
   // Detection in flight, for the sheet's "Find my airport" button — the tap
   // used to do nothing visible for up to 8 seconds.
   const [detecting, setDetecting] = useState(false);
@@ -1526,7 +1530,30 @@ export default function Home() {
         // which on a denied permission meant either a silent reload of the old
         // search or the sheet popping straight back with no explanation —
         // detectLocation closes it itself, and only on success.
-        onDetect={() => detectLocation({ fromSheet: true })}
+        //
+        // Between the tap and the browser's native prompt sits the PRIMER —
+        // but only when the permission is still undecided. Granted goes
+        // silent, denied goes to the notice; nobody who has answered is
+        // asked twice. Permissions API unavailable (older Safari) counts as
+        // undecided: showing the primer to someone who already granted is
+        // one harmless extra tap, while a cold native prompt risks the
+        // permanent denial the primer exists to prevent.
+        onDetect={() => {
+          const query = navigator.permissions?.query?.bind(
+            navigator.permissions
+          );
+          if (!query) {
+            setPrimerOpen(true);
+            return;
+          }
+          query({ name: "geolocation" }).then(
+            (status) => {
+              if (status.state === "prompt") setPrimerOpen(true);
+              else detectLocation({ fromSheet: true });
+            },
+            () => setPrimerOpen(true)
+          );
+        }}
         detecting={detecting}
         notice={geoNotice}
         meetUp={meetUp}
@@ -1537,6 +1564,21 @@ export default function Home() {
           if (v) setBridges(false);
         }}
         onClose={closeOriginSheet}
+      />
+
+      <LocationPrimer
+        open={primerOpen}
+        onAllow={() => {
+          track("location_primer", { choice: "allow" });
+          setPrimerOpen(false);
+          // Same click, same gesture chain: the native prompt follows the
+          // Allow tap directly.
+          detectLocation({ fromSheet: true });
+        }}
+        onDismiss={() => {
+          track("location_primer", { choice: "not_now" });
+          setPrimerOpen(false);
+        }}
       />
 
       {SHOW_OVERFLOW_DEBUG && <OverflowDebug />}
