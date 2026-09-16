@@ -78,19 +78,14 @@ export function LocationPrimer({
             className="motion-safe:animate-spin"
             style={{ transformOrigin: "48px 48px", animationDuration: "6s" }}
           />
-          {/* The pin — you. */}
+          {/* The pin — you. Just the radar and the pin: a plane glyph rode
+              the outer ring briefly and read as a rocket at this size
+              (owner's report), so the sweep alone carries "searching". */}
           <path
             d="M48 34c-6.6 0-12 5.4-12 12 0 8.4 12 20 12 20s12-11.6 12-20c0-6.6-5.4-12-12-12Z"
             fill="#f97316"
           />
           <circle cx="48" cy="46" r="4.5" fill="white" />
-          {/* The plane on the outer ring — where you could be. */}
-          <g transform="translate(80 22) rotate(40)">
-            <path
-              d="M9 0 L2.5 -2.3 L-6.5 -1 L-8 -2.7 L-10 -2.3 L-8.6 0 L-10 2.3 L-8 2.7 L-6.5 1 L2.5 2.3 Z"
-              className="fill-black/70 dark:fill-white/80"
-            />
-          </g>
         </svg>
 
         <h2 id="loc-primer-title" className="text-lg font-bold tracking-tight text-balance">

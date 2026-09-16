@@ -183,7 +183,18 @@ export function OriginSheet({
           className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-black/10 px-3.5 py-2 text-xs font-medium text-black/70 transition hover:bg-black/[0.04] hover:text-black disabled:opacity-60 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white"
         >
           <span aria-hidden>📍</span>
-          {detecting ? "Finding your airport…" : "Find my airport"}
+          {detecting ? (
+            // The dots type themselves (globals: .animate-searching) — a
+            // little life while geolocation runs. aria-hidden: the label is
+            // already "Finding your airport"; a screen reader needs no
+            // punctuation theater.
+            <>
+              Finding your airport
+              <span aria-hidden className="animate-searching" />
+            </>
+          ) : (
+            "Find my airport"
+          )}
         </button>
 
         {/* Meet-up belongs here, not in the receipt: it is a statement about

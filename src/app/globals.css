@@ -285,6 +285,31 @@ html:has(dialog[open]) {
   }
 }
 
+/* The searching ellipsis — "Finding your airport" while geolocation runs.
+   Content animation in steps, so the dots type themselves: fancier than a
+   static "…", cheaper than a spinner, and currentColor means it works on
+   any button in either theme. The span reserves the full three-dot width
+   up front so the label never shifts as dots appear. */
+@keyframes searching-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75%, 100% { content: "..."; }
+}
+.animate-searching::after {
+  display: inline-block;
+  width: 1.1em;
+  text-align: left;
+  content: "...";
+  animation: searching-dots 1.4s steps(1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-searching::after {
+    animation: none;
+    content: "…";
+  }
+}
+
 /* MapLibre's default zoom control is a sharp white box — the one control on
    the canvas that isn't a pill, sitting beside "✕ Close map" and "Fit all",
    which are. Restyled, not rebuilt: the buttons and their behaviour are
