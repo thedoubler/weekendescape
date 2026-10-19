@@ -9,7 +9,9 @@
 // wrangler's `main` points HERE; everything except the scheme check is
 // delegated untouched, and the durable objects the generated worker exports
 // are re-exported so their bindings keep resolving.
+import { EmailMessage } from "cloudflare:email";
 import handler from "./.open-next/worker.js";
+import { runCanary, buildAlertEmail } from "./canary.js";
 
 export {
   DOQueueHandler,
@@ -37,5 +39,37 @@ export default {
       );
     }
     return handler.fetch(request, env, ctx);
+  },
+
+  // The cron half of the worker (triggers.crons in wrangler.jsonc). It is
+  // here rather than inside Next because a scheduled() handler has no request
+  // to hang off — OpenNext's generated worker only exports fetch.
+  //
+  // Everything effectful is wired here and passed in, so canary.js stays a
+  // plain module vitest can import: `cloudflare:email` resolves only inside
+  // workerd, and importing it from a tested file would break the suite.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runCanary({
+        kv: env.API_CACHE,
+        apiKey: env.TEQUILA_API_KEY,
+        sendEmail: async ({ subject, body }) => {
+          const to = env.ALERT_TO || "raulropan@gmail.com";
+          const from = "canary@weekend.flights";
+          const raw = buildAlertEmail({
+            from,
+            to,
+            subject,
+            body,
+            id: crypto.randomUUID(),
+          });
+          await env.ALERT_EMAIL.send(new EmailMessage(from, to, raw));
+        },
+      }).catch((e) => {
+        // Never let the canary's own failure be silent — that would be the
+        // monitor failing closed, which reads exactly like everything's fine.
+        console.error(`Canary: run threw ${String(e)}`);
+      })
+    );
   },
 };

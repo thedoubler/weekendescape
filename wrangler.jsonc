@@ -52,6 +52,24 @@
   // blocks deploys until someone runs a command is worse than no config. The
   // code already treats an absent binding as an absent tier, so nothing breaks
   // while this is off.
+  // The canary (canary.js, driven by scheduled() in worker-entry.js). Every
+  // 30 minutes, because nothing about this product gets acted on faster than
+  // that; the cost argument for a slower cadence was weaker than it looked
+  // (the "paid Kiwi call" premise above is repo lore, not a confirmed tier —
+  // see docs/seo-origin-pages.md on the partner agreement).
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+  // Outbound alert mail, via the zone's own Email Routing — no third-party
+  // provider and no API key. destination_address pins it to the ONE verified
+  // address on the account; Cloudflare refuses to send anywhere else, which
+  // is also why this binding cannot be used to mail users.
+  "send_email": [
+    {
+      "name": "ALERT_EMAIL",
+      "destination_address": "raulropan@gmail.com"
+    }
+  ],
   "observability": {
     "enabled": true
   }
