@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { MockInstance } from "vitest";
 import { NextRequest } from "next/server";
 import axios from "axios";
 import { GET } from "@/app/api/weekends/route";
@@ -242,6 +243,63 @@ describe("GET /api/weekends", () => {
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.error).toMatch(/ZZZ/);
+  });
+
+  // This route is the only place a Tequila problem becomes visible from
+  // outside the browser, and for the two failures most worth knowing about it
+  // was silent: the 429 and the timeout branches returned their friendly
+  // message BEFORE reaching the console.error at the bottom of the catch. A
+  // rate-limited key looked exactly like a healthy one from the server side.
+  describe("what a failure leaves in the log", () => {
+    let spy: MockInstance;
+    beforeEach(() => {
+      spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+    afterEach(() => {
+      spy.mockRestore();
+    });
+    const logged = () =>
+      spy.mock.calls.map((c: unknown[]) => String(c[0])).join("\n");
+    const upstreamRejects = (reason: unknown) => {
+      vi.mocked(axios.isAxiosError).mockReturnValue(true);
+      vi.mocked(axios.get).mockRejectedValue(reason);
+    };
+
+    it("tags a missing key", async () => {
+      delete process.env.TEQUILA_API_KEY;
+      await GET(req("flyFrom=BCN"));
+      expect(logged()).toMatch(/outcome=no_api_key/);
+    });
+
+    it("tags an upstream timeout, which used to log nothing at all", async () => {
+      upstreamRejects({ code: "ECONNABORTED" });
+      const res = await GET(req("flyFrom=BCN"));
+      expect(res.status).toBe(504);
+      expect(logged()).toMatch(/outcome=timeout/);
+    });
+
+    it("tags a rate limit, which used to log nothing at all", async () => {
+      upstreamRejects({ response: { status: 429 } });
+      const res = await GET(req("flyFrom=BCN"));
+      expect(res.status).toBe(429);
+      expect(logged()).toMatch(/outcome=upstream_429/);
+    });
+
+    // The first question about any failure is whether it is Tequila or one
+    // unroutable airport, and the codes are what answers it.
+    it("names the origins it was asked about", async () => {
+      upstreamRejects({ response: { status: 422 } });
+      await GET(req("flyFrom=ZZZ,BCN"));
+      expect(logged()).toMatch(/origins=ZZZ,BCN/);
+    });
+
+    it("writes one line per failure, not none and not three", async () => {
+      vi.mocked(axios.isAxiosError).mockReturnValue(false);
+      vi.mocked(axios.get).mockRejectedValue(new Error("upstream down"));
+      await GET(req("flyFrom=BCN"));
+      expect(spy.mock.calls).toHaveLength(1);
+      expect(logged()).toMatch(/outcome=upstream_error/);
+    });
   });
 
   it("caches identical searches, hitting Tequila once", async () => {

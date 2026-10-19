@@ -7,6 +7,7 @@ import { DestinationLinks } from "@/components/DestinationLinks";
 import { airportCity } from "@/lib/airport-city";
 import { weekendKey } from "@/lib/calendar";
 import { searchWeekends, MissingApiKeyError } from "@/lib/weekend-search";
+import { upstreamFailed, noResults } from "@/lib/page-failure";
 import { SITE_NAME, siteUrl } from "@/lib/site";
 import type { Deal } from "@/lib/deals";
 import { AboutDialog } from "@/components/AboutDialog";
@@ -134,21 +135,24 @@ export default async function OriginPage({
     fetchedAt = r.fetchedAt;
   } catch (e) {
     // A page that cannot answer its own question should not exist as a 200 —
-    // including when the reason is a missing key.
+    // including when the reason is a missing key. But it must not exist as a
+    // CACHED 404 either, which is what this did: on ISR, notFound() bakes the
+    // 404 in for a day, so a short Tequila outage de-indexed every origin page
+    // on the site and outlived the outage by weeks. upstreamFailed() rethrows
+    // instead, which leaves the last good render in place and retries.
     //
-    // This used to rethrow MissingApiKeyError, which is correct at runtime and
-    // catastrophic at build time: if anything ever prerenders this route without
-    // the runtime Secret, the throw escapes as "Export encountered an error" and
-    // takes the WHOLE deploy down — rate limiting, CSP, SEO fixes and all. There
-    // is no generateStaticParams any more, so that should never happen; this is
-    // the belt to that braces, because the cost of being wrong is asymmetric. A
-    // 404 on one origin page is a bad page. A failed build is no site at all.
+    // The build-time belt moved into that helper rather than going away: a
+    // throw during prerender escapes as "Export encountered an error" and
+    // takes the WHOLE deploy down. There is no generateStaticParams any more,
+    // so that should never happen; the helper keeps the braces anyway, because
+    // the cost of being wrong is asymmetric. A 404 on one origin page is a bad
+    // page. A failed build is no site at all.
     if (e instanceof MissingApiKeyError) {
       console.error("Origin page: TEQUILA_API_KEY missing at render time");
     }
-    notFound();
+    upstreamFailed(`Origin page /from/${code}`, e, { missingOn422: true });
   }
-  if (deals.length === 0) notFound();
+  if (deals.length === 0) noResults(`Origin page /from/${code}`, `from=${code}`);
 
   const weekends = byWeekend(deals);
   const cheapest = deals[0];

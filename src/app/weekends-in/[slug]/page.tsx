@@ -5,6 +5,7 @@ import type { Deal } from "@/lib/deals";
 import { searchWeekends, MissingApiKeyError } from "@/lib/weekend-search";
 import { weekendKey } from "@/lib/calendar";
 import { siteUrl, SITE_NAME } from "@/lib/site";
+import { upstreamFailed, noResults } from "@/lib/page-failure";
 import { Masthead } from "@/components/Masthead";
 import { DealList } from "@/components/DealList";
 import { OriginLinks } from "@/components/OriginLinks";
@@ -17,9 +18,10 @@ import {
 // The destination mirror of /from/[iata]: one page per curated city,
 // answering "cheap weekend in Rome" the way the origin pages answer "weekend
 // flights from Vienna". Same architecture for the same reasons — daily
-// revalidation, no generateStaticParams, notFound() instead of a throw that
-// could take a build down, and ONE upstream search per page per day (all
-// origin metros in a single fly_from list).
+// revalidation, no generateStaticParams, upstreamFailed() so a bad day at
+// Tequila cannot cache a 404 over a working page (and cannot take a build
+// down either), and ONE upstream search per page per day (all origin metros
+// in a single fly_from list).
 export const revalidate = 86400;
 export const dynamicParams = true;
 
@@ -86,9 +88,14 @@ export default async function DestinationPage({
     if (e instanceof MissingApiKeyError) {
       console.error("Destination page: TEQUILA_API_KEY missing at render time");
     }
-    notFound();
+    upstreamFailed(`Destination page /weekends-in/${dest.slug}`, e);
   }
-  if (deals.length === 0) notFound();
+  if (deals.length === 0) {
+    noResults(
+      `Destination page /weekends-in/${dest.slug}`,
+      `to=${dest.code} origins=${origins.length}`
+    );
+  }
 
   const money = (n: number) =>
     new Intl.NumberFormat("en", {

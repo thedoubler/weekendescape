@@ -338,7 +338,17 @@ export default function Home() {
       if (params.meetUp) qs.set("meetup", "1");
       const res = await fetchWithTimeout(`/api/weekends?${qs.toString()}`, 20000);
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Search failed");
+      if (!res.ok) {
+        // The status is the whole diagnosis, and throwing a bare Error threw
+        // it away: 422 (that airport is unroutable), 429 (we are being rate
+        // limited), 500 (Tequila or our key) all arrived at the catch below
+        // as one indistinguishable "search_failed". Carry it.
+        const failed = new Error(body.error || "Search failed") as Error & {
+          status?: number;
+        };
+        failed.status = res.status;
+        throw failed;
+      }
       setRawDeals(body.deals ?? []);
       setFetchedAt(body.fetchedAt ?? Date.now());
       setOriginPoints(body.origins ?? []);
@@ -358,10 +368,21 @@ export default function Home() {
       setSelectedMonths([]);
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "AbortError";
+      const status = (e as { status?: number })?.status;
       // Health signal, not behaviour: how often real visitors see a failed
       // board, and why, without waiting for someone to email about it.
+      //
+      // `kind` alone could not answer the only question worth asking at 3am —
+      // is this Tequila, or is this one airport? — so the status rides along,
+      // and the origins with it. Same vocabulary as the `search` event above:
+      // airport codes and counts, nothing typed by or about the person.
+      // `status` is absent when the request never got an answer at all (the
+      // fetch itself threw: offline, DNS, CORS), which is its own diagnosis.
       track("error_shown", {
         kind: timedOut ? "timeout" : "search_failed",
+        status,
+        origins: list.join(","),
+        origin_count: list.length,
       });
       setError(
         timedOut

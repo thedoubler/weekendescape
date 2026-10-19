@@ -140,32 +140,59 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "private, max-age=300" } }
     );
   } catch (error) {
+    // EVERY failure gets exactly one line, including the ones we have a kind
+    // word for. The four branches below used to return before reaching the
+    // console.error at the bottom, so the two failures most worth knowing
+    // about — Tequila rate-limiting us, and Tequila timing out — left no
+    // trace on the server at all. The only way to notice was a person
+    // reporting a broken board.
+    //
+    // Keep it one greppable line: `outcome=` says which branch answered,
+    // `origins=` separates "Kiwi is down" from "that one airport is
+    // unroutable", and logSafe carries message/code/status without printing
+    // the apikey header (see src/lib/log-safe.ts — that leak is why it
+    // exists).
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    const timedOut = axios.isAxiosError(error) && error.code === "ECONNABORTED";
+    // The PARSED codes, not the raw query string. Echoing the raw value back
+    // reflected however many kilobytes an attacker sent; it renders as a
+    // React text child so it was never an injection, just a mirror.
+    const originCodes = parseOrigins(
+      new URL(request.url).searchParams.get("flyFrom")
+    );
+    const origins = originCodes.join(",");
+    const outcome =
+      error instanceof MissingApiKeyError
+        ? "no_api_key"
+        : timedOut
+          ? "timeout"
+          : status === 422
+            ? "upstream_422"
+            : status === 429
+              ? "upstream_429"
+              : "upstream_error";
+    console.error(
+      `Weekend search failed: outcome=${outcome} origins=${origins || "none"} ${logSafe(error)}`
+    );
+
     if (error instanceof MissingApiKeyError) {
       return NextResponse.json(
         { error: "Tequila API key not configured" },
         { status: 500 }
       );
     }
-    // Tequila 422 = it rejected our parameters (usually an airport it can't
-    // route from). Surface that as an actionable message rather than a 500.
-    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-    if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
+    if (timedOut) {
       return NextResponse.json(
         { error: "Search is taking too long — please try again." },
         { status: 504 }
       );
     }
+    // Tequila 422 = it rejected our parameters (usually an airport it can't
+    // route from). Surface that as an actionable message rather than a 500.
     if (status === 422) {
-      // The PARSED codes, not the raw query string. Echoing the raw value back
-      // reflected however many kilobytes an attacker sent; it renders as a
-      // React text child so it was never an injection, just a mirror.
-      const from =
-        parseOrigins(new URL(request.url).searchParams.get("flyFrom")).join(
-          ", "
-        ) || "that airport";
       return NextResponse.json(
         {
-          error: `We couldn't search weekends from ${from}. Try a different airport or a longer window.`,
+          error: `We couldn't search weekends from ${originCodes.join(", ") || "that airport"}. Try a different airport or a longer window.`,
         },
         { status: 422 }
       );
@@ -176,7 +203,6 @@ export async function GET(request: NextRequest) {
         { status: 429 }
       );
     }
-    console.error("Weekend search error:", logSafe(error));
     return NextResponse.json(
       { error: "Failed to search weekend flights" },
       { status: 500 }

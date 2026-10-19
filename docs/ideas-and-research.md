@@ -894,6 +894,51 @@ the reasoning that does not fit in a task title. Numbers are task IDs.
 - **#5 → origin pages.** `docs/seo-origin-pages.md`. Blocked on extracting the
   search out of the route handler.
 
+### Knowing when Tequila breaks (2026-10-19)
+The honest answer to "how would we find out" was: a user tells us, or nobody
+does. Three of the four blind spots are now closed in code; the fourth is the
+only real monitor and is not built.
+
+Done:
+- **Every failure branch logs one line.** `/api/weekends` returned its friendly
+  message for 422 / 429 / timeout / missing-key *before* reaching the
+  `console.error`, so a rate-limited key was invisible server-side. One
+  greppable line now: `outcome=` (which branch), `origins=` (is it Kiwi or is
+  it that one airport), and logSafe's message/code/status. Pinned by tests —
+  all five fail against the old route.
+- **`error_shown` carries `status` + `origins`.** It was `kind` alone, which
+  could not separate "Tequila is down" from "unroutable airport" from "one
+  visitor's wifi". The client threw a bare Error and dropped `res.status`;
+  it now rides along.
+- **SSR pages stopped caching 404s over working pages.** `/from/[iata]` and
+  `/weekends-in/[slug]` are ISR (`revalidate = 86400`), and both answered any
+  upstream failure with `notFound()` — which does not just fail one request,
+  it *bakes a 404 in for a day*, Googlebot included. A ten-minute outage
+  de-indexed every landing page and outlived itself by weeks. They rethrow now,
+  which keeps the last good render serving and retries (next/dist/docs,
+  incremental-static-regeneration, "Handling uncaught exceptions").
+  Two edges that cost a live round-trip to find, both now in `page-failure.ts`:
+  a build-phase guard, because a throw during prerender takes the whole deploy
+  down (the reason the original code swallowed it); and `missingOn422`, because
+  a Tequila 422 on `/from/ZZZ` IS "no such airport" and must stay a 404 — set
+  by the origin pages only, never by the curated destination pages, where a 422
+  is about one of a dozen origins and never about whether Rome exists.
+
+Not done, in order of value:
+1. **Cron canary** — the actual monitor. Nothing calls Tequila on a schedule,
+   so the first detector of an outage is still a human doing a search. One
+   fixed search every ~15 min, alert on two consecutive failures; state fits
+   the KV namespace already bound. Needs a Workers cron trigger (none in
+   `wrangler.jsonc` today) and somewhere to send mail.
+2. **Cloudflare Workers error-rate alert** — dashboard, no code, ~5 minutes.
+3. **A PostHog alert on `error_shown`** — now that the event can actually say
+   what broke, it is worth a threshold.
+4. **Zero-results is still a 404** on both page types (`noResults()`), loudly
+   logged but still cached. A curated city with no fares is thin content, so
+   this is deliberate — but if the logs ever show it firing in bursts, that is
+   a quota wall answering 200 with an empty list, not the truth about the
+   weekend, and it should become a rethrow.
+
 ### Correctness
 - **#6** `saveHomes()` runs before the fetch, so a failing origin is persisted
   and reloaded on the next visit.
