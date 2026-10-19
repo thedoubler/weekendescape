@@ -182,5 +182,41 @@ describe("DealCard — regional holidays", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /show details for/i })[0]);
     expect(screen.getByText(/a public holiday in Zurich/i)).toBeInTheDocument();
   });
+
+  // jsdom has no layout, so this cannot measure the squeeze that produced
+  // "Palma…  Spain" on the phone board. What it CAN pin is the rule that fixed
+  // it: whatever else competes for the row, the clipping is not applied to the
+  // destination. Both earlier versions of this header put `truncate` on the
+  // city, and both cut it.
+  it("never clips the destination name", () => {
+    const { container } = render(
+      <DealCard deal={{ ...base, cityTo: "Palma, Majorca" }} />
+    );
+    const city = screen.getByText("Palma, Majorca");
+    expect(city.className).not.toMatch(/\btruncate\b/);
+    // The country is the one that yields — it is allowed to ellipse, and it
+    // shrinks far harder than the city (shrink-[999]) so it goes first.
+    const country = container.querySelector(".shrink-\\[999\\]");
+    expect(country?.textContent).toBe("Spain");
+    expect(country?.className).toMatch(/\btruncate\b/);
+  });
+
+  // The country is in the markup twice — beside the city on a wide card, on
+  // the meta line under it on a narrow one — and the two must stay strictly
+  // complementary. Drop the width condition from either and the card says
+  // "Spain" twice on one screen, out loud included.
+  it("keeps the country's two copies mutually exclusive", () => {
+    render(<DealCard deal={base} />);
+    const copies = screen.getAllByText("Spain");
+    expect(copies).toHaveLength(2);
+    // Wide only: hidden by default, shown from @md up.
+    expect(copies.some((el) => /\bhidden\b.*@md\/card:inline/.test(el.className))).toBe(
+      true
+    );
+    // Narrow only: visible by default, hidden from @md up.
+    expect(
+      copies.some((el) => el.closest(".\\@md\\/card\\:hidden") !== null)
+    ).toBe(true);
+  });
 });
 

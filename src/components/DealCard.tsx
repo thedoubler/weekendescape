@@ -448,22 +448,48 @@ export function DealCard({
             <span className="shrink-0 text-xl leading-tight" aria-hidden>
               {deal.flag}
             </span>
-            {/* ONE line, boxed. The wrap-and-clamp version let a long country
-                spill under the city ("Edinburgh United / Kingdom", and with
-                overflow-wrap:anywhere even mid-word) into the row below —
-                reported on the phone board. Now the city truncates with an
-                ellipsis and the country keeps a nowrap box capped at 45% of
-                the row, so neither can ever start a second line. */}
-            <span className="min-w-0 truncate text-lg font-semibold leading-tight">
+            {/* The destination is the one word this row exists to say, so it
+                is never the thing that gets cut. Two earlier versions both cut
+                it: the wrap-and-clamp one let a long country spill under the
+                city ("Edinburgh United / Kingdom", mid-word under
+                overflow-wrap:anywhere), and its fix — city truncates, country
+                keeps a nowrap box — traded that for "Palma…  Spain" on the
+                phone board, measured: the city got 66px of a 130px name while
+                the country kept all 38 of its own.
+
+                So the country yields instead. Below @md the card is too narrow
+                to hold both, and the country steps down to the meta line under
+                the city (see below) where it costs no height and still gets to
+                be words; the flag already answers it at a glance either way.
+                Above @md there is room for both, and the country shrinks and
+                ellipses first (shrink-[999]) so the city keeps its whole name
+                until the country is gone entirely.
+
+                The city itself no longer truncates: a name that outgrows even
+                the full row wraps to a second line rather than losing letters.
+                overflow-wrap only ever breaks a word that cannot fit alone, so
+                this is the rare long name, not the everyday card. */}
+            <span className="min-w-0 text-lg leading-tight font-semibold [overflow-wrap:break-word]">
               {deal.cityTo}
             </span>
             {deal.countryTo && (
-              <span className="max-w-[45%] shrink-0 truncate text-sm font-normal text-muted-foreground">
+              <span className="hidden min-w-0 shrink-[999] truncate text-sm font-normal whitespace-nowrap text-muted-foreground @md/card:inline">
                 {deal.countryTo}
               </span>
             )}
           </div>
           <div className="mt-0.5 text-xs">
+            {/* The country's narrow-card home. It leads the line because it
+                qualifies the name directly above it, and it rides a row that
+                already exists, so moving it off the title costs zero height.
+                Only one of the two copies is ever displayed — the other is
+                display:none, so screen readers hear the country once. */}
+            {deal.countryTo && (
+              <span className="@md/card:hidden">
+                <span className="text-muted-foreground">{deal.countryTo}</span>
+                <span className="text-black/35 dark:text-white/35"> · </span>
+              </span>
+            )}
             <span className="font-medium text-black/70 dark:text-white/70">
               {/* The coarse "when", because that is the decision at the browse
                   stage — the exact days are in the strip directly below, with

@@ -389,9 +389,12 @@ export function AirportInput({
               // One line per suggestion, always. As inline spans the row used
               // to wrap once country names landed (AMS · Amsterdam Schiphol ·
               // Netherlands), spilling a fragment under the airport name. Flex
-              // instead: the NAME is the truncatable part (min-w-0), the code
-              // and country never break — though a marathon country still caps
-              // at half the row so the name can't be squeezed to nothing.
+              // instead, and the city is what you are reading the row for, so
+              // it is the last thing to give: the country carries shrink-[999]
+              // and so absorbs essentially the whole deficit, ellipsing itself
+              // down to nothing before the city loses its first letter. (The
+              // half-the-row cap it used to carry still left the city cut at
+              // "Amsterdam Schi…" while "Netherlands" sat there intact.)
               className={`flex min-h-11 cursor-pointer items-baseline px-3 py-2.5 text-sm ${
                 i === active ? "bg-black/5 dark:bg-white/10" : ""
               }`}
@@ -401,7 +404,7 @@ export function AirportInput({
                 &nbsp;· {s.city || s.name}
               </span>
               {s.country && (
-                <span className="max-w-[50%] shrink-0 truncate opacity-45">
+                <span className="min-w-0 shrink-[999] truncate whitespace-nowrap opacity-45">
                   &nbsp;· {s.country}
                 </span>
               )}

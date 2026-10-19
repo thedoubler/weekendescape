@@ -910,6 +910,18 @@ the reasoning that does not fit in a task title. Numbers are task IDs.
   emoji misaligns on multi-line.
 - **#9** Design-system consolidation. True but low-impact — schedule it, don't
   absorb it into a bug-fix pass.
+- **Card title, remaining half** (2026-09-24). The destination no longer
+  truncates — the country steps down to the meta line below @md and yields
+  first above it — but on a narrow card the name can now take TWO lines, and
+  when it does, the thing squeezing it is the price column's origin eyebrow:
+  "FROM BARCELONA (BCN)" is nowrap and ~136px, leaving ~112px of a 130px
+  "Palma, Majorca". Only bites when `showOrigin` is on (multi-origin searches
+  and every `/weekends-in/*` page), so the single-origin board is untouched.
+  Options, none obviously right: cap the right column on narrow cards and let
+  the eyebrow wrap instead; move the eyebrow onto the meta line too; or drop
+  title and price to `text-base` below @md, which keeps one line and keeps
+  their hierarchy relative to each other. Wrapping was chosen for now because
+  it has no cliff — nothing is ever lost, it just costs height.
 
 ### Config
 - **#8** Remove `WEEKEND_CURRENCY` from `.env.local` (it defeats
