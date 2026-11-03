@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withPostHogConfig } from "@posthog/nextjs-config";
 
 // Headers that matter for THIS product, which is a board of affiliate
 // click-outs. Framing is the direct attack: an attacker embeds the site,
@@ -90,4 +91,26 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Source maps for PostHog Error Tracking: the build uploads them to project
+// 588833 so stack traces show src/ file names and lines instead of minified
+// chunks, then deletes them from the output so they are never served.
+//
+// Only when POSTHOG_PERSONAL_API_KEY is set — a Workers Builds "Build
+// variable" (build time, like NEXT_PUBLIC_*; see docs/pre-launch.md), never
+// in .env files or the repo. Local and keyless builds skip the plugin
+// entirely. failOnError: false because a PostHog outage or a revoked key
+// should cost readable stack traces, not a deploy.
+const posthogKey = process.env.POSTHOG_PERSONAL_API_KEY;
+
+export default posthogKey
+  ? withPostHogConfig(nextConfig, {
+      personalApiKey: posthogKey,
+      projectId: "588833",
+      host: "https://us.posthog.com",
+      sourcemaps: {
+        enabled: true,
+        deleteAfterUpload: true,
+        failOnError: false,
+      },
+    })
+  : nextConfig;
