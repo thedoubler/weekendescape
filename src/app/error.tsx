@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { captureError } from "@/lib/analytics";
+
 // Without this, any render throw in the board — 1,200 lines of client component
 // over upstream data — was a permanent white screen with no way back. Next
 // needs a client component here; it cannot be a server one.
@@ -10,6 +13,11 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // The boundary swallows the throw, so autocapture never sees it — report it.
+  useEffect(() => {
+    captureError(error, { digest: error.digest, boundary: "app/error" });
+  }, [error]);
+
   return (
     <main className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
       <h1 className="text-lg font-semibold tracking-tight">

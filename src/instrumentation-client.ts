@@ -34,6 +34,11 @@ if (key && process.env.NODE_ENV === "production") {
       // page promises for analytics generally — measurement, not identity.
       // Nothing here calls identify(), so today every visitor is anonymous.
       person_profiles: "identified_only",
+      // Error tracking: uncaught errors and unhandled promise rejections in
+      // the browser land in PostHog's Error Tracking for this project.
+      // Render errors caught by app/error.tsx are not "uncaught", so that
+      // boundary reports its own through captureError() in lib/analytics.ts.
+      capture_exceptions: true,
     });
     // The app's own events go through track() in src/lib/analytics.ts, which
     // reads this handle. A window global rather than an import, so component

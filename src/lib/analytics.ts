@@ -10,7 +10,10 @@
 // initialise: dev, keyless builds, SSR, tests. Properties must stay in the
 // vocabulary of the product (codes, counts, prices), never anything typed by
 // or about the person — the About page promises measurement, not identity.
-type Capture = { capture: (event: string, props?: Record<string, unknown>) => void };
+type Capture = {
+  capture: (event: string, props?: Record<string, unknown>) => void;
+  captureException?: (error: unknown, props?: Record<string, unknown>) => void;
+};
 
 export function track(event: string, props?: Record<string, unknown>): void {
   if (typeof window === "undefined") return;
@@ -18,5 +21,17 @@ export function track(event: string, props?: Record<string, unknown>): void {
     (window as { __ph?: Capture }).__ph?.capture(event, props);
   } catch {
     // Analytics must never break the product.
+  }
+}
+
+// Error Tracking for errors something already caught (an error boundary) —
+// uncaught ones are autocaptured by the capture_exceptions init option. Same
+// no-op guarantees as track().
+export function captureError(error: unknown, props?: Record<string, unknown>): void {
+  if (typeof window === "undefined") return;
+  try {
+    (window as { __ph?: Capture }).__ph?.captureException?.(error, props);
+  } catch {
+    // Error reporting must never break the error screen.
   }
 }
