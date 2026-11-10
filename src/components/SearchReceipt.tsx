@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -125,6 +125,33 @@ export function SearchReceipt({
   onEditOrigins,
 }: Props) {
   const [open, setOpen] = useState<FacetKey | null>(null);
+  // The hint retires itself. It exists to teach ONE thing — that the receipt
+  // is a row of controls — so the moment the visitor opens any of them it has
+  // taught it, and it never plays again on this device.
+  //
+  // Deliberately NOT React state. The spans always render; a class on the row
+  // switches the animation on, added in an effect because localStorage cannot
+  // be read on the server and a hint that flashes on every hydration is worse
+  // than none. Via state this was a setState inside an effect — a second
+  // render pass for a purely visual flourish, which the react-hooks rule flags
+  // and is right to. A class costs no render at all.
+  const row = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("receipt-hint-seen"))
+        row.current?.classList.add("receipt-hint-on");
+    } catch {
+      // Private mode or blocked storage: no hint rather than a broken board.
+    }
+  }, []);
+  const retireHint = useCallback(() => {
+    row.current?.classList.remove("receipt-hint-on");
+    try {
+      localStorage.setItem("receipt-hint-seen", "1");
+    } catch {
+      // Nothing to do — it simply plays again next visit.
+    }
+  }, []);
   // The values as they were when the popover opened. Closing compares against
   // this, so opening a facet and picking what was already selected costs
   // nothing.
@@ -174,6 +201,7 @@ export function SearchReceipt({
   // the before-image), `false` from any dismissal cancels.
   function onOpenChange(key: FacetKey, next: boolean) {
     if (next) {
+      retireHint();
       openedWith.current = { ...values };
       setOpen(key);
     } else {
@@ -248,7 +276,8 @@ export function SearchReceipt({
   // One Radix popover per facet: the trigger is the receipt word, the
   // content is that facet's panel plus Apply. aria-expanded/haspopup come
   // from Radix now, so the button no longer sets its own.
-  const facet = (key: FacetKey, label: string) => (
+  // `order` only stages the hint: 0 is the origin, so the first facet is 1.
+  const facet = (key: FacetKey, label: string, order = 0) => (
     <Popover open={open === key} onOpenChange={(o) => onOpenChange(key, o)}>
       <PopoverTrigger asChild>
         <button
@@ -261,6 +290,11 @@ export function SearchReceipt({
           } border-b-2 border-dotted border-amber-700 dark:border-amber-400`}
         >
           {label}
+          <span
+            aria-hidden
+            className="receipt-hint"
+            style={{ "--receipt-hint-delay": `${order * 0.12}s` } as React.CSSProperties}
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -294,6 +328,7 @@ export function SearchReceipt({
       // moves the row; each value keeps its own popover anchored to itself.
       // No rule under the row (removed by request): the whitespace and the
       // sticky filter bar's own top edge already separate it from the board.
+      ref={row}
       className="relative flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-2 pb-3 text-center text-[15px]"
     >
       {/* "From", not "Searching": the reference deals page says "from <city>",
@@ -311,6 +346,7 @@ export function SearchReceipt({
         className="relative -mx-0.5 rounded border-b-2 border-dotted border-amber-700 px-0.5 pb-0.5 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] font-semibold whitespace-nowrap text-black/70 transition-colors hover:text-black dark:border-amber-400 dark:text-white/70 dark:hover:text-white"
       >
         {originLabel}
+        <span aria-hidden className="receipt-hint" />
       </button>
 
       {/* Meet-up rewrites what every price below means (a total for the whole
@@ -357,14 +393,14 @@ export function SearchReceipt({
           stays (four values will not fit a phone at 15px, and this row is
           deliberately not shrunk); what goes away is the dangling mark. */}
       {[
-        facet("style", styleLabelOf(values.bridges ? "bridges" : values.style)),
+        facet("style", styleLabelOf(values.bridges ? "bridges" : values.style), 1),
         // The region only exists as a fact once a bridge search has answered
         // (that answer carries which regions the home country even has), and
         // only matters while bridges is on. Everyone else never sees it.
         ...(values.bridges && homeRegion && homeRegion.options.length > 0
-          ? [facet("region", regionLabel(values.region, homeRegion))]
+          ? [facet("region", regionLabel(values.region, homeRegion), 2)]
           : []),
-        facet("stops", values.stopMode === "direct" ? "direct" : "any stops"),
+        facet("stops", values.stopMode === "direct" ? "direct" : "any stops", 3),
         // In meet-up mode "1 adult" would undercount the party: adults means
         // adults PER CITY there (each leg is priced for that many people from
         // that origin), and the label says so.
@@ -376,7 +412,8 @@ export function SearchReceipt({
               : `${values.adults} adults each`
             : values.adults === 1
               ? "1 adult"
-              : `${values.adults} adults`
+              : `${values.adults} adults`,
+          4
         ),
       ].map((control, i) => (
         <span key={i} className="inline-flex items-baseline gap-x-2.5">
