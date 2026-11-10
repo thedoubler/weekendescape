@@ -446,11 +446,17 @@ html:has(dialog[open]) {
    The span clips its own overflow rather than the button clipping it — the
    button's ::before is an enlarged tap target that reaches past the box, and
    overflow:hidden there would cut the 44px touch floor back down. */
+/* The light crosses in the first 45% and then waits off-screen for the rest,
+   so two iterations read as two passes with a breath between them rather than
+   one continuous shuttle. */
 @keyframes receipt-hint {
-  from {
+  0% {
     transform: translate3d(-100%, 0, 0);
   }
-  to {
+  45% {
+    transform: translate3d(100%, 0, 0);
+  }
+  100% {
     transform: translate3d(100%, 0, 0);
   }
 }
@@ -479,8 +485,18 @@ html:has(dialog[open]) {
      underline waking up rather than a new colour arriving. */
   background: linear-gradient(90deg, transparent, #b45309, transparent);
   transform: translate3d(-100%, 0, 0);
-  animation: receipt-hint 1.15s cubic-bezier(0.22, 1, 0.36, 1)
-    var(--receipt-hint-delay, 0s) 2 both;
+  /* Starts late on purpose. On load the board is still settling — results
+     land, the row reflows — and a hint spent during that is a hint nobody
+     sees. Three quarters of a second in, the page is still and the eye is
+     free. The per-control stagger rides on top of that start. */
+  /* Gentle ease-in-out, NOT the exponential ease-out used elsewhere in this
+     file. Measured: under cubic-bezier(.22,1,.36,1) the light crossed its
+     92px box in well under 200ms and then sat parked off-screen for the rest
+     of the pass — technically running, practically invisible. A travelling
+     light is the one case where near-constant speed is the point: the eye is
+     meant to follow it across the row, not catch a flash. */
+  animation: receipt-hint 2s cubic-bezier(0.45, 0, 0.55, 1)
+    calc(0.75s + var(--receipt-hint-delay, 0s)) 2 both;
 }
 @media (prefers-color-scheme: dark) {
   .receipt-hint::after {
