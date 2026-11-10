@@ -34,18 +34,6 @@ describe("weekendStyleToParams", () => {
     });
   });
 
-  // Sat–Sun is the only shape shorter than Fri–Sun, for someone who cannot
-  // get away on Friday evening at all. Friday is still a valid HOME departure:
-  // a late Friday flight that lands after midnight starts its trip Saturday.
-  it("maps satsun to Fri/Sat out, Sun back, 1-2 nights", () => {
-    expect(weekendStyleToParams("satsun")).toEqual({
-      flyDays: [5, 6],
-      retFlyDays: [0],
-      nightsFrom: 1,
-      nightsTo: 2,
-    });
-  });
-
   // Thu–Sun costs the same single day of leave as Fri–Mon, taken at the other
   // end of the weekend.
   it("maps thusun to Wed/Thu out, Sun back, 2-4 nights", () => {
@@ -85,24 +73,6 @@ describe("matchesWeekendShape", () => {
         "2027-04-29T10:15:00.000Z",
         "2027-05-02T19:40:00.000Z",
         "loose"
-      )
-    ).toBe(false);
-  });
-
-  it("matches Sat–Sun on a single night", () => {
-    expect(
-      matchesWeekendShape(
-        "2027-03-06T09:00:00.000Z",
-        "2027-03-07T20:15:00.000Z",
-        "satsun"
-      )
-    ).toBe(true);
-    // A Friday arrival is Fri–Sun, not Sat–Sun, however short the stay.
-    expect(
-      matchesWeekendShape(
-        "2027-03-05T22:00:00.000Z",
-        "2027-03-07T20:15:00.000Z",
-        "satsun"
       )
     ).toBe(false);
   });

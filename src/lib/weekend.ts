@@ -1,8 +1,14 @@
 // Ordered the way the control reads them: by how much leave they cost.
-// satsun and strict cost none, frimon and thusun cost one day, loose costs
-// two — and within each pair the Friday shape comes before the Thursday one,
-// so the row groups by departure day as well as by price in leave.
-export type WeekendStyle = "satsun" | "strict" | "frimon" | "thusun" | "loose";
+// strict costs none, frimon and thusun cost one day, loose costs two — and
+// the Friday shape comes before the Thursday one in that middle pair, so the
+// row groups by departure day as well as by price in leave.
+//
+// A Sat–Sun shape shipped here briefly and came straight back out: one night
+// is not a weekend escape, and Fri–Sun already answers "no day off" with a
+// night more in it. The gap it was meant to fill — someone who cannot leave
+// on Friday evening at all — is real but narrow, and a preset nobody picks
+// costs every other preset a slot in the row.
+export type WeekendStyle = "strict" | "frimon" | "thusun" | "loose";
 
 export interface WeekendParams {
   flyDays: number[];
@@ -21,7 +27,6 @@ export const WEEKEND_SHAPE: Record<
   WeekendStyle,
   { label: string; arriveDay: number; leaveDay: number }
 > = {
-  satsun: { label: "Sat–Sun", arriveDay: 6, leaveDay: 0 },
   strict: { label: "Fri–Sun", arriveDay: 5, leaveDay: 0 },
   frimon: { label: "Fri–Mon", arriveDay: 5, leaveDay: 1 },
   thusun: { label: "Thu–Sun", arriveDay: 4, leaveDay: 0 },
@@ -50,12 +55,6 @@ export function matchesWeekendShape(
 
 export function weekendStyleToParams(style: WeekendStyle): WeekendParams {
   switch (style) {
-    // The only shape SHORTER than Fri–Sun, and the only one for someone who
-    // cannot get away on Friday evening at all. Home departure allows Friday
-    // too: a late Friday flight that lands after midnight still starts its
-    // trip on Saturday, which is what the label names.
-    case "satsun":
-      return { flyDays: [5, 6], retFlyDays: [0], nightsFrom: 1, nightsTo: 2 };
     case "strict":
       return { flyDays: [5], retFlyDays: [0], nightsFrom: 1, nightsTo: 2 };
     case "frimon":

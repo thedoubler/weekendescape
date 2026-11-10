@@ -52,9 +52,9 @@ export interface HomeRegionInfo {
 // long is the trip. As a separate pill it read as a filter running on top of
 // "Fri–Sun" rather than instead of it.
 //
-// Ordered by what they COST in leave, not by length: Sat–Sun and Fri–Sun take
-// no day off, Fri–Mon and Thu–Sun take one (at opposite ends of the weekend),
-// Thu–Mon takes two. Within each pair the Friday shape leads, so the row also
+// Ordered by what they COST in leave, not by length: Fri–Sun takes no day
+// off, Fri–Mon and Thu–Sun take one (at opposite ends of the weekend),
+// Thu–Mon takes two. The Friday shape leads that middle pair, so the row also
 // groups by the day you leave.
 //
 // The label was "Long weekends", which described the RESULT and hid the
@@ -62,7 +62,6 @@ export interface HomeRegionInfo {
 // leave, so the label now says holiday and the sentence below says how.
 type StyleChoice = WeekendStyle | "bridges";
 const STYLE_OPTS: { value: StyleChoice; label: string }[] = [
-  { value: "satsun", label: "Sat–Sun" },
   { value: "strict", label: "Fri–Sun" },
   { value: "frimon", label: "Fri–Mon" },
   { value: "thusun", label: "Thu–Sun" },
