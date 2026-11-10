@@ -370,16 +370,18 @@ describe("Home page", () => {
     await waitFor(() => expect(screen.getByText("Ibiza")).toBeInTheDocument());
     expect(screen.getByText(/^\d+ flights?$/i)).toBeInTheDocument();
 
-    // Long weekends is a choice inside the trip-length facet now, not a switch
-    // of its own — it answers the same question as Fri–Sun rather than running
-    // alongside it. Like every facet, it commits when the popover closes.
+    // Holiday weekends is a choice inside the trip-length facet now, not a
+    // switch of its own — it answers the same question as Fri–Sun rather than
+    // running alongside it. Like every facet, it commits when the popover
+    // closes. The RESULTS still count "long weekends", which is the thing you
+    // got; the control names the occasion that produced them.
     fireEvent.click(screen.getByRole("button", { name: /^Fri–Sun/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^Long weekends/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Holiday weekends/ }));
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     await waitFor(() => expect(screen.getByText("Searching…")).toBeInTheDocument());
-    // Scoped to the results heading — the switch itself says "Long weekends"
-    // and is legitimately on.
+    // Scoped to the results heading — the control itself says "Holiday
+    // weekends" and is legitimately on.
     expect(
       screen.queryByText(/^\d+ long weekends?$/i)
     ).not.toBeInTheDocument();

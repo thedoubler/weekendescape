@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { WeekendStyle } from "@/lib/weekend";
+import { WEEKEND_SHAPE, type WeekendStyle } from "@/lib/weekend";
 import { type Deal, isShortStay, dealDomId } from "@/lib/deals";
 import {
   type SortKey,
@@ -539,11 +539,13 @@ export default function Home() {
     if (from) {
       const s = p.get("style");
       const m = Number(p.get("months"));
-      const style0: WeekendStyle = (["strict", "frimon", "loose"] as const).includes(
-        s as WeekendStyle
-      )
-        ? (s as WeekendStyle)
-        : "strict";
+      // Validated against the shape table itself: a second hand-written list
+      // of styles here is how a new preset ships working everywhere EXCEPT a
+      // shared link, which is the one place nobody tests.
+      const style0: WeekendStyle =
+        s && Object.prototype.hasOwnProperty.call(WEEKEND_SHAPE, s)
+          ? (s as WeekendStyle)
+          : "strict";
       const months0 = [1, 2, 3, 6].includes(m) ? m : 3;
       // Direct is the default now; an explicit direct=0 opts back into stops.
       const stop0: StopMode = p.get("direct") === "0" ? "any" : "direct";

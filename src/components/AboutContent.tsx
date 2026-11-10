@@ -90,10 +90,9 @@ export function AboutContent() {
         </p>
         <p className="text-sm leading-relaxed text-black/70 dark:text-white/70">
           <span className="font-medium text-black dark:text-white">
-            Long weekends
+            Holiday weekends
           </span>{" "}
-          searches around your public holidays instead of fixed
-          Fri&ndash;Sun. National ones always count. Your region&rsquo;s count
+          searches around your public holidays instead of a fixed shape. National ones always count. Your region&rsquo;s count
           too once the board knows it, and it tells you which region it
           assumed.
         </p>

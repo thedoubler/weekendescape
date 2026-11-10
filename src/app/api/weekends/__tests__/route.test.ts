@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import axios from "axios";
 import { GET } from "@/app/api/weekends/route";
 import { clearApiCache } from "@/lib/api-cache";
+import { WEEKEND_SHAPE } from "@/lib/weekend";
 
 vi.mock("axios");
 
@@ -41,6 +42,18 @@ describe("GET /api/weekends", () => {
   it("returns 400 on invalid style", async () => {
     const res = await GET(req("flyFrom=BCN&style=nope"));
     expect(res.status).toBe(400);
+  });
+
+  // The route's accepted list is derived from WEEKEND_SHAPE, so a new preset
+  // works here the moment it exists. This is the guard for the day someone
+  // replaces that with a hand-written array again.
+  it("accepts every shape the table names", async () => {
+    for (const style of Object.keys(WEEKEND_SHAPE)) {
+      vi.mocked(axios.get).mockResolvedValue({ status: 200, data: { data: [] } });
+      clearApiCache();
+      const res = await GET(req(`flyFrom=BCN&style=${style}`));
+      expect(res.status, `style=${style}`).toBe(200);
+    }
   });
 
   it("returns 400 on invalid months", async () => {

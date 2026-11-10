@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { rateLimited } from "@/lib/rate-limit";
 import { logSafe } from "@/lib/log-safe";
 import axios from "axios";
-import type { WeekendStyle } from "@/lib/weekend";
+import { WEEKEND_SHAPE, type WeekendStyle } from "@/lib/weekend";
 import {
   MissingApiKeyError,
   searchWeekends,
 } from "@/lib/weekend-search";
 import { MAX_ORIGINS, parseOrigins } from "@/lib/origins";
 
-const VALID_STYLES: WeekendStyle[] = ["strict", "frimon", "loose"];
+// Every shape the table names, so the route cannot fall behind it.
+const VALID_STYLES = Object.keys(WEEKEND_SHAPE) as WeekendStyle[];
 const VALID_MONTHS = [1, 2, 3, 6];
 
 export async function GET(request: NextRequest) {

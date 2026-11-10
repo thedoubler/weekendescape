@@ -1,4 +1,8 @@
-export type WeekendStyle = "strict" | "frimon" | "loose";
+// Ordered the way the control reads them: by how much leave they cost.
+// satsun and strict cost none, frimon and thusun cost one day, loose costs
+// two — and within each pair the Friday shape comes before the Thursday one,
+// so the row groups by departure day as well as by price in leave.
+export type WeekendStyle = "satsun" | "strict" | "frimon" | "thusun" | "loose";
 
 export interface WeekendParams {
   flyDays: number[];
@@ -17,8 +21,10 @@ export const WEEKEND_SHAPE: Record<
   WeekendStyle,
   { label: string; arriveDay: number; leaveDay: number }
 > = {
+  satsun: { label: "Sat–Sun", arriveDay: 6, leaveDay: 0 },
   strict: { label: "Fri–Sun", arriveDay: 5, leaveDay: 0 },
   frimon: { label: "Fri–Mon", arriveDay: 5, leaveDay: 1 },
+  thusun: { label: "Thu–Sun", arriveDay: 4, leaveDay: 0 },
   loose: { label: "Thu–Mon", arriveDay: 4, leaveDay: 1 },
 };
 
@@ -44,10 +50,21 @@ export function matchesWeekendShape(
 
 export function weekendStyleToParams(style: WeekendStyle): WeekendParams {
   switch (style) {
+    // The only shape SHORTER than Fri–Sun, and the only one for someone who
+    // cannot get away on Friday evening at all. Home departure allows Friday
+    // too: a late Friday flight that lands after midnight still starts its
+    // trip on Saturday, which is what the label names.
+    case "satsun":
+      return { flyDays: [5, 6], retFlyDays: [0], nightsFrom: 1, nightsTo: 2 };
     case "strict":
       return { flyDays: [5], retFlyDays: [0], nightsFrom: 1, nightsTo: 2 };
     case "frimon":
       return { flyDays: [5, 6], retFlyDays: [0, 1], nightsFrom: 1, nightsTo: 3 };
+    // Thu–Sun costs the same one day of leave as Fri–Mon, taken at the other
+    // end: the Friday off instead of the Monday. Three nights, home departure
+    // Wed night or Thu, back on Sunday.
+    case "thusun":
+      return { flyDays: [3, 4], retFlyDays: [0], nightsFrom: 2, nightsTo: 4 };
     case "loose":
       return { flyDays: [4, 5, 6], retFlyDays: [0, 1], nightsFrom: 1, nightsTo: 4 };
     default:

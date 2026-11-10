@@ -157,7 +157,7 @@ export default async function DestinationPage({
     },
     {
       q: `Do I need to take days off work?`,
-      a: `It depends on the weekend you pick. Every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact, though an early Friday departure can still mean leaving work after lunch. On the live board you can also choose Long weekends (Thursday to Monday shapes) or hunt bridge days around public holidays, and those do cost a day or two of leave.`,
+      a: `It depends on the weekend you pick. Every trip on this page leaves on Friday and returns on Sunday, so the work week stays intact, though an early Friday departure can still mean leaving work after lunch. On the live board you can stretch the trip — Fri–Mon and Thu–Sun each cost one day of leave, Thu–Mon costs two — or switch to Holiday weekends, which searches only the weekends a public holiday already stretches, so one day off can buy three or four.`,
     },
     {
       q: `How fresh are these prices?`,

@@ -48,7 +48,7 @@ export function Masthead() {
             the least work: the board below already opens with an airport field,
             so the line spent its first three words telling the reader to do
             something the screen was already asking for. What it could not say
-            for itself is what it gives back — when you can go, and where.
+            for itself is what it gives back — when you can fly, and where.
             "Show", not "tell" (owner's call): showing is literally what the
             board below does. Present tense, not "we'll", for the same reason:
             it is already doing it.
@@ -58,7 +58,7 @@ export function Masthead() {
             against the 358px a 390px phone gives, so it holds one line
             everywhere and the original "one line, not two" rule is intact. */}
         <p className="mt-0.5 text-[17px] leading-snug font-semibold tracking-[-0.01em] text-balance sm:text-[20px]">
-          We show you when and where you can go.
+          We show you when and where you can fly.
         </p>
     </header>
   );

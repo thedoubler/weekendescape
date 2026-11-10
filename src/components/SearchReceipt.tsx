@@ -47,16 +47,27 @@ export interface HomeRegionInfo {
 // seconds — and if production ever measures much worse, the fix is to move the
 // commit from popover-dismiss back to an explicit button, not to add a number.
 
-// The three fixed shapes, plus "bridges" — which is not a shape at all but a
+// The fixed shapes, plus "holidays" — which is not a shape at all but a
 // search strategy. They share a control because they answer one question: how
-// long is the trip. As a separate pill, "Long weekends" read as a filter
-// running on top of "Fri–Sun" rather than instead of it.
+// long is the trip. As a separate pill it read as a filter running on top of
+// "Fri–Sun" rather than instead of it.
+//
+// Ordered by what they COST in leave, not by length: Sat–Sun and Fri–Sun take
+// no day off, Fri–Mon and Thu–Sun take one (at opposite ends of the weekend),
+// Thu–Mon takes two. Within each pair the Friday shape leads, so the row also
+// groups by the day you leave.
+//
+// The label was "Long weekends", which described the RESULT and hid the
+// trick. What earns the row is the public holiday doing the work of a day's
+// leave, so the label now says holiday and the sentence below says how.
 type StyleChoice = WeekendStyle | "bridges";
 const STYLE_OPTS: { value: StyleChoice; label: string }[] = [
+  { value: "satsun", label: "Sat–Sun" },
   { value: "strict", label: "Fri–Sun" },
   { value: "frimon", label: "Fri–Mon" },
+  { value: "thusun", label: "Thu–Sun" },
   { value: "loose", label: "Thu–Mon" },
-  { value: "bridges", label: "Long weekends" },
+  { value: "bridges", label: "Holiday weekends" },
 ];
 const STOP_OPTS: { value: StopMode; label: string }[] = [
   { value: "any", label: "Any stops" },
@@ -428,13 +439,13 @@ function Options<T extends string | number>({
   value: T;
   onPick: (v: T) => void;
   /** Explanatory text for one option whose label names a result rather than a
-   *  mechanism — "Long weekends" says what you get, not that a public holiday
-   *  is doing the work. */
+   *  mechanism — "Holiday weekends" says WHEN it searches, not that the
+   *  holiday is doing the work of a day's leave. */
   hint?: { value: T; text: string };
 }) {
   // The hint used to live in `title` and an aria-label, which meant a sighted
   // touch user — most of them — could not reach it at all: there is no hover on
-  // a phone, and "Long weekends" names the result rather than the mechanism, so
+  // a phone, and the label names the occasion rather than the mechanism, so
   // the one option that needs explaining was the one nobody could get explained.
   // Now it is visible text, shown BEFORE the choice rather than after it, and
   // tied to its option with aria-describedby so a screen reader still hears the
