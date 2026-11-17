@@ -1031,3 +1031,151 @@ A 150px-tall element was read as "laid out compactly" when it was rendering
 blank; a `{"height": 0}` postMessage was read as "no inventory" when GYG sends
 it for every city. If a claim is about appearance, it needs a screenshot behind
 it, not a `getBoundingClientRect`.
+
+---
+
+## Packages, event-anchored — the research pass that decided the shape (2026-11-17)
+
+Owner's ask: a SEPARATE project selling "packages" — flight + stay anchored to a
+reason (a concert, a jazz weekend, a match), weekend or 7 days, global but
+starting from Romania, possibly folded back into weekend.flights later. The
+starting hypothesis was that no hotel/flight APIs are reachable, so the data
+would have to come from agentic browsing of airline and hotel sites.
+
+Five parallel research agents ran. Four findings decide the architecture.
+
+### 1. The "no API access" premise is false
+
+- **Travelpayouts / Aviasales Data API** — free, self-serve, approval ~3 working
+  days, **no traffic minimum** (the 50,000 MAU gate applies to their separate
+  live Flight Search API, not the data endpoints). Pays commission: Aviasales
+  ~1.1–1.3%, Kiwi.com ~3%, 30-day cookie. Prices are **cached**, 48h–7d with an
+  `expires_at` per row — right for inspiration, wrong for a booking funnel.
+- **LiteAPI / Nuitee** — hotels. Sandbox key in minutes, **production unlocked by
+  adding a card**, no approval, no volume floor. ~2.9M properties, live rates,
+  **you set your own margin**, free white-label booking site, weekly payouts.
+
+Dead, and still recommended all over the web: **Amadeus Self-Service** (keys
+disabled 17 Jul 2026), **Travelpayouts Hotellook** (20 Oct 2025), **Impala**.
+And **Kiwi Tequila has been invitation-only since 30 May 2024** — our key cannot
+be re-obtained by anyone. It is a grandfathered privilege; protect it, and
+finish the de-Tequila-the-lookup move so a revocation breaks nothing visible.
+
+Caveat nobody could close: **no LCC coverage is route-verified**. Ryanair/Wizz
+presence on our actual city pairs needs an afternoon of live queries per
+provider before committing. **Duffel carries easyJet but NOT Ryanair or Wizz**,
+which may disqualify it for a European weekend board.
+
+### 2. Agentic browsing is killed by arithmetic, not by cost or law
+
+One board view = 1 origin × ~100 destinations × 26 weekends = **2,600 price
+cells**, ~18 browser-hours. Live per-request browsing is impossible at any
+budget; the only shape is scheduled batch into a cache — which is what the
+"checked X ago" stamp already makes honest. All-in **$200–900/month for ONE
+origin** at daily refresh, plus **30–60 maintenance hours/month**; a solo
+ceiling of 5–8 targets.
+
+An LLM per page is the trap: $60–120 per 1,000 pages to handle a layout change
+that happens ~3×/year, and a non-deterministic extractor yields **silently wrong
+prices**, which on a deal board is worse than no data. Correct use: the model
+writes the parser once and repairs it when schema validation alarms.
+
+Legally: fares are **not protected** (CJEU C-30/14 *Ryanair v PR Aviation*;
+*Football Dataco* C-604/10) — but the same judgment leaves the operator free to
+ban scraping **by contract**, and contract is where scrapers lose. The bright
+line is the login: hiQ won on CFAA and **lost on contract** ($500k, data
+destroyed) because it held accounts; Bright Data won because it was logged off.
+Ryanair sued **Bucharest-based SC Vola.Ro** in the Irish High Court — that is
+the shape of the risk for a Romanian operator. Their Terms cl.2 offers a
+**written licence to price-comparison sites**: ask for it rather than evade.
+
+What browsing genuinely buys, and the API does not: **Ryanair/Wizz/easyJet,
+which are in no affiliate network** and on a European weekend board *are* the
+product; and **a price history we own**, which is the only honest route to a
+"this is genuinely cheap" signal PRODUCT.md otherwise forbids.
+
+### 3. travelator.ro and aventurescu.ro are not technical products
+
+Both are editorial blogs with a **rented** search widget (Skyscanner/Momondo).
+Prices are **typed in by hand and shown as JPG screenshots** — their own terms
+say so. Aventurescu uploaded 2,171 images in 30 days, median 87 seconds apart,
+business hours only: a person searching and cropping. ~30–45 min per post, two
+people full time.
+
+The automated version of them already exists — **zborieftin.ro**, a pure
+Travelpayouts white-label, no editorial — and nobody talks about it. Automation
+buys parity with their output in a weekend and zero distribution.
+
+The moat is the channel: **Aventurescu's WhatsApp channel has 66K followers**
+and its output went 2 → 60 posts/month this year, while Google-shaped Travelator
+decayed 94 → 16. And the fat margin is not affiliate at all: Aventurescu sells
+**its own group cruises at €1,499–2,029/person**, with a named group leader and
+a 21-person minimum. A human sells that.
+
+The screenshot is worth stealing as an idea: it is a **trust artifact**, and
+unscrapable by competitors. Our honest equivalent is the freshness stamp.
+
+### 4. The package line — where the project becomes a travel agency
+
+Under Directive (EU) 2015/2302 (RO: **OG 2/2018**, MEDAT + ANPC), one thing
+flips publisher → organiser: **selling two different TYPES of travel service as
+one purchase**. Any one of these is independently sufficient: one payment; one
+inclusive bookable price; the word "package"; a single point of sale; or passing
+the traveller's **name/e-mail/payment details** with the second booking closing
+within 24 hours.
+
+Organiser obligations in Romania: licence, **25,000 lei share capital**,
+insolvency guarantee (real policies run **€220–350/yr** for €5–10k of cover;
+€100k costs €4,510), liability for the **whole** trip (CJEU C-469/24), the
+Anexa 1 forms, a monthly declaration (10,000 lei fine if missed), and fines of
+**20,000–40,000 lei with mandatory licence withdrawal** for guarantee breaches.
+Art. 25 **voids** any "we are only an intermediary" disclaimer.
+
+**The chosen architecture, and why it is light:**
+
+- **Hotel** through LiteAPI with our margin — Nuitee as merchant of record, so we
+  never hold traveller money.
+- **Flight** as a targeted affiliate deep-link. **Never inside our own checkout**
+  — merchant for hotel *and* flight on one site is Art. 3(2)(b)(i), single point
+  of sale, and that is a full organiser instantly.
+- **Event ticket** as a third separate affiliate link to the promoter. Bundling
+  a ticket with accommodation is the textbook package: for a concert weekend the
+  ticket is both ≥25% of value and advertised as essential. **There is no
+  structuring around this** — it is the one thing the owner most wants and the
+  one thing that cannot be done.
+
+That combination is a **Linked Travel Arrangement today**, not a package:
+guarantee only the hotel money we receive, state plainly that the traveller has
+no package rights, serve the Anexa 2 form. And **from 29 March 2029 it is
+nothing at all** — Directive (EU) 2026/1024 (in force 28 May 2026) **abolishes
+LTAs outright**, and the surviving click-through trigger requires a personal-data
+transfer we are not making. Build for that now and we are compliant in both
+regimes.
+
+Merchant-of-record status is **nearly irrelevant** to the Directive, which asks
+who combines and sells — but it is worth having anyway: never holding traveller
+money is exactly what killed the comparables. **Festicket** bonded correctly
+through ABTA and still died with £22.56m of liabilities and customer money
+unsegregated; **Pollen** collapsed owing £78.6m with £280k cash after pulling
+~$3.2m of not-yet-due instalments to meet payroll. Inventory was not the cause.
+Prepayments were.
+
+One live trap: **Booking.com Partner Terms cl. 6.1(e)** contractually dumps
+100% of organiser liability onto the affiliate if a reservation becomes part of
+a package or LTA.
+
+**Accommodation alone is outside the Directive entirely** — one type of service
+is never a package. Open question for MEDAT: whether marked-up accommodation
+resale needs an *intermediary* licence (cheap if so — no guarantee instrument).
+
+### Order this implies
+
+1. Open **Travelpayouts** and **LiteAPI** accounts — free, and the 3-day approval
+   blocks everything else.
+2. Verify **LCC coverage on real city pairs** before building on any provider.
+3. Build the overlay: curation + side-by-side + itemised indicative totals that
+   are *not* bookable as a sum. Never the word "pachet".
+4. Build the **push channel before the crawler**. It is the only moat the
+   teardown found.
+5. Treat scraping as a later, narrow question — LCC coverage and owned price
+   history only, logged-out, cached, 5–8 targets maximum.
