@@ -149,6 +149,30 @@ Ranked by fit × delight for a weekend-getaway tool:
 - Multiple home airports in one search.
 - SEO landing pages per route ("Cheap weekends to Porto from Barcelona").
 
+#### The channel, and why it is the actual gap (noted 2026-11-17)
+
+A channel is a way to reach the same people AGAIN without asking anyone's
+permission: a WhatsApp or Telegram channel, an email list, web push. We have
+none, and no email capture either — discussed Oct 2026, never built. So every
+visit starts cold, and affiliate revenue arrives at the click-out, which means a
+visitor who returns ten times is worth ten of one who passes through once.
+
+The teardown of the Romanian comparables put numbers on it. Aventurescu runs a
+**66,000-follower WhatsApp channel** and went 2 → 60 posts/month this year.
+Travelator, which is Google-shaped and has no messaging channel at all, decayed
+94 → 16 in the same period. Same market, same content type, opposite curves.
+
+**The asymmetry is in our favour and we are not using it.** Their content is
+manual — a person searching, screenshotting and writing, 30–45 minutes a post,
+two people full time — and their distribution is excellent. Ours is the
+opposite: the board already COMPUTES "the cheapest weekend from Cluj" on its
+own, and reaches nobody. They have the audience and buy content with labour; we
+have content for free and no audience.
+
+Cheapest first step, for the record: a WhatsApp channel needs no code at all.
+The hard part was never having something to send each week — and that part is
+already built.
+
 ### Technical health
 - E2E smoke test (Playwright) — the preview-page trick is ad-hoc.
 - Per-IP rate limiting (see below) — we have caching + coalescing, not abuse
