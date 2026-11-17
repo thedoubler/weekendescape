@@ -711,6 +711,57 @@ weekday filtering; nothing bookable to link to), Google-Flights scraping too
       guidelines impose UX obligations (Powered-by branding, pre-deeplink
       disclosure, click-quality bars) that need a design pass of their own.
 
+### Provider-dependency check (2026-11-17) — measured, not assumed
+
+Nothing on the ladder above has been done: no `TRAVELPAYOUTS_TOKEN`, no adapter
+code, no partner email sent. Two findings from this session change which rung
+to climb first.
+
+**1. The key does not gate what we assumed it gates.** While building the
+Tequila canary, both endpoints were tested with a good key, a junk key, and no
+`apikey` header at all, against the same host the app uses:
+
+| Endpoint | good key | junk key | no key |
+|---|---|---|---|
+| `/v2/search` | 200 | 200 | 200 — **byte-identical, 5163 bytes each** |
+| `/locations/query` | 200 | **401** | 401 |
+
+So the board's search is not authenticated today. If Kiwi revokes the key, the
+**search keeps answering** and the only things that break are autocomplete and
+nearest-airport — `src/app/api/airports/route.ts`, now the single remaining
+consumer of `/locations`.
+
+That makes "de-Tequila the airport lookup" (already listed above as a free
+resilience win, still not done) the highest-leverage move on this whole topic:
+`src/lib/airports.json` is already bundled — 137 KB, ~6k airports with
+coordinates, already used by `airport-coords.ts`. A few hours converts a total
+outage on key revocation into no user-visible effect at all.
+
+Caveat worth keeping: an unauthenticated `/v2/search` is a gap Kiwi can close
+without notice, so this is an argument about WHICH failure arrives first, not a
+reason to relax. The canary probes the key separately, so the alarm exists.
+
+**2. The contested premise above is now verified, and it has eroded.** The
+Ryanair–Skyscanner distribution agreement is real (12 Sep 2025, TravelMole /
+Travel Extra / Travel Weekly), alongside an expanded "Approved OTA" roster, an
+Approved OTA *Aggregator* tier (Atlas), and a Booking Holdings deal. Kiwi and
+Expedia could NOT be confirmed on that roster — treat their status as open.
+Net: "we aggregate the LCCs metasearch won't" is no longer the moat it was, and
+alternatives are correspondingly more viable than the ranked list above assumed.
+
+The sting in the same story, and it bears on the affiliate model rather than on
+redundancy: Ryanair pays OTAs **zero commission** (Skift, 27 Dec 2025). LCC
+distribution is opening up but does not pay. On a board whose sort order puts
+the cheapest fare first, the fares we show first are the ones that earn least —
+which is an argument for the "is this a good deal" and reason-anchored layers
+carrying the revenue, not for chasing LCC coverage as an end in itself.
+
+**Order this implies:** de-Tequila the airport lookup (hours, data already in
+repo) → Travelpayouts account (owner, 1–5 days) → Aviasales shadow adapter
+behind `searchDeals()` → the Kiwi continuity email.
+
+---
+
 ---
 
 ## Best practices for flight-deal / getaway sites (researched)
