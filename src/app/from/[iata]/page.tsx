@@ -341,6 +341,12 @@ export default async function OriginPage({
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "FAQPage",
+            // The one lever we control that answer engines actually weigh:
+            // recency. The page already SAYS "rebuilt on 10 November" in
+            // prose; this is the same fact where a machine reads it, taken
+            // from the search's own fetch time rather than from render time,
+            // so it can never claim fresher than the fares behind it.
+            dateModified: new Date(fetchedAt).toISOString(),
             mainEntity: faq.map((f) => ({
               "@type": "Question",
               name: f.q,
